@@ -1,0 +1,91 @@
+@model BizCore.Models.Entities.QuotationHeader
+
+@{
+    ViewData["Title"] = "Quotation Details";
+}
+
+@if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="form-alert mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Module</div>
+        <h1 class="page-title">Quotation Details</h1>
+        <p class="page-subtitle">Review quotation details, VAT totals, and conversion readiness before creating an invoice.</p>
+    </div>
+    <div class="page-actions">
+        @if (Model.Status == "Draft")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">Edit Quotation</a>
+        }
+        <a asp-action="Print" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        @if (Model.Status == "Approved")
+        {
+            <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Convert to Invoice</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Quotation No.</span><p class="detail-value">@Model.QuotationNumber</p></div>
+            <div class="detail-item"><span class="detail-label">Reference No.</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
+            <div class="detail-item"><span class="detail-label">Quotation Date</span><p class="detail-value">@Model.QuotationDate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">Expiry Date</span><p class="detail-value">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "No expiry")</p></div>
+            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.VatType</p></div>
+            <div class="detail-item"><span class="detail-label">Customer</span><p class="detail-value">@Model.Customer?.CustomerName</p></div>
+            <div class="detail-item"><span class="detail-label">Salesperson</span><p class="detail-value">@(Model.Salesperson?.SalespersonName ?? "-")</p></div>
+            <div class="detail-item"><span class="detail-label">Remarks</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</p></div>
+            <div class="detail-item"><span class="detail-label">Totals</span><p class="detail-value">Subtotal @Model.Subtotal.ToString("N2") | Line Discount @Model.DiscountAmount.ToString("N2") | Header Discount @Model.HeaderDiscountAmount.ToString("N2") | VAT @Model.VatAmount.ToString("N2") | Total @Model.TotalAmount.ToString("N2")</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Quotation Lines</h2>
+            <p class="section-subtitle">Detailed item list used to compose the quotation.</p>
+        </div>
+        <div class="table-meta">@Model.QuotationDetails.Count line(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Discount</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.QuotationDetails.OrderBy(x => x.LineNumber))
+                {
+                    <tr>
+                        <td>@line.LineNumber</td>
+                        <td class="fw-semibold">@line.Item?.ItemName</td>
+                        <td>@line.Description</td>
+                        <td>@line.Quantity.ToString("N2")</td>
+                        <td>@line.UnitPrice.ToString("N2")</td>
+                        <td>@line.DiscountAmount.ToString("N2")</td>
+                        <td>@line.LineTotal.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

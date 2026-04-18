@@ -1,0 +1,32 @@
+@model BizCore.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Customer Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Customer Record</div>
+        <h1 class="page-title">Customer Details</h1>
+        <p class="page-subtitle">Review customer profile information in a more readable business summary layout.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-primary">Edit Customer</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.CustomerCode</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
+            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.CustomerName</p></div>
+            <div class="detail-item"><span class="detail-label">Credit Limit</span><p class="detail-value">@Model.CreditLimit.ToString("N2")</p></div>
+            <div class="detail-item"><span class="detail-label">Tax ID</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.TaxId) ? "-" : Model.TaxId)</p></div>
+            <div class="detail-item"><span class="detail-label">Phone</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</p></div>
+            <div class="detail-item"><span class="detail-label">Email</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</p></div>
+            <div class="detail-item"><span class="detail-label">Address</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</p></div>
+        </div>
+    </div>
+</div>

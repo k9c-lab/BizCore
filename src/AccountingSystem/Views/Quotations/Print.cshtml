@@ -1,0 +1,441 @@
+@model BizCore.Models.Entities.QuotationHeader
+@{
+    Layout = null;
+    var companyName = ViewData["PrintCompanyName"] as string ?? "BizCore Co., Ltd.";
+    var companyAddress = ViewData["PrintCompanyAddress"] as string ?? "-";
+    var companyTaxId = ViewData["PrintCompanyTaxId"] as string ?? "-";
+    var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
+    var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
+    var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quotation @Model.QuotationNumber</title>
+    <style>
+        @@page {
+            size: A4;
+            margin: 14mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            color: #111827;
+            background: #ffffff;
+            font-size: 11.5px;
+            line-height: 1.35;
+        }
+
+        .quotation-print {
+            width: 100%;
+            min-height: calc(297mm - 28mm);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .print-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #d1d5db;
+        }
+
+        .company-block {
+            max-width: 58%;
+        }
+
+        .company-name {
+            margin: 0 0 6px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .company-line,
+        .document-label,
+        .meta-label,
+        .customer-label,
+        .summary-label,
+        .signature-label,
+        .remark-label {
+            color: #6b7280;
+        }
+
+        .document-block {
+            min-width: 260px;
+            text-align: right;
+        }
+
+        .document-title-th {
+            margin: 0;
+            font-size: 23px;
+            font-weight: 700;
+        }
+
+        .document-title-en {
+            margin: 2px 0 12px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+
+        .document-meta {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .document-meta td {
+            padding: 2px 0 2px 16px;
+            vertical-align: top;
+        }
+
+        .document-meta td:first-child {
+            white-space: nowrap;
+        }
+
+        .print-section {
+            margin-top: 18px;
+        }
+
+        .salesperson-meta {
+            margin-top: 12px;
+            margin-left: auto;
+            width: 100%;
+            max-width: 320px;
+            border-top: 1px solid #d1d5db;
+            padding-top: 10px;
+        }
+
+        .salesperson-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 1px 0;
+        }
+
+        .salesperson-row .meta-label {
+            min-width: 110px;
+        }
+
+        .customer-section {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .customer-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
+            gap: 12px 20px;
+        }
+
+        .customer-name {
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .customer-value,
+        .remark-value,
+        .signature-date {
+            white-space: pre-wrap;
+        }
+
+        .line-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .line-table th,
+        .line-table td {
+            border: 1px solid #d1d5db;
+            padding: 7px 8px;
+            vertical-align: top;
+        }
+
+        .line-table th {
+            background: #f3f4f6;
+            font-weight: 700;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .line-no {
+            width: 52px;
+            text-align: center;
+        }
+
+        .line-description {
+            width: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .line-qty {
+            width: 82px;
+            text-align: right;
+        }
+
+        .line-unit-price,
+        .line-total {
+            width: 120px;
+            text-align: right;
+        }
+
+        .summary-wrap {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 14px;
+        }
+
+        .summary-table {
+            min-width: 280px;
+            border-collapse: collapse;
+        }
+
+        .summary-table td {
+            padding: 4px 0 4px 18px;
+        }
+
+        .summary-table td:first-child {
+            text-align: left;
+            color: #4b5563;
+        }
+
+        .summary-table td:last-child {
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .summary-total td {
+            padding-top: 8px;
+            border-top: 2px solid #9ca3af;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .remark-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 14px;
+            min-height: 78px;
+        }
+
+        .signature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 28px;
+            margin-top: auto;
+            padding-top: 28px;
+        }
+
+        .signature-box {
+            text-align: center;
+        }
+
+        .signature-line {
+            margin: 44px auto 8px;
+            width: 88%;
+            border-bottom: 1px solid #111827;
+        }
+
+        .signature-date {
+            margin-top: 12px;
+        }
+
+        .company-meta-grid {
+            display: grid;
+            gap: 2px;
+            margin-top: 8px;
+        }
+
+        .remark-value,
+        .line-description,
+        .signature-box,
+        .customer-value,
+        .company-line,
+        .document-meta td {
+            font-size: 11.5px;
+        }
+
+        .screen-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0 0 10px;
+        }
+
+        .screen-actions button {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #111827;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font: inherit;
+        }
+
+        @@media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .screen-actions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quotation-print">
+        <div class="screen-actions">
+            <button type="button" onclick="window.print()">Print</button>
+        </div>
+        <header class="print-header">
+            <div class="company-block">
+                <h1 class="company-name">@companyName</h1>
+                <div class="company-meta-grid">
+                    <div class="company-line">@companyAddress</div>
+                    <div class="company-line">Tax ID: @companyTaxId</div>
+                    <div class="company-line">Phone: @companyPhone</div>
+                    <div class="company-line">Email: @companyEmail</div>
+                </div>
+            </div>
+            <div class="document-block">
+                <h2 class="document-title-th">ใบเสนอราคา</h2>
+                <div class="document-title-en">Quotation</div>
+                <table class="document-meta">
+                    <tr>
+                        <td class="meta-label">Quotation No.</td>
+                        <td>@Model.QuotationNumber</td>
+                    </tr>
+                    <tr>
+                        <td class="meta-label">Quotation Date</td>
+                        <td>@Model.QuotationDate.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td class="meta-label">Reference No.</td>
+                        <td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td>
+                    </tr>
+                </table>
+                <div class="salesperson-meta">
+                    <div class="salesperson-row">
+                        <span class="meta-label">Salesperson</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.Salesperson?.SalespersonName) ? "-" : Model.Salesperson!.SalespersonName)</span>
+                    </div>
+                    <div class="salesperson-row">
+                        <span class="meta-label">Phone</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.Salesperson?.PhoneNumber) ? "-" : Model.Salesperson!.PhoneNumber)</span>
+                    </div>
+                    <div class="salesperson-row">
+                        <span class="meta-label">Email</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.Salesperson?.Email) ? "-" : Model.Salesperson!.Email)</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="print-section customer-section">
+            <div class="customer-grid">
+                <div>
+                    <div class="customer-label">Customer Name</div>
+                    <div class="customer-name">@Model.Customer?.CustomerName</div>
+                </div>
+                <div>
+                    <div class="customer-label">Tax ID</div>
+                    <div class="customer-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</div>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <div class="customer-label">Billing Address</div>
+                    <div class="customer-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="print-section">
+            <table class="line-table">
+                <thead>
+                    <tr>
+                        <th class="line-no">No</th>
+                        <th class="line-description">Description</th>
+                        <th class="line-qty">Qty</th>
+                        <th class="line-unit-price">Unit Price</th>
+                        <th class="line-total">Line Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.QuotationDetails.OrderBy(x => x.LineNumber))
+                {
+                    var description = string.IsNullOrWhiteSpace(line.Description)
+                        ? line.Item?.ItemName ?? "-"
+                        : line.Description;
+                    <tr>
+                        <td class="line-no">@line.LineNumber</td>
+                        <td class="line-description">@description</td>
+                        <td class="line-qty">@line.Quantity.ToString("N2")</td>
+                        <td class="line-unit-price">@line.UnitPrice.ToString("N2")</td>
+                        <td class="line-total">@line.LineTotal.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+
+            <div class="summary-wrap">
+                <table class="summary-table">
+                    <tr>
+                        <td class="summary-label">Subtotal</td>
+                        <td>@Model.Subtotal.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">Discount</td>
+                        <td>@appliedDiscount.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td class="summary-label">VAT</td>
+                        <td>@Model.VatAmount.ToString("N2")</td>
+                    </tr>
+                    <tr class="summary-total">
+                        <td>Total Amount</td>
+                        <td>@Model.TotalAmount.ToString("N2")</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <section class="print-section">
+            <div class="remark-box">
+                <div class="remark-label">หมายเหตุ / Remark</div>
+                <div class="remark-value">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
+            </div>
+        </section>
+
+        <section class="signature-grid">
+            <div class="signature-box">
+                <div class="signature-label">Customer Signature</div>
+                <div class="signature-line"></div>
+                <div>............................................................</div>
+                <div class="signature-date">Date ........ / ........ / ........</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-label">Company Approval / Authorized Signature</div>
+                <div class="signature-line"></div>
+                <div>............................................................</div>
+                <div class="signature-date">Date ........ / ........ / ........</div>
+            </div>
+        </section>
+    </div>
+    <script>
+        window.addEventListener("load", () => {
+            window.print();
+        });
+    </script>
+</body>
+</html>

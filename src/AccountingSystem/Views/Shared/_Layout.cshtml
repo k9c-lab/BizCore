@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BizCore</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/BizCore.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <a class="sidebar-brand-link" asp-controller="Home" asp-action="Index">BizCore</a>
+                <div class="sidebar-caption">Core Operations</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="sidebar-link" asp-controller="Home" asp-action="Index">Dashboard</a>
+                <a class="sidebar-link" asp-controller="Customers" asp-action="Index">Customers</a>
+                <a class="sidebar-link" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                <a class="sidebar-link" asp-controller="Items" asp-action="Index">Items</a>
+                <a class="sidebar-link" asp-controller="StockInquiry" asp-action="Index">Stock Inquiry</a>
+                <a class="sidebar-link" asp-controller="SerialInquiry" asp-action="Index">Serial Inquiry</a>
+                <a class="sidebar-link" asp-controller="Salespersons" asp-action="Index">Salespersons</a>
+                <a class="sidebar-link" asp-controller="Quotations" asp-action="Index">Quotations</a>
+                <a class="sidebar-link" asp-controller="Invoices" asp-action="Index">Invoices</a>
+                <a class="sidebar-link" asp-controller="Payments" asp-action="Index">Payments</a>
+                <a class="sidebar-link" asp-controller="Receipts" asp-action="Index">Receipts</a>
+                <a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
+                <a class="sidebar-link" asp-controller="Receivings" asp-action="Index">Receivings</a>
+                <a class="sidebar-link" asp-controller="SupplierClaims" asp-action="Index">Supplier Claims</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                Phase 1 master data foundation
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="mobile-topbar">
+                <a class="sidebar-brand-link" asp-controller="Home" asp-action="Index">BizCore</a>
+            </header>
+
+            <div class="page-shell">
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </div>
+
+            <footer class="footer text-muted">
+                <div class="footer-inner">
+                    Core module foundation for phase 1 accounting workflows.
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

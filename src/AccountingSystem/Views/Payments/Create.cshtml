@@ -1,0 +1,80 @@
+@model BizCore.Models.ViewModels.PaymentFormViewModel
+
+@{
+    ViewData["Title"] = "Create Payment";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">AR Module</div>
+        <h1 class="page-title">Create Payment</h1>
+        <p class="page-subtitle">Post a customer payment, allocate it to open invoices, and issue one receipt automatically.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Payments</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" id="paymentForm">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">Save posts the payment immediately and creates one read-only receipt.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Post Payment</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const customerSelect = document.getElementById("paymentCustomerId");
+            const amountInput = document.getElementById("Amount");
+            const rows = [...document.querySelectorAll(".payment-allocation-row")];
+            const appliedInputs = [...document.querySelectorAll(".js-applied-amount")];
+            const visibleCount = document.getElementById("visibleInvoiceCount");
+
+            const updateVisibility = () => {
+                const customerId = customerSelect.value;
+                let count = 0;
+
+                rows.forEach(row => {
+                    const match = customerId && row.dataset.customerId === customerId;
+                    row.style.display = match ? "" : "none";
+                    const input = row.querySelector(".js-applied-amount");
+                    if (!match) {
+                        input.value = "0";
+                    } else {
+                        count += 1;
+                    }
+                });
+
+                visibleCount.textContent = count;
+                updateSummary();
+            };
+
+            const updateSummary = () => {
+                const paymentAmount = parseFloat(amountInput.value || "0");
+                const applied = rows
+                    .filter(row => row.style.display !== "none")
+                    .reduce((sum, row) => sum + parseFloat(row.querySelector(".js-applied-amount").value || "0"), 0);
+                const unapplied = Math.max(paymentAmount - applied, 0);
+
+                document.getElementById("paymentAmountSummary").textContent = paymentAmount.toFixed(2);
+                document.getElementById("paymentAppliedSummary").textContent = applied.toFixed(2);
+                document.getElementById("paymentUnappliedSummary").textContent = unapplied.toFixed(2);
+            };
+
+            customerSelect.addEventListener("change", updateVisibility);
+            amountInput.addEventListener("input", updateSummary);
+            appliedInputs.forEach(input => input.addEventListener("input", updateSummary));
+            updateVisibility();
+        })();
+    </script>
+}

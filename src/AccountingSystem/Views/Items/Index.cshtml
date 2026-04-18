@@ -1,0 +1,76 @@
+@model IEnumerable<BizCore.Models.Entities.Item>
+
+@{
+    ViewData["Title"] = "Items";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Items</h1>
+        <p class="page-subtitle">Manage stock and sellable items with a more readable catalog-style table.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Item</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Item Catalog</h2>
+            <p class="section-subtitle">Operational inventory list with pricing and control flags surfaced clearly.</p>
+        </div>
+        <div class="table-meta">@Model.Count() records</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Item Code</th>
+                        <th>Item Name</th>
+                        <th>Part Number</th>
+                        <th>Type</th>
+                        <th>Unit</th>
+                        <th>Unit Price</th>
+                        <th>Stock</th>
+                        <th>Serial</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@item.ItemCode</span></td>
+                        <td class="fw-semibold">@item.ItemName</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.PartNumber) ? "-" : item.PartNumber)</td>
+                        <td>@item.ItemType</td>
+                        <td>@item.Unit</td>
+                        <td>@item.UnitPrice.ToString("N2")</td>
+                        <td>@(item.TrackStock ? item.CurrentStock.ToString("N2") : "-")</td>
+                        <td>@(item.IsSerialControlled ? "Serial" : "Standard")</td>
+                        <td class="text-end">
+                            <div class="table-actions">
+                                <a asp-action="Details" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                <a asp-action="Edit" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="table-empty">No items yet. Add products or services to start testing sales and inventory flows.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

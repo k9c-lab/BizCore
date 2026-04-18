@@ -1,0 +1,85 @@
+@model BizCore.Models.Entities.ReceivingHeader
+
+@{
+    ViewData["Title"] = "Receiving Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Receiving Details</h1>
+        <p class="page-subtitle">Posted goods receipt that already updated stock and created serials where required.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Receiving No.</span><p class="detail-value">@Model.ReceivingNo</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
+            <div class="detail-item"><span class="detail-label">Receive Date</span><p class="detail-value">@Model.ReceiveDate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">PO No.</span><p class="detail-value">@Model.PurchaseOrderHeader?.PONo</p></div>
+            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
+            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.PurchaseOrderHeader?.VatType</p></div>
+            <div class="detail-item"><span class="detail-label">Subtotal</span><p class="detail-value">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</p></div>
+            <div class="detail-item"><span class="detail-label">VAT</span><p class="detail-value">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</p></div>
+            <div class="detail-item"><span class="detail-label">Total</span><p class="detail-value">@((Model.PurchaseOrderHeader?.TotalAmount ?? 0m).ToString("N2"))</p></div>
+            <div class="detail-item"><span class="detail-label">Delivery Note</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.DeliveryNoteNo) ? "-" : Model.DeliveryNoteNo)</p></div>
+            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Receiving Lines</h2>
+            <p class="section-subtitle">Stock increments and serial creation happened when this document was posted.</p>
+        </div>
+        <div class="table-meta">@Model.ReceivingDetails.Count line(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Qty Received</th>
+                        <th>Remark</th>
+                        <th>Serials</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.ReceivingDetails.OrderBy(x => x.LineNumber))
+                {
+                    <tr>
+                        <td>@line.LineNumber</td>
+                        <td class="fw-semibold">@line.Item?.ItemName</td>
+                        <td>@line.QtyReceived.ToString("N2")</td>
+                        <td>@(string.IsNullOrWhiteSpace(line.Remark) ? "-" : line.Remark)</td>
+                        <td>
+                            @if (line.ReceivingSerials.Any())
+                            {
+                                <div class="serial-stack">
+                                @foreach (var serial in line.ReceivingSerials.OrderBy(x => x.SerialNo))
+                                {
+                                    <span>@serial.SerialNo</span>
+                                }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,67 @@
+@model IEnumerable<BizCore.Models.Entities.PurchaseOrderHeader>
+
+@{
+    ViewData["Title"] = "Purchase Orders";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Purchase Orders</h1>
+        <p class="page-subtitle">Create supplier purchase orders before receiving and stock-in processing.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New PO</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">PO Register</h2>
+            <p class="section-subtitle">Track supplier orders and received progress without AP.</p>
+        </div>
+        <div class="table-meta">@Model.Count() records</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>PO No.</th>
+                        <th>Date</th>
+                        <th>Supplier</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var po in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@po.PONo</span></td>
+                            <td>@po.PODate.ToString("dd MMM yyyy")</td>
+                            <td class="fw-semibold">@po.Supplier?.SupplierName</td>
+                            <td>@po.TotalAmount.ToString("N2")</td>
+                            <td><span class="status-pill active">@po.Status</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <a asp-action="Edit" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="table-empty">No purchase orders yet. Start with a supplier PO.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

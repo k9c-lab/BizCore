@@ -1,0 +1,75 @@
+@model IEnumerable<BizCore.Models.Entities.PaymentHeader>
+
+@{
+    ViewData["Title"] = "Payments";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">AR Module</div>
+        <h1 class="page-title">Payments</h1>
+        <p class="page-subtitle">Post customer payments, allocate them to open invoices, and issue one receipt per payment.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Payment</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Payment Register</h2>
+            <p class="section-subtitle">Receipt cancellation reversal and AP stay out of scope for now.</p>
+        </div>
+        <div class="table-meta">@Model.Count() record(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Payment No.</th>
+                        <th>Payment Date</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Receipt</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var payment in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@payment.PaymentNo</span></td>
+                            <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                            <td class="fw-semibold">@payment.Customer?.CustomerName</td>
+                            <td>@payment.Amount.ToString("N2")</td>
+                            <td><span class="status-pill active">@payment.Status</span></td>
+                            <td>
+                                @if (payment.ReceiptHeader is not null)
+                                {
+                                    <a asp-controller="Receipts" asp-action="Details" asp-route-id="@payment.ReceiptHeader.ReceiptId" class="code-chip">@payment.ReceiptHeader.ReceiptNo</a>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@payment.PaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="table-empty">No payments yet. Start by selecting a customer and allocating payment to open invoices.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

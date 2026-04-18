@@ -1,0 +1,111 @@
+@model BizCore.Models.Entities.InvoiceHeader
+
+@{
+    ViewData["Title"] = "Invoice Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Module</div>
+        <h1 class="page-title">Invoice Details</h1>
+        <p class="page-subtitle">Review invoice header, item lines, issued serials, and financial totals.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Print" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Invoice No.</span><p class="detail-value">@Model.InvoiceNo</p></div>
+            <div class="detail-item"><span class="detail-label">Quotation No.</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Quotation?.QuotationNumber) ? "-" : Model.Quotation!.QuotationNumber)</p></div>
+            <div class="detail-item"><span class="detail-label">Invoice Date</span><p class="detail-value">@Model.InvoiceDate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">Reference No.</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</p></div>
+            <div class="detail-item"><span class="detail-label">Customer</span><p class="detail-value">@Model.Customer?.CustomerName</p></div>
+            <div class="detail-item"><span class="detail-label">Salesperson</span><p class="detail-value">@(Model.Salesperson?.SalespersonName ?? "-")</p></div>
+            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.VatType</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
+            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Invoice Lines</h2>
+            <p class="section-subtitle">Serials and customer warranty appear on serial-controlled lines only.</p>
+        </div>
+        <div class="table-meta">@Model.InvoiceDetails.Count line(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Discount</th>
+                        <th>Line Total</th>
+                        <th>Warranty</th>
+                        <th>Issued Serials</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.InvoiceDetails.OrderBy(x => x.LineNumber))
+                {
+                    <tr>
+                        <td class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</td>
+                        <td>@line.Qty.ToString("N2")</td>
+                        <td>@line.UnitPrice.ToString("N2")</td>
+                        <td>@line.DiscountAmount.ToString("N2")</td>
+                        <td>@line.LineTotal.ToString("N2")</td>
+                        <td>@(line.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(line.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                        <td>
+                            @if (line.InvoiceSerials.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var serial in line.InvoiceSerials.OrderBy(x => x.SerialNumber!.SerialNo))
+                                    {
+                                        <span class="code-chip">@serial.SerialNumber?.SerialNo</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="quote-summary-grid">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Subtotal</span>
+        <p class="quote-summary-value">@Model.Subtotal.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Discount</span>
+        <p class="quote-summary-value">@Model.DiscountAmount.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">VAT</span>
+        <p class="quote-summary-value">@Model.VatAmount.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Total</span>
+        <p class="quote-summary-value">@Model.TotalAmount.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Balance</span>
+        <p class="quote-summary-value">@Model.BalanceAmount.ToString("N2")</p>
+    </div>
+</div>

@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.Item
+
+@{
+    ViewData["Title"] = "Create Item";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Create Item</h1>
+        <p class="page-subtitle">Add a product or service with clearer pricing and control sections.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions">
+                <span class="table-meta">Use product-level fields like unit, stock, and unit price to prepare item records for sales testing.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Item</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

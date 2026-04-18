@@ -1,0 +1,84 @@
+@model BizCore.Models.Entities.ReceiptHeader
+
+@{
+    ViewData["Title"] = "Receipt Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">AR Module</div>
+        <h1 class="page-title">Receipt Details</h1>
+        <p class="page-subtitle">Review the issued receipt and the related posted payment allocations.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        @if (Model.PaymentHeader is not null)
+        {
+            <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">View Payment</a>
+        }
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Receipt No.</span><p class="detail-value">@Model.ReceiptNo</p></div>
+            <div class="detail-item"><span class="detail-label">Receipt Date</span><p class="detail-value">@Model.ReceiptDate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">Customer</span><p class="detail-value">@Model.Customer?.CustomerName</p></div>
+            <div class="detail-item"><span class="detail-label">Payment No.</span><p class="detail-value">@Model.PaymentHeader?.PaymentNo</p></div>
+            <div class="detail-item"><span class="detail-label">Payment Method</span><p class="detail-value">@Model.PaymentHeader?.PaymentMethod</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
+            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Allocated Invoices</h2>
+            <p class="section-subtitle">Receipt total follows the payment amount for this phase.</p>
+        </div>
+        <div class="table-meta">@Model.PaymentHeader?.PaymentAllocations.Count allocation(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Invoice No.</th>
+                        <th>Invoice Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Applied Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var allocation in Model.PaymentHeader?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo) ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>())
+                {
+                    <tr>
+                        <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
+                        <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
+                        <td>@allocation.InvoiceHeader?.Status</td>
+                        <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="quote-summary-grid">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Receipt Amount</span>
+        <p class="quote-summary-value">@Model.TotalReceivedAmount.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Payment Amount</span>
+        <p class="quote-summary-value">@Model.PaymentHeader?.Amount.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Applied</span>
+        <p class="quote-summary-value">@((Model.PaymentHeader?.PaymentAllocations.Sum(x => x.AppliedAmount) ?? 0m).ToString("N2"))</p>
+    </div>
+</div>

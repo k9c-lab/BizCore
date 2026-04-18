@@ -1,0 +1,77 @@
+@model BizCore.Models.Entities.PurchaseOrderHeader
+
+@{
+    ViewData["Title"] = "Purchase Order Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Purchase Order Details</h1>
+        <p class="page-subtitle">Review PO header, supplier, and line quantities before receiving.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-primary">Edit PO</a>
+        <a asp-controller="Receivings" asp-action="Create" class="btn btn-outline-primary">New Receiving</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">PO No.</span><p class="detail-value">@Model.PONo</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
+            <div class="detail-item"><span class="detail-label">PO Date</span><p class="detail-value">@Model.PODate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">Expected Receive</span><p class="detail-value">@(Model.ExpectedReceiveDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
+            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
+            <div class="detail-item"><span class="detail-label">Reference No.</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</p></div>
+            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.VatType</p></div>
+            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+            <div class="detail-item"><span class="detail-label">Totals</span><p class="detail-value">Subtotal @Model.Subtotal.ToString("N2") | VAT @Model.VatAmount.ToString("N2") | Total @Model.TotalAmount.ToString("N2")</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">PO Lines</h2>
+            <p class="section-subtitle">Received quantity is tracked on each purchase line.</p>
+        </div>
+        <div class="table-meta">@Model.PurchaseOrderDetails.Count line(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Received</th>
+                        <th>Remaining</th>
+                        <th>Unit Price</th>
+                        <th>Discount</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var line in Model.PurchaseOrderDetails.OrderBy(x => x.LineNumber))
+                {
+                    <tr>
+                        <td>@line.LineNumber</td>
+                        <td class="fw-semibold">@line.Item?.ItemName</td>
+                        <td>@line.Qty.ToString("N2")</td>
+                        <td>@line.ReceivedQty.ToString("N2")</td>
+                        <td>@((line.Qty - line.ReceivedQty).ToString("N2"))</td>
+                        <td>@line.UnitPrice.ToString("N2")</td>
+                        <td>@line.DiscountAmount.ToString("N2")</td>
+                        <td>@line.LineTotal.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

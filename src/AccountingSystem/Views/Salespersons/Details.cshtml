@@ -1,0 +1,30 @@
+@model BizCore.Models.Entities.Salesperson
+
+@{
+    ViewData["Title"] = "Salesperson Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Team</div>
+        <h1 class="page-title">Salesperson Details</h1>
+        <p class="page-subtitle">Review sales team data in a more readable summary layout.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.SalespersonId" class="btn btn-primary">Edit Salesperson</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.SalespersonCode</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
+            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.SalespersonName</p></div>
+            <div class="detail-item"><span class="detail-label">Commission</span><p class="detail-value">@Model.CommissionRate.ToString("N2")%</p></div>
+            <div class="detail-item"><span class="detail-label">Phone</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</p></div>
+            <div class="detail-item"><span class="detail-label">Email</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</p></div>
+        </div>
+    </div>
+</div>

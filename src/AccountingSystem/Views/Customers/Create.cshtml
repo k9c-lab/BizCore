@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Create Customer";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Create Customer</h1>
+        <p class="page-subtitle">Add a customer record with clearer form sections and validation feedback.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions">
+                <span class="table-meta">Fields with validation feedback need correction before save.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Customer</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

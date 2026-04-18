@@ -1,0 +1,30 @@
+@model BizCore.Models.Entities.Item
+
+@{
+    ViewData["Title"] = "Delete Item";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Item Catalog</div>
+        <h1 class="page-title">Delete Item</h1>
+        <p class="page-subtitle">Confirm deletion before removing this item from the product catalog.</p>
+    </div>
+</div>
+
+<div class="card content-card danger-card">
+    <div class="card-body">
+        <div class="danger-banner">
+            This action removes <strong>@Model.ItemName</strong> from item master data.
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.ItemCode</p></div>
+            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</p></div>
+        </div>
+        <form asp-action="Delete" method="post" class="form-actions mt-4">
+            <input type="hidden" asp-for="ItemId" />
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-danger px-4">Delete Item</button>
+        </form>
+    </div>
+</div>

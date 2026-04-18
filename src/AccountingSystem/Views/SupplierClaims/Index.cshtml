@@ -1,0 +1,63 @@
+@model IEnumerable<BizCore.Models.Entities.SerialClaimLog>
+
+@{
+    ViewData["Title"] = "Supplier Claims";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Supplier Claim Module</div>
+        <h1 class="page-title">Supplier Claims</h1>
+        <p class="page-subtitle">Track simple serial-based supplier claim logs. Start a new claim from Serial Inquiry or Stock Inquiry.</p>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Claim Register</h2>
+            <p class="section-subtitle">Each record is a direct claim log from one selected serial.</p>
+        </div>
+        <div class="table-meta">@Model.Count() record(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Claim Date</th>
+                        <th>Serial No.</th>
+                        <th>Item</th>
+                        <th>Supplier</th>
+                        <th>Claim Status</th>
+                        <th>Serial Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var claim in Model)
+                    {
+                        <tr>
+                            <td>@claim.ClaimDate.ToString("dd MMM yyyy")</td>
+                            <td><span class="code-chip">@claim.SerialNumber?.SerialNo</span></td>
+                            <td class="fw-semibold">@claim.SerialNumber?.Item?.ItemName</td>
+                            <td class="fw-semibold">@claim.Supplier?.SupplierName</td>
+                            <td><span class="status-pill active">@claim.ClaimStatus</span></td>
+                            <td>@claim.SerialNumber?.Status</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@claim.SerialClaimLogId" class="btn btn-sm btn-outline-secondary">View</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="table-empty">No supplier claims yet. Start from an eligible serial under supplier warranty.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+@model BizCore.Models.Entities.Salesperson
+
+@{
+    ViewData["Title"] = "Edit Salesperson";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Edit Salesperson</h1>
+        <p class="page-subtitle">Update team member details with improved spacing and clearer validation.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Details" asp-route-id="@Model.SalespersonId" class="btn btn-outline-secondary">View Details</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="SalespersonId" />
+            <partial name="_Form" model="Model" />
+            <div class="form-actions">
+                <span class="table-meta">Any invalid field will surface clearly inside the form sections.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

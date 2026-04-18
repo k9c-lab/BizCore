@@ -1,0 +1,475 @@
+@model BizCore.Models.ViewModels.QuotationFormViewModel
+
+@{
+    ViewData["Title"] = "Create Quotation";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Module</div>
+        <h1 class="page-title">Create Quotation</h1>
+        <p class="page-subtitle">Build a quotation with VAT auto-calculation. Stock, serial assignment, and payment stay outside quotation.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Quotations</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" id="quotationForm">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">Save stores the quotation only. No stock deduction or serial assignment happens here.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Quotation</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const itemLookup = JSON.parse(document.getElementById("quotationItemLookupData").textContent);
+            const customerLookup = JSON.parse(document.getElementById("quotationCustomerLookupData").textContent);
+            const salespersonLookup = JSON.parse(document.getElementById("quotationSalespersonLookupData").textContent);
+            const itemMap = Object.fromEntries(itemLookup.map(item => [String(item.ItemId), item]));
+            const itemDisplayMap = Object.fromEntries(itemLookup.map(item => [item.DisplayText.toLowerCase(), item]));
+            const customerMap = Object.fromEntries(customerLookup.map(customer => [String(customer.CustomerId), customer]));
+            const salespersonMap = Object.fromEntries(salespersonLookup.map(salesperson => [String(salesperson.SalespersonId), salesperson]));
+            const lineBody = document.getElementById("quotationLineBody");
+            const addButton = document.getElementById("addQuotationLine");
+            const discountModeInput = document.getElementById("DiscountMode");
+            const vatTypeInput = document.getElementById("VatType");
+            const headerDiscountInput = document.getElementById("HeaderDiscountAmount");
+            const expiryInput = document.getElementById("ExpiryDate");
+            const noExpiryInput = document.getElementById("quotationNoExpiry");
+            const customerInput = document.getElementById("CustomerId");
+            const customerSearch = document.getElementById("quotationCustomerSearch");
+            const customerResults = document.getElementById("quotationCustomerResults");
+            const salespersonSelect = document.getElementById("SalespersonId");
+            const headerDiscountHelp = document.getElementById("quotationHeaderDiscountHelp");
+            const discountModeText = document.getElementById("quotationDiscountModeText");
+
+            const createRow = index => {
+                const mainRow = document.createElement("tr");
+                mainRow.className = "quotation-line-row quotation-line-row-main";
+                mainRow.innerHTML = `
+                    <td>
+                        <input type="hidden" name="Details[${index}].QuotationDetailId" value="" />
+                        <input type="hidden" class="js-line-number" name="Details[${index}].LineNumber" value="${index + 1}" />
+                        <input type="hidden" name="Details[${index}].ItemId" id="Details_${index}__ItemId" value="" class="js-item-id" />
+                        <div class="search-dropdown">
+                            <input type="text"
+                                   id="Details_${index}__ItemSearch"
+                                   class="form-control js-item-search"
+                                   autocomplete="off"
+                                   placeholder="Search by item code, name, or part number" />
+                            <div id="quotationItemResults_${index}" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                        </div>
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0.01" name="Details[${index}].Quantity" id="Details_${index}__Quantity" value="1" class="form-control js-line-quantity" />
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Quantity" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" name="Details[${index}].UnitPrice" id="Details_${index}__UnitPrice" value="0" class="form-control js-line-unit-price" />
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].UnitPrice" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" name="Details[${index}].DiscountAmount" id="Details_${index}__DiscountAmount" value="0" class="form-control js-line-discount" />
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" name="Details[${index}].LineTotal" id="Details_${index}__LineTotal" value="0" class="form-control js-line-total" readonly />
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                    </td>`;
+
+                const detailRow = document.createElement("tr");
+                detailRow.className = "quotation-line-row quotation-line-row-detail";
+                detailRow.innerHTML = `
+                    <td colspan="6">
+                        <label class="form-label">Description</label>
+                        <textarea name="Details[${index}].Description" id="Details_${index}__Description" class="form-control js-line-description" rows="3"></textarea>
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Description" data-valmsg-replace="true"></span>
+                    </td>`;
+
+                return [mainRow, detailRow];
+            };
+
+            const reindexRows = () => {
+                [...lineBody.querySelectorAll(".quotation-line-row-main")].forEach((row, index) => {
+                    const detailRow = row.nextElementSibling;
+                    [row, detailRow].forEach(section => {
+                        section?.querySelectorAll("input, textarea, span[data-valmsg-for], .js-item-results").forEach(element => {
+                            if (element.name) {
+                                element.name = element.name.replace(/Details\[\d+\]/g, `Details[${index}]`);
+                            }
+
+                            if (element.id) {
+                                element.id = element.id.replace(/Details_\d+__/g, `Details_${index}__`).replace(/quotationItemResults_\d+/g, `quotationItemResults_${index}`);
+                            }
+
+                            const field = element.getAttribute("data-valmsg-for");
+                            if (field) {
+                                element.setAttribute("data-valmsg-for", field.replace(/Details\[\d+\]/g, `Details[${index}]`));
+                            }
+                        });
+                    });
+
+                    row.querySelector(".js-line-number").value = String(index + 1);
+                });
+            };
+
+            const getValue = value => value && value.trim() ? value : "-";
+
+            const hideCustomerResults = () => {
+                customerResults.style.display = "none";
+                customerResults.innerHTML = "";
+            };
+
+            const renderCustomerResults = query => {
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = customerLookup
+                    .filter(customer =>
+                        !keyword ||
+                        customer.CustomerName.toLowerCase().includes(keyword) ||
+                        (customer.TaxId || "").toLowerCase().includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    customerResults.innerHTML = `<div class="search-dropdown-empty">No matching customers found.</div>`;
+                    customerResults.style.display = "";
+                    return;
+                }
+
+                customerResults.innerHTML = matches
+                    .map(customer => `
+                        <button type="button" class="search-dropdown-option" data-customer-id="${customer.CustomerId}">
+                            <span class="search-dropdown-title">${customer.CustomerName}</span>
+                            <span class="search-dropdown-meta">${customer.TaxId || "-"} | ${customer.Phone || "-"}</span>
+                        </button>`)
+                    .join("");
+                customerResults.style.display = "";
+            };
+
+            const selectCustomer = customer => {
+                customerInput.value = customer.CustomerId;
+                customerSearch.value = customer.CustomerName;
+                customerSearch.dataset.selectedCustomerId = String(customer.CustomerId);
+                hideCustomerResults();
+                updateCustomerInfo();
+            };
+
+            const hideItemResults = row => {
+                const results = row.querySelector(".js-item-results");
+                if (results) {
+                    results.style.display = "none";
+                    results.innerHTML = "";
+                }
+            };
+
+            const hideAllItemResults = () => {
+                lineBody.querySelectorAll(".js-item-results").forEach(results => {
+                    results.style.display = "none";
+                    results.innerHTML = "";
+                });
+            };
+
+            const renderItemResults = (row, query) => {
+                const results = row.querySelector(".js-item-results");
+                if (!results) {
+                    return;
+                }
+
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = itemLookup
+                    .filter(item =>
+                        !keyword ||
+                        item.ItemCode.toLowerCase().includes(keyword) ||
+                        item.ItemName.toLowerCase().includes(keyword) ||
+                        (item.PartNumber || "").toLowerCase().includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    results.innerHTML = `<div class="search-dropdown-empty">No matching items found.</div>`;
+                    results.style.display = "";
+                    return;
+                }
+
+                results.innerHTML = matches
+                    .map(item => `
+                        <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
+                            <span class="search-dropdown-title">${item.ItemCode} - ${item.ItemName}</span>
+                            <span class="search-dropdown-meta">${item.PartNumber || "-"} | ${item.UnitPrice.toFixed(2)}</span>
+                        </button>`)
+                    .join("");
+                results.style.display = "";
+            };
+
+            const selectItemForRow = (row, item) => {
+                row.querySelector(".js-item-id").value = item.ItemId;
+                row.querySelector(".js-item-search").value = item.DisplayText;
+                hideItemResults(row);
+                updateLine(row, true);
+                updateSummary();
+            };
+
+            const updateCustomerInfo = () => {
+                const customer = customerMap[customerInput.value];
+
+                document.getElementById("quotationCustomerName").textContent = getValue(customer?.CustomerName);
+                document.getElementById("quotationCustomerTaxId").textContent = getValue(customer?.TaxId);
+                document.getElementById("quotationCustomerPhone").textContent = getValue(customer?.Phone);
+                document.getElementById("quotationCustomerEmail").textContent = getValue(customer?.Email);
+                document.getElementById("quotationCustomerBillingAddress").textContent = getValue(customer?.BillingAddress);
+            };
+
+            const updateSalespersonInfo = () => {
+                const salesperson = salespersonMap[salespersonSelect.value];
+                const getValue = value => value && value.trim() ? value : "-";
+
+                document.getElementById("quotationSalespersonName").textContent = getValue(salesperson?.SalespersonName);
+                document.getElementById("quotationSalespersonPhone").textContent = getValue(salesperson?.Phone);
+                document.getElementById("quotationSalespersonEmail").textContent = getValue(salesperson?.Email);
+            };
+
+            const updateExpiryState = () => {
+                expiryInput.disabled = noExpiryInput.checked;
+                if (noExpiryInput.checked) {
+                    expiryInput.value = "";
+                }
+            };
+
+            const updateDiscountModeState = () => {
+                const isLineMode = discountModeInput.value === "Line";
+                headerDiscountInput.disabled = isLineMode;
+                if (isLineMode) {
+                    headerDiscountInput.value = "0";
+                    headerDiscountHelp.textContent = "Disabled in line discount mode.";
+                    discountModeText.textContent = "Line discount mode: use discount per quotation line. Header discount is disabled.";
+                } else {
+                    headerDiscountHelp.textContent = "Used only in header discount mode.";
+                    discountModeText.textContent = "Header discount mode: line discounts are disabled and the whole quotation discount is applied before VAT.";
+                }
+
+                lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
+                    const lineDiscountInput = row.querySelector(".js-line-discount");
+                    lineDiscountInput.disabled = !isLineMode;
+                    if (!isLineMode) {
+                        lineDiscountInput.value = "0";
+                    }
+                    updateLine(row, false);
+                });
+            };
+
+            const resolveItem = row => {
+                const itemIdInput = row.querySelector(".js-item-id");
+                const searchInput = row.querySelector(".js-item-search");
+                const fromId = itemIdInput.value ? itemMap[itemIdInput.value] : null;
+                if (fromId) {
+                    return fromId;
+                }
+                return itemDisplayMap[(searchInput.value || "").trim().toLowerCase()] ?? null;
+            };
+
+            const updateLine = (row, syncItemFields) => {
+                const itemIdInput = row.querySelector(".js-item-id");
+                const itemSearch = row.querySelector(".js-item-search");
+                const detailRow = row.nextElementSibling;
+                const description = detailRow.querySelector(".js-line-description");
+                const quantity = row.querySelector(".js-line-quantity");
+                const unitPrice = row.querySelector(".js-line-unit-price");
+                const discount = row.querySelector(".js-line-discount");
+                const total = row.querySelector(".js-line-total");
+                const selectedItem = resolveItem(row);
+                const isLineMode = discountModeInput.value === "Line";
+
+                itemIdInput.value = selectedItem ? selectedItem.ItemId : "";
+                if (selectedItem && syncItemFields) {
+                    itemSearch.value = selectedItem.DisplayText;
+                }
+
+                if (selectedItem && syncItemFields) {
+                    description.value = selectedItem.ItemName;
+                    if (!parseFloat(unitPrice.value)) {
+                        unitPrice.value = selectedItem.UnitPrice;
+                    }
+                }
+
+                const qty = parseFloat(quantity.value || "0");
+                const price = parseFloat(unitPrice.value || "0");
+                const discountValue = isLineMode ? parseFloat(discount.value || "0") : 0;
+                const lineTotal = Math.max((qty * price) - discountValue, 0);
+                total.value = lineTotal.toFixed(2);
+            };
+
+            const updateSummary = () => {
+                let subtotal = 0;
+                let discount = 0;
+                const isLineMode = discountModeInput.value === "Line";
+                const headerDiscount = parseFloat(headerDiscountInput.value || "0");
+
+                lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
+                    const qty = parseFloat(row.querySelector(".js-line-quantity").value || "0");
+                    const price = parseFloat(row.querySelector(".js-line-unit-price").value || "0");
+                    const discountValue = isLineMode ? parseFloat(row.querySelector(".js-line-discount").value || "0") : 0;
+                    if (isLineMode) {
+                        subtotal += Math.max((qty * price) - discountValue, 0);
+                        discount += discountValue;
+                    } else {
+                        subtotal += qty * price;
+                    }
+                });
+
+                const netBeforeVat = isLineMode ? subtotal : Math.max(subtotal - headerDiscount, 0);
+                const vat = vatTypeInput.value === "VAT" ? (netBeforeVat * 0.07) : 0;
+                document.getElementById("quotationSubtotal").textContent = subtotal.toFixed(2);
+                document.getElementById("quotationDiscount").textContent = (isLineMode ? discount : headerDiscount).toFixed(2);
+                document.getElementById("quotationVat").textContent = vat.toFixed(2);
+                document.getElementById("quotationTotal").textContent = (netBeforeVat + vat).toFixed(2);
+            };
+
+            lineBody.addEventListener("click", event => {
+                if (!event.target.classList.contains("js-remove-line")) {
+                    return;
+                }
+
+                const rows = lineBody.querySelectorAll(".quotation-line-row-main");
+                if (rows.length === 1) {
+                    return;
+                }
+
+                const mainRow = event.target.closest(".quotation-line-row-main");
+                const detailRow = mainRow.nextElementSibling;
+                detailRow?.remove();
+                mainRow.remove();
+                reindexRows();
+                updateSummary();
+            });
+
+            addButton.addEventListener("click", () => {
+                const rows = createRow(lineBody.querySelectorAll(".quotation-line-row-main").length);
+                rows.forEach(row => lineBody.appendChild(row));
+                updateDiscountModeState();
+            });
+
+            discountModeInput.addEventListener("change", () => {
+                updateDiscountModeState();
+                updateSummary();
+            });
+            vatTypeInput.addEventListener("change", updateSummary);
+            headerDiscountInput.addEventListener("input", updateSummary);
+            salespersonSelect.addEventListener("change", updateSalespersonInfo);
+            noExpiryInput.addEventListener("change", updateExpiryState);
+
+            customerSearch.addEventListener("input", () => {
+                delete customerSearch.dataset.selectedCustomerId;
+                customerInput.value = "";
+                updateCustomerInfo();
+                renderCustomerResults(customerSearch.value);
+            });
+
+            customerSearch.addEventListener("focus", () => {
+                renderCustomerResults(customerSearch.value);
+            });
+
+            customerSearch.addEventListener("change", () => {
+                const selectedId = customerSearch.dataset.selectedCustomerId;
+                if (selectedId && customerMap[selectedId]) {
+                    selectCustomer(customerMap[selectedId]);
+                    return;
+                }
+
+                const match = customerLookup.find(customer =>
+                    customer.CustomerName.toLowerCase() === (customerSearch.value || "").trim().toLowerCase());
+                if (match) {
+                    selectCustomer(match);
+                } else {
+                    customerInput.value = "";
+                    updateCustomerInfo();
+                }
+            });
+
+            customerResults.addEventListener("click", event => {
+                const option = event.target.closest(".search-dropdown-option");
+                if (!option) {
+                    return;
+                }
+
+                const customer = customerMap[option.dataset.customerId];
+                if (customer) {
+                    selectCustomer(customer);
+                }
+            });
+
+            lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => updateLine(row, false));
+            lineBody.addEventListener("input", event => {
+                if (event.target.classList.contains("js-item-search")) {
+                    const row = event.target.closest(".quotation-line-row-main");
+                    row.querySelector(".js-item-id").value = "";
+                    renderItemResults(row, event.target.value);
+                    updateLine(row, false);
+                    updateSummary();
+                    return;
+                }
+
+                const row = event.target.closest(".quotation-line-row-main");
+                if (!row) {
+                    return;
+                }
+
+                updateLine(row, false);
+                updateSummary();
+            });
+
+            lineBody.addEventListener("focusin", event => {
+                if (event.target.classList.contains("js-item-search")) {
+                    const row = event.target.closest(".quotation-line-row-main");
+                    renderItemResults(row, event.target.value);
+                }
+            });
+
+            lineBody.addEventListener("click", event => {
+                const option = event.target.closest(".search-dropdown-option");
+                if (option && option.dataset.itemId) {
+                    const row = option.closest(".quotation-line-row-main");
+                    const item = itemMap[option.dataset.itemId];
+                    if (row && item) {
+                        selectItemForRow(row, item);
+                    }
+                    return;
+                }
+            });
+
+            document.addEventListener("click", event => {
+                const clickedCustomer = event.target === customerSearch || customerResults.contains(event.target);
+                if (!clickedCustomer) {
+                    hideCustomerResults();
+                }
+
+                const clickedItem = event.target.closest(".search-dropdown");
+                if (!clickedItem || !lineBody.contains(clickedItem)) {
+                    hideAllItemResults();
+                }
+            });
+
+            if (customerInput.value && customerMap[customerInput.value]) {
+                customerSearch.value = customerMap[customerInput.value].CustomerName;
+                customerSearch.dataset.selectedCustomerId = customerInput.value;
+            }
+            updateCustomerInfo();
+            updateSalespersonInfo();
+            updateExpiryState();
+            updateDiscountModeState();
+            updateSummary();
+        })();
+    </script>
+}

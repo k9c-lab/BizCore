@@ -1,0 +1,70 @@
+@model IEnumerable<BizCore.Models.Entities.Salesperson>
+
+@{
+    ViewData["Title"] = "Salespersons";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Salespersons</h1>
+        <p class="page-subtitle">Manage the sales team with clearer account visibility for quotations and invoices.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Salesperson</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Sales Team</h2>
+            <p class="section-subtitle">Compact CRM-style list with commission and status at a glance.</p>
+        </div>
+        <div class="table-meta">@Model.Count() records</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Commission</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@item.SalespersonCode</span></td>
+                        <td class="fw-semibold">@item.SalespersonName</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.Email) ? "-" : item.Email)</td>
+                        <td>@item.CommissionRate.ToString("N2")%</td>
+                        <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <div class="table-actions">
+                                <a asp-action="Details" asp-route-id="@item.SalespersonId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                <a asp-action="Edit" asp-route-id="@item.SalespersonId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@item.SalespersonId" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="table-empty">No salespersons yet. Add team members to test quotation and invoice ownership.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

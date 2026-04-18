@@ -1,0 +1,115 @@
+@model BizCore.Models.ViewModels.SerialInquiryPageViewModel
+
+@{
+    ViewData["Title"] = "Serial Inquiry";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Inquiry</div>
+        <h1 class="page-title">Serial Inquiry</h1>
+        <p class="page-subtitle">Read-only serial lookup joined to the item master for operational tracing.</p>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <form method="get" class="form-shell">
+            <div class="form-section">
+                <div class="form-section-title">Search Filters</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="serialNo" class="form-label">Serial No.</label>
+                        <input id="serialNo" name="serialNo" value="@Model.SerialNo" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="itemCode" class="form-label">Item Code</label>
+                        <input id="itemCode" name="itemCode" value="@Model.ItemCode" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="partNumber" class="form-label">Part Number</label>
+                        <input id="partNumber" name="partNumber" value="@Model.PartNumber" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-actions mt-3">
+                    <span class="table-meta">Inquiry only. Serial creation still comes from receiving workflow.</span>
+                    <div class="page-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Serial Register</h2>
+            <p class="section-subtitle">Serial-level status and warranty visibility without edit actions.</p>
+        </div>
+        <div class="table-meta">@Model.Results.Count record(s)</div>
+    </div>
+    <div class="card-body">
+        @if (Model.Results.Any())
+        {
+            <div class="inquiry-card-list">
+                @foreach (var serial in Model.Results)
+                {
+                    var isWarrantyExpired = !serial.SupplierWarrantyEndDate.HasValue || serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today;
+                    <article class="inquiry-card inquiry-card-compact">
+                        <div class="inquiry-card-top">
+                            <div class="inquiry-card-title-group">
+                                <span class="code-chip">@serial.SerialNo</span>
+                                <div>
+                                    <h3 class="inquiry-card-title">@serial.ItemName</h3>
+                                    <p class="inquiry-card-subtitle">@serial.ItemCode | @serial.PartNumber</p>
+                                </div>
+                            </div>
+                            <div class="page-actions">
+                                <span class="status-pill active">@serial.Status</span>
+                                @if (isWarrantyExpired)
+                                {
+                                    <span class="status-pill inactive">Warranty Expired</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Claim</button>
+                                }
+                                else
+                                {
+                                    <a asp-controller="SupplierClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-primary">Claim</a>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="inquiry-card-grid">
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Supplier</span>
+                                <span class="inquiry-card-value">@serial.SupplierName</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Customer</span>
+                                <span class="inquiry-card-value">@serial.CurrentCustomerName</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Supplier Warranty</span>
+                                <span class="inquiry-card-value">@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Invoice Code</span>
+                                <span class="inquiry-card-value">@serial.InvoiceCode</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Customer Warranty</span>
+                                <span class="inquiry-card-value">@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-empty">No serial records matched the current search.</div>
+        }
+    </div>
+</div>

@@ -1,0 +1,36 @@
+@model BizCore.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Edit Customer";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Edit Customer</h1>
+        <p class="page-subtitle">Update customer details with a cleaner business form layout.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Details" asp-route-id="@Model.CustomerId" class="btn btn-outline-secondary">View Details</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="CustomerId" />
+            <partial name="_Form" model="Model" />
+            <div class="form-actions">
+                <span class="table-meta">Inline validation remains active on every field.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
