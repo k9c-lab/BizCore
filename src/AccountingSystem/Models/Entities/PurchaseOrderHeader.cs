@@ -45,10 +45,24 @@ public class PurchaseOrderHeader
     [StringLength(20)]
     public string Status { get; set; } = "Draft";
 
+    public int? CreatedByUserId { get; set; }
+    public int? UpdatedByUserId { get; set; }
+    public int? ApprovedByUserId { get; set; }
+    public DateTime? ApprovedDate { get; set; }
+    public int? CancelledByUserId { get; set; }
+    public DateTime? CancelledDate { get; set; }
+
+    [StringLength(500)]
+    public string? CancelReason { get; set; }
+
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedDate { get; set; }
 
     public Supplier? Supplier { get; set; }
+    public User? CreatedByUser { get; set; }
+    public User? UpdatedByUser { get; set; }
+    public User? ApprovedByUser { get; set; }
+    public User? CancelledByUser { get; set; }
     public ICollection<PurchaseOrderDetail> PurchaseOrderDetails { get; set; } = new List<PurchaseOrderDetail>();
     public ICollection<ReceivingHeader> Receivings { get; set; } = new List<ReceivingHeader>();
 }

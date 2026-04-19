@@ -37,6 +37,8 @@ public class AccountingDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.Property(x => x.PasswordHash).HasMaxLength(300);
+            entity.Property(x => x.Role).HasMaxLength(30);
             entity.HasIndex(x => x.Username).IsUnique();
             entity.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
         });
@@ -111,6 +113,22 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.SalespersonId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ConvertedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ConvertedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<QuotationDetail>(entity =>
@@ -133,6 +151,7 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.InvoiceId);
             entity.Property(x => x.ReferenceNo).HasMaxLength(50);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
             entity.Property(x => x.VatType).HasMaxLength(10);
@@ -152,6 +171,22 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Quotation)
                 .WithMany()
                 .HasForeignKey(x => x.QuotationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.IssuedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.IssuedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -190,10 +225,23 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.PaymentId);
             entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasIndex(x => x.PaymentNo).IsUnique();
             entity.HasOne(x => x.Customer)
                 .WithMany()
                 .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PostedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.PostedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.ReceiptHeader)
                 .WithOne(x => x.PaymentHeader)
@@ -220,11 +268,24 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.ReceiptId);
             entity.Property(x => x.TotalReceivedAmount).HasPrecision(18, 2);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasIndex(x => x.ReceiptNo).IsUnique();
             entity.HasIndex(x => x.PaymentId).IsUnique();
             entity.HasOne(x => x.Customer)
                 .WithMany()
                 .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.IssuedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.IssuedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -236,10 +297,27 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.VatType).HasMaxLength(10);
             entity.Property(x => x.VatAmount).HasPrecision(18, 2);
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasIndex(x => x.PONo).IsUnique();
             entity.HasOne(x => x.Supplier)
                 .WithMany()
                 .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -264,6 +342,7 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.ReceivingId);
             entity.HasIndex(x => x.ReceivingNo).IsUnique();
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasOne(x => x.Supplier)
                 .WithMany()
                 .HasForeignKey(x => x.SupplierId)
@@ -271,6 +350,22 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.PurchaseOrderHeader)
                 .WithMany(x => x.Receivings)
                 .HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PostedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.PostedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

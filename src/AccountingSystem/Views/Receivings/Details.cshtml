@@ -2,84 +2,237 @@
 
 @{
     ViewData["Title"] = "Receiving Details";
+    var isDraft = Model.Status == "Draft";
+    var isPosted = Model.Status == "Posted";
+    var isCancelled = Model.Status == "Cancelled";
+    var canCancel = isDraft || isPosted;
+    var cancelBlockedReason = isCancelled
+        ? "Cancelled receiving documents are read-only."
+        : $"Cancel Receiving is available only for Draft or Posted receiving documents. Current status is {Model.Status}.";
 }
 
 <div class="page-header">
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Receiving Details</h1>
-        <p class="page-subtitle">Posted goods receipt that already updated stock and created serials where required.</p>
+        <p class="page-subtitle">@(isDraft ? "Draft receiving document. Stock and PO received quantities have not been updated yet." : isCancelled ? "Cancelled receiving document kept for history." : "Posted goods receipt that already updated stock and created serials where required.")</p>
     </div>
     <div class="page-actions">
+        @if (isDraft)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-primary">Edit Draft</a>
+            <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
+        }
+        else if (isPosted)
+        {
+            <a asp-action="Print" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.ReceivingId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this receiving document (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this receiving document?');">Cancel Receiving</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Receiving</button>
+        }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
-<div class="card content-card mb-3">
-    <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Receiving No.</span><p class="detail-value">@Model.ReceivingNo</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
-            <div class="detail-item"><span class="detail-label">Receive Date</span><p class="detail-value">@Model.ReceiveDate.ToString("dd MMM yyyy")</p></div>
-            <div class="detail-item"><span class="detail-label">PO No.</span><p class="detail-value">@Model.PurchaseOrderHeader?.PONo</p></div>
-            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
-            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.PurchaseOrderHeader?.VatType</p></div>
-            <div class="detail-item"><span class="detail-label">Subtotal</span><p class="detail-value">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</p></div>
-            <div class="detail-item"><span class="detail-label">VAT</span><p class="detail-value">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</p></div>
-            <div class="detail-item"><span class="detail-label">Total</span><p class="detail-value">@((Model.PurchaseOrderHeader?.TotalAmount ?? 0m).ToString("N2"))</p></div>
-            <div class="detail-item"><span class="detail-label">Delivery Note</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.DeliveryNoteNo) ? "-" : Model.DeliveryNoteNo)</p></div>
-            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
-        </div>
-    </div>
-</div>
+@if (TempData["ReceivingNotice"] is string notice)
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
 
-<div class="card content-card table-card">
-    <div class="table-card-header">
-        <div>
-            <h2 class="section-title">Receiving Lines</h2>
-            <p class="section-subtitle">Stock increments and serial creation happened when this document was posted.</p>
-        </div>
-        <div class="table-meta">@Model.ReceivingDetails.Count line(s)</div>
-    </div>
+<div class="card content-card">
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table entity-table align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Item</th>
-                        <th>Qty Received</th>
-                        <th>Remark</th>
-                        <th>Serials</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var line in Model.ReceivingDetails.OrderBy(x => x.LineNumber))
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Receiving Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Receiving No.</div>
+                        <div class="form-control readonly-detail">@Model.ReceivingNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Receive Date</div>
+                        <div class="form-control readonly-detail">@Model.ReceiveDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">PO No.</div>
+                        <div class="form-control readonly-detail">@Model.PurchaseOrderHeader?.PONo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Delivery Note</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.DeliveryNoteNo) ? "-" : Model.DeliveryNoteNo)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">VAT Type</div>
+                        <div class="form-control readonly-detail">@Model.PurchaseOrderHeader?.VatType</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Subtotal</div>
+                        <div class="form-control readonly-detail">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">VAT</div>
+                        <div class="form-control readonly-detail">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Supplier Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Supplier Name</span>
+                                <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.TaxId) ? "-" : Model.Supplier!.TaxId)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">PO Financial Summary</div>
+                        <div class="quotation-summary-stack">
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Subtotal</span>
+                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">VAT</span>
+                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</span>
+                            </div>
+                            <div class="quotation-summary-row total">
+                                <span class="quotation-summary-name">Total</span>
+                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.TotalAmount ?? 0m).ToString("N2"))</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">Receiving Lines</div>
+                        <div class="table-meta">@(isDraft ? $"{Model.ReceivingDetails.Count} draft line(s). Posting will update stock and create serial records." : isCancelled ? $"{Model.ReceivingDetails.Count} cancelled line(s). This document is read-only." : $"{Model.ReceivingDetails.Count} line(s). Stock increments and serial creation happened when this document was posted.")</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table quote-editor-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">#</th>
+                                <th>Item</th>
+                                <th style="width: 9%;">Ordered</th>
+                                <th style="width: 9%;">Received</th>
+                                <th style="width: 9%;">Remaining</th>
+                                <th style="width: 10%;">Unit Price</th>
+                                <th style="width: 10%;">Line Total</th>
+                                <th style="width: 18%;">Serials</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.ReceivingDetails.OrderBy(x => x.LineNumber))
+                        {
+                            var poLine = line.PurchaseOrderDetail;
+                            var remaining = poLine is null ? 0m : poLine.Qty - poLine.ReceivedQty;
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
+                                    <div class="table-meta">@(string.IsNullOrWhiteSpace(line.Remark) ? "No remark" : line.Remark)</div>
+                                </td>
+                                <td>@((poLine?.Qty ?? 0m).ToString("N2"))</td>
+                                <td>@line.QtyReceived.ToString("N2")</td>
+                                <td>@remaining.ToString("N2")</td>
+                                <td>@((poLine?.UnitPrice ?? 0m).ToString("N2"))</td>
+                                <td>@((poLine?.LineTotal ?? 0m).ToString("N2"))</td>
+                                <td>
+                                    @if (line.ReceivingSerials.Any())
+                                    {
+                                        <div class="serial-stack">
+                                        @foreach (var serial in line.ReceivingSerials.OrderBy(x => x.SerialNo))
+                                        {
+                                            <span>@serial.SerialNo</span>
+                                        }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Posted</span>
+                        <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                </div>
+                @if (isCancelled)
                 {
-                    <tr>
-                        <td>@line.LineNumber</td>
-                        <td class="fw-semibold">@line.Item?.ItemName</td>
-                        <td>@line.QtyReceived.ToString("N2")</td>
-                        <td>@(string.IsNullOrWhiteSpace(line.Remark) ? "-" : line.Remark)</td>
-                        <td>
-                            @if (line.ReceivingSerials.Any())
-                            {
-                                <div class="serial-stack">
-                                @foreach (var serial in line.ReceivingSerials.OrderBy(x => x.SerialNo))
-                                {
-                                    <span>@serial.SerialNo</span>
-                                }
-                                </div>
-                            }
-                            else
-                            {
-                                <span>-</span>
-                            }
-                        </td>
-                    </tr>
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
                 }
-                </tbody>
-            </table>
+            </div>
         </div>
     </div>
 </div>

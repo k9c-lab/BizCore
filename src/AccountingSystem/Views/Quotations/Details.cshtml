@@ -3,11 +3,15 @@
 @{
     ViewData["Title"] = "Quotation Details";
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+    var canApprove = Model.Status == "Draft";
+    var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"Only Draft quotations can be approved. Current status is {Model.Status}.";
+    var canConvert = Model.Status == "Approved";
+    var convertBlockedReason = Model.Status == "Approved" ? string.Empty : $"Convert to Invoice is available only after approval. Current status is {Model.Status}.";
 }
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="form-alert mb-3">@notice</div>
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="page-header">
@@ -17,7 +21,7 @@
         <p class="page-subtitle">Review quotation details, VAT totals, and conversion readiness before creating an invoice.</p>
     </div>
     <div class="page-actions">
-        @if (Model.Status == "Draft")
+        @if (canApprove)
         {
             <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">Edit Quotation</a>
             <form asp-action="Approve" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
@@ -25,8 +29,12 @@
                 <button type="submit" class="btn btn-primary">Approve</button>
             </form>
         }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+        }
         <a asp-action="Print" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
-        @if (Model.Status == "Approved")
+        @if (canConvert)
         {
             <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
                 @Html.AntiForgeryToken()
@@ -35,11 +43,25 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled>Convert to Invoice</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@convertBlockedReason">Convert to Invoice</button>
         }
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
+
+@if (!canApprove || !canConvert)
+{
+    <div class="workflow-info mb-3">
+        @if (!canApprove)
+        {
+            <div>@approveBlockedReason</div>
+        }
+        @if (!canConvert)
+        {
+            <div>@convertBlockedReason</div>
+        }
+    </div>
+}
 
 <div class="card content-card">
     <div class="card-body">
@@ -197,6 +219,32 @@
                             <span class="quotation-summary-name">Total</span>
                             <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Approved</span>
+                        <span class="document-history-value">@(Model.ApprovedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Converted</span>
+                        <span class="document-history-value">@(Model.ConvertedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.ConvertedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                 </div>
             </div>

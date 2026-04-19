@@ -43,6 +43,8 @@
                 {
                     @foreach (var invoice in Model)
                     {
+                        var canReceivePayment = invoice.BalanceAmount > 0 &&
+                            (invoice.Status == "Issued" || invoice.Status == "PartiallyPaid");
                         <tr>
                             <td><span class="code-chip">@invoice.InvoiceNo</span></td>
                             <td>@(string.IsNullOrWhiteSpace(invoice.Quotation?.QuotationNumber) ? "-" : invoice.Quotation!.QuotationNumber)</td>
@@ -54,6 +56,10 @@
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @if (canReceivePayment)
+                                    {
+                                        <a asp-controller="Payments" asp-action="Create" asp-route-customerId="@invoice.CustomerId" asp-route-invoiceId="@invoice.InvoiceId" class="btn btn-sm btn-outline-success">Receive Payment</a>
+                                    }
                                     @if (invoice.Status == "Draft")
                                     {
                                         <a asp-action="Edit" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-primary">Edit</a>

@@ -17,7 +17,7 @@
 
 @if (TempData["InvoiceNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="form-alert mb-3">@notice</div>
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="card content-card">
@@ -52,7 +52,15 @@
                         </div>
                         <div class="col-md-3">
                             <label asp-for="CustomerId" class="form-label"></label>
-                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions" class="form-select"></select>
+                            <input asp-for="CustomerId" type="hidden" id="CustomerId" />
+                            <div class="search-dropdown">
+                                <input type="text"
+                                       class="form-control"
+                                       id="invoiceCustomerSearch"
+                                       placeholder="Search customer code, name, or tax ID"
+                                       autocomplete="off" />
+                                <div id="invoiceCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                            </div>
                             <span asp-validation-for="CustomerId" class="text-danger"></span>
                         </div>
                         <div class="col-md-3">
@@ -81,6 +89,38 @@
                             <label asp-for="Remark" class="form-label"></label>
                             <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
                             <span asp-validation-for="Remark" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-grid">
+                    <div class="quotation-party-column">
+                        <div class="quotation-info-card">
+                            <div class="quotation-info-card-title">Customer Information</div>
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Customer Name</span>
+                                    <span class="quotation-info-value" id="invoiceCustomerName">-</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Tax ID</span>
+                                    <span class="quotation-info-value" id="invoiceCustomerTaxId">-</span>
+                                </div>
+                            </div>
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Phone</span>
+                                    <span class="quotation-info-value" id="invoiceCustomerPhone">-</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Email</span>
+                                    <span class="quotation-info-value" id="invoiceCustomerEmail">-</span>
+                                </div>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Billing Address</span>
+                                <span class="quotation-info-value" id="invoiceCustomerBillingAddress">-</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -212,10 +252,104 @@
     </div>
 </div>
 
+<script type="application/json" id="invoiceCustomerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         (() => {
+            const customerLookup = JSON.parse(document.getElementById("invoiceCustomerLookupData").textContent);
+            const customerMap = Object.fromEntries(customerLookup.map(customer => [String(customer.CustomerId), customer]));
+            const customerInput = document.getElementById("CustomerId");
+            const customerSearch = document.getElementById("invoiceCustomerSearch");
+            const customerResults = document.getElementById("invoiceCustomerResults");
+
+            const getValue = value => value && String(value).trim() ? value : "-";
+
+            const updateCustomerInfo = () => {
+                const customer = customerMap[customerInput.value];
+                document.getElementById("invoiceCustomerName").textContent = getValue(customer?.CustomerName);
+                document.getElementById("invoiceCustomerTaxId").textContent = getValue(customer?.TaxId);
+                document.getElementById("invoiceCustomerPhone").textContent = getValue(customer?.Phone);
+                document.getElementById("invoiceCustomerEmail").textContent = getValue(customer?.Email);
+                document.getElementById("invoiceCustomerBillingAddress").textContent = getValue(customer?.BillingAddress);
+            };
+
+            const hideCustomerResults = () => {
+                customerResults.style.display = "none";
+                customerResults.innerHTML = "";
+            };
+
+            const selectCustomer = customer => {
+                customerInput.value = customer.CustomerId;
+                customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
+                customerSearch.dataset.selectedCustomerId = String(customer.CustomerId);
+                hideCustomerResults();
+                updateCustomerInfo();
+            };
+
+            const renderCustomerResults = query => {
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = customerLookup
+                    .filter(customer =>
+                        !keyword ||
+                        (customer.CustomerCode || "").toLowerCase().includes(keyword) ||
+                        customer.CustomerName.toLowerCase().includes(keyword) ||
+                        (customer.TaxId || "").toLowerCase().includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    customerResults.innerHTML = `<div class="search-dropdown-empty">No matching customers found.</div>`;
+                    customerResults.style.display = "";
+                    return;
+                }
+
+                customerResults.innerHTML = matches
+                    .map(customer => `
+                        <button type="button" class="search-dropdown-option" data-customer-id="${customer.CustomerId}">
+                            <span class="search-dropdown-title">${customer.CustomerCode || "-"} - ${customer.CustomerName}</span>
+                            <span class="search-dropdown-meta">Tax ID: ${customer.TaxId || "-"} | ${customer.Phone || "-"}</span>
+                        </button>`)
+                    .join("");
+                customerResults.style.display = "";
+            };
+
+            customerSearch.addEventListener("input", () => {
+                delete customerSearch.dataset.selectedCustomerId;
+                customerInput.value = "";
+                updateCustomerInfo();
+                renderCustomerResults(customerSearch.value);
+            });
+            customerSearch.addEventListener("focus", () => renderCustomerResults(customerSearch.value));
+            customerResults.addEventListener("click", event => {
+                const option = event.target.closest("[data-customer-id]");
+                if (!option) {
+                    return;
+                }
+                selectCustomer(customerMap[option.dataset.customerId]);
+            });
+            customerSearch.addEventListener("blur", () => {
+                window.setTimeout(() => {
+                    const selectedId = customerSearch.dataset.selectedCustomerId;
+                    const exactMatch = customerLookup.find(customer =>
+                        `${customer.CustomerCode || "-"} - ${customer.CustomerName}`.toLowerCase() === (customerSearch.value || "").trim().toLowerCase() ||
+                        customer.CustomerName.toLowerCase() === (customerSearch.value || "").trim().toLowerCase());
+
+                    if (selectedId && customerMap[selectedId]) {
+                        selectCustomer(customerMap[selectedId]);
+                    } else if (exactMatch) {
+                        selectCustomer(exactMatch);
+                    } else if (customerInput.value && customerMap[customerInput.value]) {
+                        selectCustomer(customerMap[customerInput.value]);
+                    } else {
+                        customerSearch.value = "";
+                        customerInput.value = "";
+                        updateCustomerInfo();
+                    }
+                    hideCustomerResults();
+                }, 120);
+            });
+
             document.querySelectorAll(".js-serial-limit-group").forEach(group => {
                 const message = group.closest(".invoice-line-detail-block")?.querySelector(".js-serial-count-message");
                 const update = event => {
@@ -242,6 +376,12 @@
                 group.addEventListener("change", update);
                 update();
             });
+
+            if (customerInput.value && customerMap[customerInput.value]) {
+                selectCustomer(customerMap[customerInput.value]);
+            } else {
+                updateCustomerInfo();
+            }
         })();
     </script>
 }

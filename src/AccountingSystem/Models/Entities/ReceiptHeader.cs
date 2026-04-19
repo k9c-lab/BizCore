@@ -35,7 +35,18 @@ public class ReceiptHeader
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedDate { get; set; }
+    public int? CreatedByUserId { get; set; }
+    public int? IssuedByUserId { get; set; }
+    public DateTime? IssuedDate { get; set; }
+    public int? CancelledByUserId { get; set; }
+    public DateTime? CancelledDate { get; set; }
+
+    [StringLength(500)]
+    public string? CancelReason { get; set; }
 
     public Customer? Customer { get; set; }
+    public User? CreatedByUser { get; set; }
+    public User? IssuedByUser { get; set; }
+    public User? CancelledByUser { get; set; }
     public PaymentHeader? PaymentHeader { get; set; }
 }

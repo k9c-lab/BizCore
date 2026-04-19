@@ -15,6 +15,11 @@
     </div>
 </div>
 
+@if (TempData["ReceivingNotice"] is string receivingNotice && !string.IsNullOrWhiteSpace(receivingNotice))
+{
+    <div class="workflow-info mb-3">@receivingNotice</div>
+}
+
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
@@ -41,6 +46,24 @@
                 {
                     @foreach (var po in Model)
                     {
+                        var hasReceiving = po.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
+                        var hasOpenLines = po.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
+                        var canApprove = po.Status == "Draft" && po.PurchaseOrderDetails.Any();
+                        var approveBlockedReason = po.Status == "Draft"
+                            ? "Approve is blocked because no PO lines exist."
+                            : $"Approve is available only for Draft purchase orders. Current status is {po.Status}.";
+                        var canCancel = (po.Status == "Draft" || po.Status == "Approved") && !hasReceiving;
+                        var cancelBlockedReason = po.Status == "Cancelled"
+                            ? "Cancelled purchase orders are read-only."
+                            : hasReceiving || po.Status is "PartiallyReceived" or "FullyReceived"
+                                ? "Cancel PO is blocked because receiving already exists."
+                                : $"Cancel PO is available only for Draft or Approved purchase orders. Current status is {po.Status}.";
+                        var canReceive = (po.Status == "Approved" || po.Status == "PartiallyReceived") && hasOpenLines;
+                        var receiveBlockedReason = po.Status == "Cancelled"
+                            ? "Receive Goods is blocked because the PO is cancelled."
+                            : po.Status == "FullyReceived" || !hasOpenLines
+                                ? "Receive Goods is blocked because the PO is already fully received."
+                                : "Receive Goods is available only after PO approval.";
                         <tr>
                             <td><span class="code-chip">@po.PONo</span></td>
                             <td>@po.PODate.ToString("dd MMM yyyy")</td>
@@ -50,7 +73,38 @@
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <a asp-action="Edit" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="Print" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+                                    @if (canApprove)
+                                    {
+                                        <form asp-action="Approve" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Approve</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+                                    }
+                                    @if (canReceive)
+                                    {
+                                        <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@po.PurchaseOrderId" class="btn btn-sm btn-outline-success">Receive</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@receiveBlockedReason">Receive</button>
+                                    }
+                                    @if (canCancel)
+                                    {
+                                        <form asp-action="Cancel" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="cancelReason" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this purchase order (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this purchase order?');">Cancel</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel</button>
+                                    }
                                 </div>
                             </td>
                         </tr>

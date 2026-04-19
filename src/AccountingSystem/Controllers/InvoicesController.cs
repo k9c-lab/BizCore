@@ -1,12 +1,14 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin,Sales")]
 public class InvoicesController : CrudControllerBase
 {
     private const string NumberPrefix = "INV";
@@ -133,6 +135,7 @@ public class InvoicesController : CrudControllerBase
         invoice.BalanceAmount = model.BalanceAmount;
         invoice.Status = "Draft";
         invoice.UpdatedDate = DateTime.UtcNow;
+        invoice.UpdatedByUserId = CurrentUserId();
 
         _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
         invoice.InvoiceDetails = model.Details.Select(MapDetailEntity).ToList();
@@ -195,6 +198,9 @@ public class InvoicesController : CrudControllerBase
                 BalanceAmount = model.BalanceAmount,
                 Status = "Issued",
                 CreatedDate = DateTime.UtcNow,
+                CreatedByUserId = CurrentUserId(),
+                IssuedByUserId = CurrentUserId(),
+                IssuedDate = DateTime.UtcNow,
                 InvoiceDetails = model.Details.Select(MapDetailEntity).ToList()
             };
 
@@ -265,6 +271,10 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
             .Include(x => x.Quotation)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.IssuedByUser)
+            .Include(x => x.CancelledByUser)
             .Include(x => x.PaymentAllocations)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
@@ -356,6 +366,9 @@ public class InvoicesController : CrudControllerBase
             invoice.Status = "Issued";
             invoice.BalanceAmount = invoice.TotalAmount - invoice.PaidAmount;
             invoice.UpdatedDate = DateTime.UtcNow;
+            invoice.UpdatedByUserId = CurrentUserId();
+            invoice.IssuedByUserId = CurrentUserId();
+            invoice.IssuedDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             TempData["InvoiceNotice"] = "Invoice issued successfully.";
@@ -376,7 +389,7 @@ public class InvoicesController : CrudControllerBase
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(int id)
+    public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
         var invoice = await _context.InvoiceHeaders
             .Include(x => x.PaymentAllocations)
@@ -443,6 +456,10 @@ public class InvoicesController : CrudControllerBase
 
             invoice.Status = "Cancelled";
             invoice.UpdatedDate = DateTime.UtcNow;
+            invoice.UpdatedByUserId = CurrentUserId();
+            invoice.CancelledByUserId = CurrentUserId();
+            invoice.CancelledDate = DateTime.UtcNow;
+            invoice.CancelReason = string.IsNullOrWhiteSpace(cancelReason) ? null : cancelReason.Trim();
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             TempData["InvoiceNotice"] = "Invoice cancelled successfully.";
@@ -542,6 +559,7 @@ public class InvoicesController : CrudControllerBase
             .Select(x => new QuotationCustomerLookupViewModel
             {
                 CustomerId = x.CustomerId,
+                CustomerCode = x.CustomerCode,
                 CustomerName = x.CustomerName,
                 TaxId = x.TaxId ?? string.Empty,
                 ContactName = string.Empty,

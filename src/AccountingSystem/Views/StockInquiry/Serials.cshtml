@@ -58,60 +58,64 @@
         <div class="table-meta">@Model.Results.Count record(s)</div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table entity-table align-middle">
-                <thead>
-                    <tr>
-                        <th>Serial No.</th>
-                        <th>Status</th>
-                        <th>Supplier</th>
-                        <th>Customer</th>
-                        <th>Invoice Code</th>
-                        <th>Supplier Warranty Start</th>
-                        <th>Supplier Warranty End</th>
-                        <th>Customer Warranty Start</th>
-                        <th>Customer Warranty End</th>
-                        <th class="text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @if (Model.Results.Any())
+        @if (Model.Results.Any())
+        {
+            <div class="inquiry-card-list">
+                @foreach (var serial in Model.Results)
                 {
-                    @foreach (var serial in Model.Results)
-                    {
-                        var isWarrantyExpired = !serial.SupplierWarrantyEndDate.HasValue || serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today;
-                        <tr>
-                            <td><span class="code-chip">@serial.SerialNo</span></td>
-                            <td>@serial.Status</td>
-                            <td>@serial.SupplierName</td>
-                            <td>@serial.CurrentCustomerName</td>
-                            <td>@serial.InvoiceCode</td>
-                            <td>@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</td>
-                            <td>@(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</td>
-                            <td>@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</td>
-                            <td>@(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</td>
-                            <td class="text-end">
+                    var isWarrantyExpired = !serial.SupplierWarrantyEndDate.HasValue || serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today;
+                    <article class="inquiry-card inquiry-card-compact">
+                        <div class="inquiry-card-top">
+                            <div class="inquiry-card-title-group">
+                                <span class="code-chip">@serial.SerialNo</span>
+                                <div>
+                                    <h3 class="inquiry-card-title">@Model.ItemName</h3>
+                                    <p class="inquiry-card-subtitle">@Model.ItemCode | @Model.PartNumber</p>
+                                </div>
+                            </div>
+                            <div class="page-actions">
+                                <span class="status-pill active">@serial.Status</span>
                                 @if (isWarrantyExpired)
                                 {
                                     <span class="status-pill inactive">Warranty Expired</span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" disabled>Claim</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Claim</button>
                                 }
                                 else
                                 {
                                     <a asp-controller="SupplierClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-primary">Claim</a>
                                 }
-                            </td>
-                        </tr>
-                    }
+                            </div>
+                        </div>
+
+                        <div class="inquiry-card-grid">
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Supplier</span>
+                                <span class="inquiry-card-value">@serial.SupplierName</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Customer</span>
+                                <span class="inquiry-card-value">@serial.CurrentCustomerName</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Supplier Warranty</span>
+                                <span class="inquiry-card-value">@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Invoice Code</span>
+                                <span class="inquiry-card-value">@serial.InvoiceCode</span>
+                            </div>
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Customer Warranty</span>
+                                <span class="inquiry-card-value">@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                            </div>
+                        </div>
+                    </article>
                 }
-                else
-                {
-                    <tr>
-                        <td colspan="10" class="table-empty">No serial records matched the current search for this item.</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-empty">No serial records matched the current search for this item.</div>
+        }
     </div>
 </div>

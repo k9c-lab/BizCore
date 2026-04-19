@@ -42,6 +42,8 @@
                 {
                     @foreach (var payment in Model)
                     {
+                        var canGenerateReceipt = payment.Status == "Posted" && payment.ReceiptHeader is null;
+                        var canCancel = payment.Status == "Posted" && payment.ReceiptHeader?.Status != "Issued";
                         <tr>
                             <td><span class="code-chip">@payment.PaymentNo</span></td>
                             <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
@@ -59,7 +61,23 @@
                                 }
                             </td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@payment.PaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@payment.PaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @if (canGenerateReceipt)
+                                    {
+                                        <form asp-action="GenerateReceipt" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-primary">Generate Receipt</button>
+                                        </form>
+                                    }
+                                    @if (canCancel)
+                                    {
+                                        <form asp-action="Cancel" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this payment and reverse invoice allocations?');">Cancel</button>
+                                        </form>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }

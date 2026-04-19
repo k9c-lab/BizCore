@@ -22,8 +22,9 @@
             <div class="form-actions mt-3">
                 <span class="table-meta">Save posts the payment immediately and creates one read-only receipt.</span>
                 <div class="page-actions">
+                    <span class="table-meta text-danger" id="postPaymentReason"></span>
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Post Payment</button>
+                    <button type="submit" class="btn btn-primary px-4" id="postPaymentButton">Post Payment</button>
                 </div>
             </div>
         </form>
@@ -35,14 +36,83 @@
     <script>
         (() => {
             const customerSelect = document.getElementById("paymentCustomerId");
+            const customerSearch = document.getElementById("paymentCustomerSearch");
+            const customerResults = document.getElementById("paymentCustomerResults");
+            const customerLookup = JSON.parse(document.getElementById("paymentCustomerLookupData").textContent);
+            const customerMap = Object.fromEntries(customerLookup.map(customer => [String(customer.CustomerId), customer]));
             const amountInput = document.getElementById("Amount");
+            const paymentForm = document.getElementById("paymentForm");
             const rows = [...document.querySelectorAll(".payment-allocation-row")];
             const appliedInputs = [...document.querySelectorAll(".js-applied-amount")];
             const visibleCount = document.getElementById("visibleInvoiceCount");
+            const postButton = document.getElementById("postPaymentButton");
+            const postReason = document.getElementById("postPaymentReason");
+
+            const parseAmount = value => {
+                const parsed = parseFloat((value || "0").toString().replace(/,/g, ""));
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+            const roundMoney = value => Math.round((value + Number.EPSILON) * 100) / 100;
+
+            const getActiveRows = () => {
+                const customerId = customerSelect.value;
+                return rows.filter(row => customerId && row.dataset.customerId === customerId);
+            };
+
+            const getValue = value => value && String(value).trim() ? value : "-";
+
+            const updateCustomerInfo = () => {
+                const customer = customerMap[customerSelect.value];
+                document.getElementById("paymentCustomerName").textContent = getValue(customer?.CustomerName);
+                document.getElementById("paymentCustomerTaxId").textContent = getValue(customer?.TaxId);
+                document.getElementById("paymentCustomerPhone").textContent = getValue(customer?.Phone);
+                document.getElementById("paymentCustomerEmail").textContent = getValue(customer?.Email);
+                document.getElementById("paymentCustomerBillingAddress").textContent = getValue(customer?.BillingAddress);
+            };
+
+            const hideCustomerResults = () => {
+                customerResults.style.display = "none";
+                customerResults.innerHTML = "";
+            };
+
+            const selectCustomer = customer => {
+                customerSelect.value = customer.CustomerId;
+                customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
+                customerSearch.dataset.selectedCustomerId = String(customer.CustomerId);
+                hideCustomerResults();
+                updateCustomerInfo();
+                updateVisibility();
+            };
+
+            const renderCustomerResults = query => {
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = customerLookup
+                    .filter(customer =>
+                        !keyword ||
+                        (customer.CustomerCode || "").toLowerCase().includes(keyword) ||
+                        customer.CustomerName.toLowerCase().includes(keyword) ||
+                        (customer.TaxId || "").toLowerCase().includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    customerResults.innerHTML = `<div class="search-dropdown-empty">No matching customers found.</div>`;
+                    customerResults.style.display = "";
+                    return;
+                }
+
+                customerResults.innerHTML = matches
+                    .map(customer => `
+                        <button type="button" class="search-dropdown-option" data-customer-id="${customer.CustomerId}">
+                            <span class="search-dropdown-title">${customer.CustomerCode || "-"} - ${customer.CustomerName}</span>
+                            <span class="search-dropdown-meta">Tax ID: ${customer.TaxId || "-"} | ${customer.Phone || "-"}</span>
+                        </button>`)
+                    .join("");
+                customerResults.style.display = "";
+            };
 
             const updateVisibility = () => {
                 const customerId = customerSelect.value;
-                let count = 0;
+                const activeRows = getActiveRows();
 
                 rows.forEach(row => {
                     const match = customerId && row.dataset.customerId === customerId;
@@ -50,31 +120,114 @@
                     const input = row.querySelector(".js-applied-amount");
                     if (!match) {
                         input.value = "0";
-                    } else {
-                        count += 1;
                     }
                 });
 
-                visibleCount.textContent = count;
-                updateSummary();
+                visibleCount.textContent = activeRows.length;
+                updateCustomerInfo();
+                updatePaymentState();
             };
 
-            const updateSummary = () => {
-                const paymentAmount = parseFloat(amountInput.value || "0");
-                const applied = rows
-                    .filter(row => row.style.display !== "none")
-                    .reduce((sum, row) => sum + parseFloat(row.querySelector(".js-applied-amount").value || "0"), 0);
-                const unapplied = Math.max(paymentAmount - applied, 0);
+            const updatePaymentState = () => {
+                const customerId = customerSelect.value;
+                const paymentAmount = parseAmount(amountInput.value);
+                const activeRows = getActiveRows();
+                const allocationRows = activeRows
+                    .map(row => ({
+                        row,
+                        input: row.querySelector(".js-applied-amount"),
+                        balance: parseAmount(row.dataset.balance)
+                    }))
+                    .filter(x => parseAmount(x.input.value) > 0);
+                const applied = roundMoney(allocationRows.reduce((sum, x) => sum + parseAmount(x.input.value), 0));
+                const remaining = roundMoney(paymentAmount - applied);
+                let reason = "";
+
+                rows.forEach(row => {
+                    row.querySelector(".js-applied-amount").classList.remove("is-invalid");
+                });
 
                 document.getElementById("paymentAmountSummary").textContent = paymentAmount.toFixed(2);
                 document.getElementById("paymentAppliedSummary").textContent = applied.toFixed(2);
-                document.getElementById("paymentUnappliedSummary").textContent = unapplied.toFixed(2);
+                document.getElementById("paymentUnappliedSummary").textContent = remaining.toFixed(2);
+
+                if (!customerId) {
+                    reason = "Select a customer before posting.";
+                } else if (paymentAmount <= 0) {
+                    reason = "Enter a payment amount greater than zero.";
+                } else if (activeRows.length === 0) {
+                    reason = "The selected customer has no open invoices to allocate.";
+                } else if (allocationRows.length === 0 || applied <= 0) {
+                    reason = "Apply payment to at least one invoice.";
+                } else if (applied > paymentAmount) {
+                    reason = "Total applied amount cannot exceed payment amount.";
+                } else if (remaining !== 0) {
+                    reason = "Payment amount must be fully allocated before posting";
+                } else {
+                    const overApplied = allocationRows.find(x => parseAmount(x.input.value) > x.balance);
+                    if (overApplied) {
+                        overApplied.input.classList.add("is-invalid");
+                        reason = "Applied amount cannot exceed invoice balance.";
+                    }
+                }
+
+                postButton.disabled = reason.length > 0;
+                postReason.textContent = reason;
+                return reason;
             };
 
-            customerSelect.addEventListener("change", updateVisibility);
-            amountInput.addEventListener("input", updateSummary);
-            appliedInputs.forEach(input => input.addEventListener("input", updateSummary));
+            customerSearch.addEventListener("input", () => {
+                delete customerSearch.dataset.selectedCustomerId;
+                customerSelect.value = "";
+                updateVisibility();
+                renderCustomerResults(customerSearch.value);
+            });
+            customerSearch.addEventListener("focus", () => renderCustomerResults(customerSearch.value));
+            customerResults.addEventListener("click", event => {
+                const option = event.target.closest("[data-customer-id]");
+                if (!option) {
+                    return;
+                }
+                selectCustomer(customerMap[option.dataset.customerId]);
+            });
+            customerSearch.addEventListener("blur", () => {
+                window.setTimeout(() => {
+                    const selectedId = customerSearch.dataset.selectedCustomerId;
+                    const exactMatch = customerLookup.find(customer =>
+                        `${customer.CustomerCode || "-"} - ${customer.CustomerName}`.toLowerCase() === (customerSearch.value || "").trim().toLowerCase() ||
+                        customer.CustomerName.toLowerCase() === (customerSearch.value || "").trim().toLowerCase());
+
+                    if (selectedId && customerMap[selectedId]) {
+                        selectCustomer(customerMap[selectedId]);
+                    } else if (exactMatch) {
+                        selectCustomer(exactMatch);
+                    } else {
+                        customerSearch.value = "";
+                        customerSelect.value = "";
+                        updateVisibility();
+                    }
+                    hideCustomerResults();
+                }, 120);
+            });
+            amountInput.addEventListener("input", updatePaymentState);
+            amountInput.addEventListener("change", updatePaymentState);
+            appliedInputs.forEach(input => {
+                input.addEventListener("input", updatePaymentState);
+                input.addEventListener("change", updatePaymentState);
+            });
+            paymentForm.addEventListener("submit", event => {
+                const reason = updatePaymentState();
+                if (reason) {
+                    event.preventDefault();
+                    postReason.textContent = reason;
+                }
+            });
+            window.addEventListener("pageshow", updateVisibility);
+            if (customerSelect.value && customerMap[customerSelect.value]) {
+                selectCustomer(customerMap[customerSelect.value]);
+            }
             updateVisibility();
+            window.setTimeout(updateVisibility, 0);
         })();
     </script>
 }

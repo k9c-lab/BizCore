@@ -1,0 +1,326 @@
+@model BizCore.Models.Entities.ReceiptHeader
+@{
+    Layout = null;
+    var companyName = ViewData["PrintCompanyName"] as string ?? "BizCore Co., Ltd.";
+    var companyAddress = ViewData["PrintCompanyAddress"] as string ?? "-";
+    var companyTaxId = ViewData["PrintCompanyTaxId"] as string ?? "-";
+    var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
+    var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
+    var payment = Model.PaymentHeader;
+    var allocations = payment?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo)
+        ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>();
+    var appliedAmount = allocations.Sum(x => x.AppliedAmount);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Receipt @Model.ReceiptNo</title>
+    <style>
+        @@page { size: A4; margin: 14mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            color: #111827;
+            background: #fff;
+            font-size: 11.5px;
+            line-height: 1.35;
+        }
+        .print-shell {
+            width: 100%;
+            min-height: calc(297mm - 28mm);
+            display: flex;
+            flex-direction: column;
+        }
+        .screen-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0 0 10px;
+        }
+        .screen-actions button {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #111827;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font: inherit;
+        }
+        .print-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #d1d5db;
+        }
+        .company-block { max-width: 58%; }
+        .company-name {
+            margin: 0 0 6px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .company-line, .meta-label, .section-label, .summary-label, .signature-label {
+            color: #6b7280;
+        }
+        .company-meta-grid {
+            display: grid;
+            gap: 2px;
+            margin-top: 8px;
+        }
+        .document-block {
+            min-width: 280px;
+            text-align: right;
+        }
+        .document-title {
+            margin: 0;
+            font-size: 23px;
+            font-weight: 700;
+        }
+        .document-meta {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .document-meta td {
+            padding: 2px 0 2px 16px;
+            vertical-align: top;
+        }
+        .document-meta td:first-child { white-space: nowrap; }
+        .print-section { margin-top: 18px; }
+        .party-section {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+        .party-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
+            gap: 12px 20px;
+        }
+        .party-name {
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .party-value, .remark-value, .signature-date {
+            white-space: pre-wrap;
+        }
+        .reference-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .reference-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+            min-height: 58px;
+        }
+        .reference-value {
+            margin-top: 3px;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .line-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .line-table th, .line-table td {
+            border: 1px solid #d1d5db;
+            padding: 7px 8px;
+            vertical-align: top;
+        }
+        .line-table th {
+            background: #f3f4f6;
+            font-weight: 700;
+            text-align: center;
+            font-size: 11px;
+        }
+        .col-no { width: 48px; text-align: center; }
+        .col-invoice { width: auto; word-break: break-word; }
+        .col-date { width: 110px; text-align: center; }
+        .col-status { width: 110px; text-align: center; }
+        .col-amount { width: 130px; text-align: right; }
+        .summary-wrap {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 14px;
+        }
+        .summary-table {
+            min-width: 300px;
+            border-collapse: collapse;
+        }
+        .summary-table td {
+            padding: 4px 0 4px 18px;
+        }
+        .summary-table td:first-child {
+            text-align: left;
+            color: #4b5563;
+        }
+        .summary-table td:last-child {
+            text-align: right;
+            min-width: 120px;
+        }
+        .summary-total td {
+            padding-top: 8px;
+            border-top: 2px solid #9ca3af;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .remark-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 14px;
+            min-height: 72px;
+        }
+        .signature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 28px;
+            margin-top: auto;
+            padding-top: 28px;
+        }
+        .signature-box { text-align: center; }
+        .signature-line {
+            margin: 44px auto 8px;
+            width: 88%;
+            border-bottom: 1px solid #111827;
+        }
+        @@media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .screen-actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-shell">
+        <div class="screen-actions">
+            <button type="button" onclick="window.print()">Print</button>
+        </div>
+
+        <header class="print-header">
+            <div class="company-block">
+                <h1 class="company-name">@companyName</h1>
+                <div class="company-meta-grid">
+                    <div class="company-line">@companyAddress</div>
+                    <div class="company-line">Tax ID: @companyTaxId</div>
+                    <div class="company-line">Phone: @companyPhone</div>
+                    <div class="company-line">Email: @companyEmail</div>
+                </div>
+            </div>
+            <div class="document-block">
+                <h2 class="document-title">Receipt</h2>
+                <table class="document-meta">
+                    <tr><td class="meta-label">Receipt No.</td><td>@Model.ReceiptNo</td></tr>
+                    <tr><td class="meta-label">Receipt Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
+                    <tr><td class="meta-label">Payment No.</td><td>@(payment?.PaymentNo ?? "-")</td></tr>
+                    <tr><td class="meta-label">Reference No.</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
+                </table>
+            </div>
+        </header>
+
+        <section class="print-section party-section">
+            <div class="party-grid">
+                <div>
+                    <div class="section-label">Customer Name</div>
+                    <div class="party-name">@Model.Customer?.CustomerName</div>
+                </div>
+                <div>
+                    <div class="section-label">Tax ID</div>
+                    <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</div>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <div class="section-label">Billing Address</div>
+                    <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="print-section reference-grid">
+            <div class="reference-box">
+                <div class="section-label">Payment Method</div>
+                <div class="reference-value">@(payment?.PaymentMethod ?? "-")</div>
+            </div>
+            <div class="reference-box">
+                <div class="section-label">Payment Date</div>
+                <div class="reference-value">@(payment?.PaymentDate.ToString("dd/MM/yyyy") ?? "-")</div>
+            </div>
+            <div class="reference-box">
+                <div class="section-label">Payment Amount</div>
+                <div class="reference-value">@((payment?.Amount ?? 0m).ToString("N2"))</div>
+            </div>
+        </section>
+
+        <section class="print-section">
+            <table class="line-table">
+                <thead>
+                    <tr>
+                        <th class="col-no">No</th>
+                        <th class="col-invoice">Invoice No.</th>
+                        <th class="col-date">Invoice Date</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-amount">Applied Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @{
+                    var rowNo = 1;
+                }
+                @foreach (var allocation in allocations)
+                {
+                    <tr>
+                        <td class="col-no">@rowNo</td>
+                        <td class="col-invoice">@allocation.InvoiceHeader?.InvoiceNo</td>
+                        <td class="col-date">@allocation.InvoiceHeader?.InvoiceDate.ToString("dd/MM/yyyy")</td>
+                        <td class="col-status">@allocation.InvoiceHeader?.Status</td>
+                        <td class="col-amount">@allocation.AppliedAmount.ToString("N2")</td>
+                    </tr>
+                    rowNo++;
+                }
+                </tbody>
+            </table>
+
+            <div class="summary-wrap">
+                <table class="summary-table">
+                    <tr><td class="summary-label">Payment Amount</td><td>@((payment?.Amount ?? 0m).ToString("N2"))</td></tr>
+                    <tr><td class="summary-label">Applied Amount</td><td>@appliedAmount.ToString("N2")</td></tr>
+                    <tr class="summary-total"><td>Total Received</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+                </table>
+            </div>
+        </section>
+
+        <section class="print-section">
+            <div class="remark-box">
+                <div class="section-label">Remark</div>
+                <div class="remark-value">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+            </div>
+        </section>
+
+        <section class="signature-grid">
+            <div class="signature-box">
+                <div class="signature-label">Received By</div>
+                <div class="signature-line"></div>
+                <div>............................................................</div>
+                <div class="signature-date">Date ........ / ........ / ........</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-label">Authorized Signature</div>
+                <div class="signature-line"></div>
+                <div>............................................................</div>
+                <div class="signature-date">Date ........ / ........ / ........</div>
+            </div>
+        </section>
+    </div>
+    <script>
+        window.addEventListener("load", () => {
+            window.print();
+        });
+    </script>
+</body>
+</html>

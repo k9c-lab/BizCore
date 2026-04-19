@@ -1,12 +1,14 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin,Warehouse")]
 public class SupplierClaimsController : CrudControllerBase
 {
     private readonly AccountingDbContext _context;

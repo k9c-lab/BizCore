@@ -1,0 +1,55 @@
+@model BizCore.Models.ViewModels.LoginViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Sign In";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BizCore</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-page">
+    <main class="login-shell">
+        <section class="login-panel">
+            <div class="login-brand">
+                <div class="login-brand-name">BizCore</div>
+                <div class="login-brand-caption">Accounting operations workspace</div>
+            </div>
+
+            <form asp-action="Login" method="post" class="login-form">
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+                <div>
+                    <label asp-for="Username" class="detail-label"></label>
+                    <input asp-for="Username" class="form-control" autocomplete="username" autofocus />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Password" class="detail-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+
+                <div class="form-check">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Sign In</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>

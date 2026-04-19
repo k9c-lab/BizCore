@@ -1,12 +1,14 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin,Sales")]
 public class QuotationsController : CrudControllerBase
 {
     private const string NumberPrefix = "QT";
@@ -82,6 +84,7 @@ public class QuotationsController : CrudControllerBase
             VatAmount = model.VatAmount,
             TotalAmount = model.TotalAmount,
             CreatedDate = DateTime.UtcNow,
+            CreatedByUserId = CurrentUserId(),
             QuotationDetails = model.Details.Select(MapDetailEntity).ToList()
         };
 
@@ -208,6 +211,7 @@ public class QuotationsController : CrudControllerBase
         header.VatAmount = model.VatAmount;
         header.TotalAmount = model.TotalAmount;
         header.UpdatedDate = DateTime.UtcNow;
+        header.UpdatedByUserId = CurrentUserId();
 
         _context.QuotationDetails.RemoveRange(header.QuotationDetails);
         header.QuotationDetails = model.Details.Select(MapDetailEntity).ToList();
@@ -232,6 +236,10 @@ public class QuotationsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.ApprovedByUser)
+            .Include(x => x.ConvertedByUser)
             .Include(x => x.QuotationDetails)
                 .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id.Value);
@@ -326,6 +334,7 @@ public class QuotationsController : CrudControllerBase
                 BalanceAmount = quotation.TotalAmount,
                 Status = "Draft",
                 CreatedDate = DateTime.UtcNow,
+                CreatedByUserId = CurrentUserId(),
                 InvoiceDetails = quotation.QuotationDetails
                     .OrderBy(x => x.LineNumber)
                     .Select(x => new InvoiceDetail
@@ -346,6 +355,9 @@ public class QuotationsController : CrudControllerBase
             _context.InvoiceHeaders.Add(invoice);
             quotation.Status = "Converted";
             quotation.UpdatedDate = DateTime.UtcNow;
+            quotation.UpdatedByUserId = CurrentUserId();
+            quotation.ConvertedByUserId = CurrentUserId();
+            quotation.ConvertedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -380,6 +392,9 @@ public class QuotationsController : CrudControllerBase
 
         quotation.Status = "Approved";
         quotation.UpdatedDate = DateTime.UtcNow;
+        quotation.UpdatedByUserId = CurrentUserId();
+        quotation.ApprovedByUserId = CurrentUserId();
+        quotation.ApprovedDate = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         TempData["QuotationNotice"] = "Quotation approved successfully.";
@@ -431,6 +446,7 @@ public class QuotationsController : CrudControllerBase
             .Select(x => new QuotationCustomerLookupViewModel
             {
                 CustomerId = x.CustomerId,
+                CustomerCode = x.CustomerCode,
                 CustomerName = x.CustomerName,
                 TaxId = x.TaxId ?? string.Empty,
                 ContactName = string.Empty,

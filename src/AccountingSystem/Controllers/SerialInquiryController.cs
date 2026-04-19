@@ -1,10 +1,12 @@
 using BizCore.Data;
 using BizCore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin,Warehouse")]
 public class SerialInquiryController : Controller
 {
     private readonly AccountingDbContext _context;

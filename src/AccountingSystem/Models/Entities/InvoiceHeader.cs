@@ -51,10 +51,23 @@ public class InvoiceHeader
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedDate { get; set; }
+    public int? CreatedByUserId { get; set; }
+    public int? UpdatedByUserId { get; set; }
+    public int? IssuedByUserId { get; set; }
+    public DateTime? IssuedDate { get; set; }
+    public int? CancelledByUserId { get; set; }
+    public DateTime? CancelledDate { get; set; }
+
+    [StringLength(500)]
+    public string? CancelReason { get; set; }
 
     public Customer? Customer { get; set; }
     public Salesperson? Salesperson { get; set; }
     public QuotationHeader? Quotation { get; set; }
+    public User? CreatedByUser { get; set; }
+    public User? UpdatedByUser { get; set; }
+    public User? IssuedByUser { get; set; }
+    public User? CancelledByUser { get; set; }
     public ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
     public ICollection<PaymentAllocation> PaymentAllocations { get; set; } = new List<PaymentAllocation>();
 }

@@ -1,0 +1,270 @@
+<script>
+    (() => {
+        const supplierLookup = JSON.parse(document.getElementById("poSupplierLookupData").textContent);
+        const itemLookup = JSON.parse(document.getElementById("poItemLookupData").textContent);
+        const itemMap = Object.fromEntries(itemLookup.map(item => [String(item.ItemId), item]));
+        const lineBody = document.getElementById("poLineBody");
+        const addButton = document.getElementById("addPOLine");
+        const vatInput = document.getElementById("poVatAmount");
+        const vatTypeSelect = document.getElementById("poVatType");
+        const supplierIdInput = document.getElementById("SupplierId");
+        const supplierSearch = document.getElementById("poSupplierSearch");
+        const supplierResults = document.getElementById("poSupplierResults");
+
+        const escapeHtml = value => String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
+        const normalize = value => String(value ?? "").toLowerCase();
+        const money = value => Number(value || 0).toFixed(2);
+
+        const setSupplierInfo = supplier => {
+            document.getElementById("poSupplierName").textContent = supplier?.SupplierName || "-";
+            document.getElementById("poSupplierTaxId").textContent = supplier?.TaxId || "-";
+            document.getElementById("poSupplierPhone").textContent = supplier?.Phone || "-";
+            document.getElementById("poSupplierEmail").textContent = supplier?.Email || "-";
+            document.getElementById("poSupplierAddress").textContent = supplier?.Address || "-";
+        };
+
+        const renderSupplierResults = () => {
+            const term = normalize(supplierSearch.value.trim());
+            const matches = supplierLookup
+                .filter(supplier => !term ||
+                    normalize(supplier.SupplierCode).includes(term) ||
+                    normalize(supplier.SupplierName).includes(term) ||
+                    normalize(supplier.TaxId).includes(term))
+                .slice(0, 12);
+
+            if (matches.length === 0) {
+                supplierResults.innerHTML = `<div class="search-dropdown-empty">No matching suppliers found.</div>`;
+                supplierResults.style.display = "block";
+                return;
+            }
+
+            supplierResults.innerHTML = matches.map(supplier => `
+                <button type="button" class="search-dropdown-option" data-supplier-id="${supplier.SupplierId}">
+                    <span class="search-dropdown-title">${escapeHtml(supplier.SupplierCode || "-")} - ${escapeHtml(supplier.SupplierName)}</span>
+                    <span class="search-dropdown-meta">Tax ID: ${escapeHtml(supplier.TaxId || "-")} | ${escapeHtml(supplier.Phone || "-")}</span>
+                </button>`).join("");
+            supplierResults.style.display = "block";
+        };
+
+        const setItemInfo = (row, item) => {
+            const serialFlag = row.querySelector(".js-serial-flag");
+            const itemMeta = row.querySelector(".js-item-meta");
+
+            if (serialFlag) {
+                serialFlag.textContent = item?.IsSerialControlled ? "Yes" : "No";
+            }
+
+            if (itemMeta) {
+                if (!item) {
+                    itemMeta.textContent = "Select item from master data.";
+                    return;
+                }
+
+                const stockText = item.ItemType === "Product" && item.TrackStock
+                    ? ` | Stock: ${money(item.CurrentStock)}`
+                    : "";
+                itemMeta.textContent = `Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"}${stockText}`;
+            }
+        };
+
+        const renderItemResults = row => {
+            const searchInput = row.querySelector(".js-item-search");
+            const results = row.querySelector(".js-item-results");
+            const term = normalize(searchInput.value.trim());
+            const matches = itemLookup
+                .filter(item => !term ||
+                    normalize(item.ItemCode).includes(term) ||
+                    normalize(item.ItemName).includes(term) ||
+                    normalize(item.PartNumber).includes(term))
+                .slice(0, 12);
+
+            if (matches.length === 0) {
+                results.innerHTML = `<div class="search-dropdown-empty">No matching items found.</div>`;
+                results.style.display = "block";
+                return;
+            }
+
+            results.innerHTML = matches.map(item => `
+                <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
+                    <span class="search-dropdown-title">${escapeHtml(item.ItemCode)} - ${escapeHtml(item.ItemName)}</span>
+                    <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")} | ${money(item.UnitPrice)}</span>
+                </button>`).join("");
+            results.style.display = "block";
+        };
+
+        const createRow = index => {
+            const row = document.createElement("tr");
+            row.className = "po-line-row";
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" name="Details[${index}].PurchaseOrderDetailId" value="" />
+                    <input type="hidden" class="js-line-number" name="Details[${index}].LineNumber" value="${index + 1}" />
+                    <input type="hidden" name="Details[${index}].ItemId" id="Details_${index}__ItemId" value="" class="js-item-id" />
+                    <div class="search-dropdown">
+                        <input type="text" class="form-control js-item-search" placeholder="Search item code, name, or part no." autocomplete="off" />
+                        <div id="poItemResults_${index}" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                    </div>
+                    <div class="table-meta js-item-meta">Select item from master data.</div>
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
+                </td>
+                <td><span class="js-serial-flag badge-soft">No</span></td>
+                <td>
+                    <input type="number" step="0.01" min="0.01" name="Details[${index}].Qty" id="Details_${index}__Qty" value="1" class="form-control js-line-qty" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Qty" data-valmsg-replace="true"></span>
+                </td>
+                <td><input type="number" step="0.01" name="Details[${index}].ReceivedQty" id="Details_${index}__ReceivedQty" value="0" class="form-control" readonly /></td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="Details[${index}].UnitPrice" id="Details_${index}__UnitPrice" value="0" class="form-control js-line-price" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].UnitPrice" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="Details[${index}].DiscountAmount" id="Details_${index}__DiscountAmount" value="0" class="form-control js-line-discount" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
+                </td>
+                <td><input type="number" step="0.01" name="Details[${index}].LineTotal" id="Details_${index}__LineTotal" value="0" class="form-control js-line-total" readonly /></td>
+                <td><input type="text" name="Details[${index}].Remark" id="Details_${index}__Remark" class="form-control" /></td>
+                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button></td>`;
+            return row;
+        };
+
+        const reindexRows = () => {
+            [...lineBody.querySelectorAll(".po-line-row")].forEach((row, index) => {
+                row.querySelectorAll("input, span[data-valmsg-for]").forEach(element => {
+                    if (element.name) element.name = element.name.replace(/Details\[\d+\]/g, `Details[${index}]`);
+                    if (element.id) element.id = element.id.replace(/Details_\d+__/g, `Details_${index}__`);
+                    const field = element.getAttribute("data-valmsg-for");
+                    if (field) element.setAttribute("data-valmsg-for", field.replace(/Details\[\d+\]/g, `Details[${index}]`));
+                });
+                const itemResults = row.querySelector(".js-item-results");
+                if (itemResults) {
+                    itemResults.id = `poItemResults_${index}`;
+                }
+                row.querySelector(".js-line-number").value = String(index + 1);
+            });
+        };
+
+        const updateLine = (row, syncItemPrice) => {
+            const itemIdInput = row.querySelector(".js-item-id");
+            const qty = parseFloat(row.querySelector(".js-line-qty").value || "0");
+            const priceInput = row.querySelector(".js-line-price");
+            const discountInput = row.querySelector(".js-line-discount");
+            const totalInput = row.querySelector(".js-line-total");
+            const item = itemMap[itemIdInput.value];
+
+            if (item && syncItemPrice && !parseFloat(priceInput.value)) {
+                priceInput.value = item.UnitPrice;
+            }
+
+            setItemInfo(row, item);
+
+            const price = parseFloat(priceInput.value || "0");
+            const discount = parseFloat(discountInput.value || "0");
+            totalInput.value = Math.max((qty * price) - discount, 0).toFixed(2);
+        };
+
+        const updateSummary = () => {
+            let subtotal = 0;
+            let discount = 0;
+            lineBody.querySelectorAll(".po-line-row").forEach(row => {
+                const qty = parseFloat(row.querySelector(".js-line-qty").value || "0");
+                const price = parseFloat(row.querySelector(".js-line-price").value || "0");
+                const disc = parseFloat(row.querySelector(".js-line-discount").value || "0");
+                subtotal += qty * price;
+                discount += disc;
+            });
+
+            const taxableAmount = subtotal - discount;
+            const vat = vatTypeSelect.value === "VAT" ? taxableAmount * 0.07 : 0;
+            vatInput.value = vat.toFixed(2);
+            document.getElementById("poSubtotal").textContent = subtotal.toFixed(2);
+            document.getElementById("poVatDisplay").textContent = vat.toFixed(2);
+            document.getElementById("poTotal").textContent = (taxableAmount + vat).toFixed(2);
+        };
+
+        supplierSearch.addEventListener("input", () => {
+            supplierIdInput.value = "";
+            setSupplierInfo(null);
+            renderSupplierResults();
+        });
+
+        supplierSearch.addEventListener("focus", renderSupplierResults);
+
+        supplierResults.addEventListener("click", event => {
+            const option = event.target.closest(".search-dropdown-option");
+            if (!option) return;
+
+            const supplier = supplierLookup.find(x => String(x.SupplierId) === option.dataset.supplierId);
+            if (!supplier) return;
+
+            supplierIdInput.value = supplier.SupplierId;
+            supplierSearch.value = `${supplier.SupplierCode || "-"} - ${supplier.SupplierName}`;
+            setSupplierInfo(supplier);
+            supplierResults.style.display = "none";
+        });
+
+        lineBody.addEventListener("input", event => {
+            const row = event.target.closest(".po-line-row");
+            if (!row) return;
+
+            if (event.target.classList.contains("js-item-search")) {
+                row.querySelector(".js-item-id").value = "";
+                setItemInfo(row, null);
+                renderItemResults(row);
+                return;
+            }
+
+            updateLine(row, false);
+            updateSummary();
+        });
+
+        lineBody.addEventListener("focusin", event => {
+            const row = event.target.closest(".po-line-row");
+            if (!row || !event.target.classList.contains("js-item-search")) return;
+            renderItemResults(row);
+        });
+
+        lineBody.addEventListener("click", event => {
+            const itemOption = event.target.closest(".search-dropdown-option[data-item-id]");
+            if (itemOption) {
+                const row = itemOption.closest(".po-line-row");
+                const item = itemMap[itemOption.dataset.itemId];
+                if (!row || !item) return;
+
+                row.querySelector(".js-item-id").value = item.ItemId;
+                row.querySelector(".js-item-search").value = `${item.ItemCode} - ${item.ItemName}`;
+                row.querySelector(".js-item-results").style.display = "none";
+                updateLine(row, true);
+                updateSummary();
+                return;
+            }
+
+            if (!event.target.classList.contains("js-remove-line")) return;
+            if (lineBody.querySelectorAll(".po-line-row").length === 1) return;
+            event.target.closest(".po-line-row").remove();
+            reindexRows();
+            updateSummary();
+        });
+
+        addButton.addEventListener("click", () => {
+            lineBody.appendChild(createRow(lineBody.querySelectorAll(".po-line-row").length));
+        });
+
+        vatTypeSelect.addEventListener("change", updateSummary);
+
+        document.addEventListener("click", event => {
+            if (!event.target.closest(".search-dropdown")) {
+                supplierResults.style.display = "none";
+                lineBody.querySelectorAll(".js-item-results").forEach(results => results.style.display = "none");
+            }
+        });
+
+        lineBody.querySelectorAll(".po-line-row").forEach(row => updateLine(row, false));
+        updateSummary();
+    })();
+</script>

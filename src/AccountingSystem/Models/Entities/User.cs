@@ -18,6 +18,14 @@ public class User
     [StringLength(256)]
     public string? Email { get; set; }
 
+    [Required]
+    [StringLength(300)]
+    public string PasswordHash { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(30)]
+    public string Role { get; set; } = "Viewer";
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

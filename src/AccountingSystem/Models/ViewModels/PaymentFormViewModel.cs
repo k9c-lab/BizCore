@@ -42,4 +42,5 @@ public class PaymentFormViewModel
 
     public IEnumerable<SelectListItem> CustomerOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> PaymentMethodOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IReadOnlyList<QuotationCustomerLookupViewModel> CustomerLookup { get; set; } = Array.Empty<QuotationCustomerLookupViewModel>();
 }

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,5 +43,11 @@ public abstract class CrudControllerBase : Controller
         return match.Success && int.TryParse(match.Value, out var sequence)
             ? sequence
             : 0;
+    }
+
+    protected int? CurrentUserId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(value, out var userId) ? userId : null;
     }
 }

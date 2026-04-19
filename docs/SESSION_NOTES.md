@@ -35,6 +35,101 @@
   - Stock Inquiry serial detail page
   - Serial Inquiry
 
+## Latest Session Update - 2026-04-20
+- User login MVP is implemented and tested by user.
+  - Cookie authentication is enabled globally.
+  - Login/logout pages exist.
+  - Default seeded login password is `Admin@12345`.
+- Role/module permissions were added:
+  - `Admin`: all modules
+  - `Sales`: Quotations, Invoices, Payments, Receipts
+  - `Warehouse`: Purchase Orders, Receivings, Stock Inquiry, Serial Inquiry, Supplier Claims
+  - `Viewer`: dashboard/basic authenticated access only
+- Sidebar was reorganized by module and now hides modules the current role cannot access.
+- Sidebar active state was added.
+- Footer/layout overlap issue was fixed earlier; action buttons should remain clickable.
+- Workflow action messages were changed from red validation style to neutral `workflow-info` style where applicable.
+- Purchase Order pages were standardized:
+  - searchable supplier/item UI
+  - action buttons for workflow
+  - PO print page
+  - PO audit/history at bottom of details page
+- Receiving pages were standardized:
+  - PO read-only information and summary
+  - clearer receiving line layout
+  - serial input split into individual textboxes
+  - per-line readiness guidance
+  - Save Draft and Post Receiving behavior refined
+  - Cancel Receiving implemented
+  - Receiving print page
+  - Receiving audit/history at bottom of details page
+- Stock Inquiry serial list was changed to a card-style layout similar to Serial Inquiry.
+- Payment/Receipt layout was refactored to match Quotation/Invoice style.
+- Receipt module was implemented:
+  - `ReceiptHeaders`
+  - Generate Receipt from posted payment
+  - Receipt list/details/print
+  - Duplicate receipt blocked for same payment
+  - Cancel Receipt implemented without changing payment/invoice balances
+- Payment cancel was implemented:
+  - only posted payments can be cancelled
+  - issued receipt blocks payment cancellation
+  - cancellation reverses invoice allocations and recalculates invoice status
+- Payment post validation now requires full allocation:
+  - allocated amount must equal payment amount
+  - over-allocation blocked
+  - remaining amount shown
+- Customer autocomplete/searchable dropdown was added across quotation/invoice/payment related pages.
+- Audit/history fields were added to sales and finance modules:
+  - Quotation: created, updated, approved, converted
+  - Invoice: created, updated, issued, cancelled
+  - Payment: created, posted, cancelled
+  - Receipt: created, issued, cancelled
+- Details pages now show compact `Document History` at the bottom for:
+  - Purchase Orders
+  - Receivings
+  - Quotations
+  - Invoices
+  - Payments
+  - Receipts
+
+## Latest SQL Scripts To Run
+- Existing database should have these scripts applied in order if not already run:
+  - `database/016_user_login_mvp.sql`
+  - `database/017_receiving_audit_fields.sql`
+  - `database/018_purchase_order_audit_fields.sql`
+  - `database/019_receiving_updated_by_audit.sql`
+  - `database/020_sales_finance_audit_fields.sql`
+- User ran `020` once and hit SQL Server compile error:
+  - `Invalid column name 'CreatedByUserId'`
+  - Cause: SQL Server parsed the `UPDATE` batch before recognizing columns added earlier in the same batch.
+  - Fix already made: `020_sales_finance_audit_fields.sql` was rewritten with `GO` batch separators.
+  - Next action: reopen the updated `020` file in SSMS and run it again.
+
+## Latest Verification
+- Build command used to avoid locked running `BizCore.exe`:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreAuditBuild`
+- Latest result:
+  - Build succeeded
+  - 0 warnings
+  - 0 errors
+- A normal build may fail if the website is currently running and locking `bin\Debug\net8.0\BizCore.exe`; this is a file-lock issue, not a compile issue.
+
+## Suggested Next Steps
+- Run the updated `database/020_sales_finance_audit_fields.sql`.
+- Restart the website after database update.
+- Quick role test:
+  - `admin` should see all modules.
+  - `sales.manager` should see Sales module only.
+  - `inventory.staff` should see Purchasing/Inventory/Warranty modules only.
+- Quick audit test:
+  - create a new quotation/invoice/payment/receipt or PO/receiving
+  - open Details
+  - check `Document History` at the bottom.
+- Before pushing to GitHub:
+  - review `git status`
+  - avoid committing runtime logs and temp build artifacts such as `bizcore-run*.log`, `bizcore-direct*.log`, and `obj_verify/`.
+
 ## Important Functional Behavior
 - Auto code generation with prefixes:
   - Customers: `CUS-0001`

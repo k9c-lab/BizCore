@@ -5,6 +5,8 @@ namespace BizCore.Models.ViewModels;
 
 public class ReceivingFormViewModel
 {
+    public int? ReceivingId { get; set; }
+
     [Required]
     [Display(Name = "Receiving No.")]
     [StringLength(30)]

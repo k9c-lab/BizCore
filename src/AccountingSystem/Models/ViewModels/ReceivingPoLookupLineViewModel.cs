@@ -12,4 +12,6 @@ public class ReceivingPoLookupLineViewModel
     public decimal OrderedQty { get; set; }
     public decimal ReceivedQty { get; set; }
     public decimal RemainingQty { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal { get; set; }
 }

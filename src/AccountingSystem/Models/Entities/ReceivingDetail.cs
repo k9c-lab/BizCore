@@ -17,6 +17,14 @@ public class ReceivingDetail
     [StringLength(300)]
     public string? Remark { get; set; }
 
+    [DataType(DataType.Date)]
+    [Display(Name = "Supplier Warranty Start Date")]
+    public DateTime? SupplierWarrantyStartDate { get; set; }
+
+    [DataType(DataType.Date)]
+    [Display(Name = "Supplier Warranty End Date")]
+    public DateTime? SupplierWarrantyEndDate { get; set; }
+
     public ReceivingHeader? ReceivingHeader { get; set; }
     public PurchaseOrderDetail? PurchaseOrderDetail { get; set; }
     public Item? Item { get; set; }

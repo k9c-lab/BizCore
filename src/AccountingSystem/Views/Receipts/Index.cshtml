@@ -38,6 +38,7 @@
                 {
                     @foreach (var receipt in Model)
                     {
+                        var canCancel = receipt.Status == "Issued";
                         <tr>
                             <td><span class="code-chip">@receipt.ReceiptNo</span></td>
                             <td>@receipt.ReceiptDate.ToString("dd MMM yyyy")</td>
@@ -45,7 +46,17 @@
                             <td>@receipt.TotalReceivedAmount.ToString("N2")</td>
                             <td><span class="status-pill active">@receipt.Status</span></td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary">View</a>
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <a asp-action="Print" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+                                    @if (canCancel)
+                                    {
+                                        <form asp-action="Cancel" asp-route-id="@receipt.ReceiptId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this receipt? Payment and invoice balances will not change.');">Cancel</button>
+                                        </form>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }

@@ -1,14 +1,30 @@
 using BizCore.Data;
+using BizCore.Services;
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AuthorizeFilter());
+});
 builder.Services.AddDbContext<AccountingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("AccountingDb")));
+builder.Services.AddScoped<PasswordHashService>();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var culture = new CultureInfo("en-US");
@@ -34,6 +50,7 @@ app.UseRequestLocalization();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

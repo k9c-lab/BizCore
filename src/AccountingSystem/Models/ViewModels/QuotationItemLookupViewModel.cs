@@ -10,5 +10,6 @@ public class QuotationItemLookupViewModel
     public string ItemType { get; set; } = "Product";
     public decimal UnitPrice { get; set; }
     public decimal CurrentStock { get; set; }
+    public bool TrackStock { get; set; }
     public bool IsSerialControlled { get; set; }
 }

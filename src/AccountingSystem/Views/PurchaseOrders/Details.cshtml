@@ -2,6 +2,48 @@
 
 @{
     ViewData["Title"] = "Purchase Order Details";
+    var hasReceiving = Model.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
+    var hasOpenLines = Model.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
+    var canEdit = Model.Status == "Draft" && !hasReceiving;
+    var editBlockedReason = canEdit
+        ? string.Empty
+        : Model.Status == "Cancelled"
+            ? "Cancelled purchase orders are read-only."
+            : hasReceiving
+                ? "Edit PO is blocked because receiving already exists."
+                : $"Edit PO is available only for Draft purchase orders. Current status is {Model.Status}.";
+    var canApprove = Model.Status == "Draft" &&
+        Model.SupplierId > 0 &&
+        Model.PurchaseOrderDetails.Any() &&
+        Model.PurchaseOrderDetails.All(x => x.ItemId > 0 && x.Qty > 0 && x.UnitPrice >= 0 && x.DiscountAmount >= 0);
+    var approveBlockedReason = canApprove
+        ? string.Empty
+        : Model.Status != "Draft"
+            ? $"Approve is available only for Draft purchase orders. Current status is {Model.Status}."
+            : !Model.PurchaseOrderDetails.Any()
+                ? "Approve is blocked because no PO lines exist."
+                : "Approve is blocked because supplier or PO lines are incomplete.";
+    var canReceive = (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && hasOpenLines;
+    var receiveBlockedReason = canReceive
+        ? string.Empty
+        : Model.Status == "Cancelled"
+            ? "Receive Goods is blocked because the PO is cancelled."
+            : Model.Status == "FullyReceived" || !hasOpenLines
+                ? "Receive Goods is blocked because the PO is already fully received."
+                : "Receive Goods is available only after PO approval.";
+    var canCancel = (Model.Status == "Draft" || Model.Status == "Approved") && !hasReceiving;
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : Model.Status == "Cancelled"
+            ? "Cancelled purchase orders are read-only."
+            : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
+                ? "Cancel PO is blocked because receiving already exists."
+                : $"Cancel PO is available only for Draft or Approved purchase orders. Current status is {Model.Status}.";
+}
+
+@if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="page-header">
@@ -11,67 +53,246 @@
         <p class="page-subtitle">Review PO header, supplier, and line quantities before receiving.</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-primary">Edit PO</a>
-        <a asp-controller="Receivings" asp-action="Create" class="btn btn-outline-primary">New Receiving</a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-primary">Edit PO</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit PO</button>
+        }
+        @if (canApprove)
+        {
+            <form asp-action="Approve" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Approve</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this purchase order (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this purchase order?');">Cancel PO</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel PO</button>
+        }
+        @if (canReceive)
+        {
+            <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" class="btn btn-success">Receive Goods</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">Receive Goods</button>
+        }
+        <a asp-action="Print" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
-<div class="card content-card mb-3">
-    <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">PO No.</span><p class="detail-value">@Model.PONo</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
-            <div class="detail-item"><span class="detail-label">PO Date</span><p class="detail-value">@Model.PODate.ToString("dd MMM yyyy")</p></div>
-            <div class="detail-item"><span class="detail-label">Expected Receive</span><p class="detail-value">@(Model.ExpectedReceiveDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
-            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
-            <div class="detail-item"><span class="detail-label">Reference No.</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</p></div>
-            <div class="detail-item"><span class="detail-label">VAT Type</span><p class="detail-value">@Model.VatType</p></div>
-            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
-            <div class="detail-item"><span class="detail-label">Totals</span><p class="detail-value">Subtotal @Model.Subtotal.ToString("N2") | VAT @Model.VatAmount.ToString("N2") | Total @Model.TotalAmount.ToString("N2")</p></div>
-        </div>
+@if (!canEdit || !canApprove || !canCancel || !canReceive)
+{
+    <div class="workflow-info mb-3">
+        @if (!canEdit)
+        {
+            <div>@editBlockedReason</div>
+        }
+        @if (!canApprove)
+        {
+            <div>@approveBlockedReason</div>
+        }
+        @if (!canCancel)
+        {
+            <div>@cancelBlockedReason</div>
+        }
+        @if (!canReceive)
+        {
+            <div>@receiveBlockedReason</div>
+        }
     </div>
-</div>
+}
 
-<div class="card content-card table-card">
-    <div class="table-card-header">
-        <div>
-            <h2 class="section-title">PO Lines</h2>
-            <p class="section-subtitle">Received quantity is tracked on each purchase line.</p>
-        </div>
-        <div class="table-meta">@Model.PurchaseOrderDetails.Count line(s)</div>
-    </div>
+<div class="card content-card">
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table entity-table align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Received</th>
-                        <th>Remaining</th>
-                        <th>Unit Price</th>
-                        <th>Discount</th>
-                        <th>Line Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var line in Model.PurchaseOrderDetails.OrderBy(x => x.LineNumber))
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">PO Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">PO No.</div>
+                        <div class="form-control readonly-detail">@Model.PONo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">PO Date</div>
+                        <div class="form-control readonly-detail">@Model.PODate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Expected Receive</div>
+                        <div class="form-control readonly-detail">@(Model.ExpectedReceiveDate?.ToString("dd MMM yyyy") ?? "-")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Reference No.</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">VAT Type</div>
+                        <div class="form-control readonly-detail">@Model.VatType</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Received Lines</div>
+                        <div class="form-control readonly-detail">@Model.PurchaseOrderDetails.Count(x => x.ReceivedQty > 0)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Open Lines</div>
+                        <div class="form-control readonly-detail">@Model.PurchaseOrderDetails.Count(x => x.Qty > x.ReceivedQty)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Supplier Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Supplier Name</span>
+                                <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.TaxId) ? "-" : Model.Supplier!.TaxId)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Address) ? "-" : Model.Supplier!.Address)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">PO Lines</div>
+                        <div class="table-meta">@Model.PurchaseOrderDetails.Count line(s). Received quantity is tracked on each purchase line.</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table quote-editor-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">#</th>
+                                <th>Item</th>
+                                <th style="width: 10%;">Qty</th>
+                                <th style="width: 10%;">Received</th>
+                                <th style="width: 10%;">Remaining</th>
+                                <th style="width: 12%;">Unit Price</th>
+                                <th style="width: 10%;">Discount</th>
+                                <th style="width: 12%;">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.PurchaseOrderDetails.OrderBy(x => x.LineNumber))
+                        {
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
+                                    <div class="table-meta">Part No.: @(string.IsNullOrWhiteSpace(line.Item?.PartNumber) ? "-" : line.Item!.PartNumber)</div>
+                                </td>
+                                <td>@line.Qty.ToString("N2")</td>
+                                <td>@line.ReceivedQty.ToString("N2")</td>
+                                <td>@((line.Qty - line.ReceivedQty).ToString("N2"))</td>
+                                <td>@line.UnitPrice.ToString("N2")</td>
+                                <td>@line.DiscountAmount.ToString("N2")</td>
+                                <td>@line.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="quotation-summary-wrap">
+                    <div class="quotation-summary-stack">
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Subtotal</span>
+                            <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Discount</span>
+                            <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">VAT</span>
+                            <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">Total</span>
+                            <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Approved</span>
+                        <span class="document-history-value">@(Model.ApprovedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                </div>
+                @if (Model.Status == "Cancelled")
                 {
-                    <tr>
-                        <td>@line.LineNumber</td>
-                        <td class="fw-semibold">@line.Item?.ItemName</td>
-                        <td>@line.Qty.ToString("N2")</td>
-                        <td>@line.ReceivedQty.ToString("N2")</td>
-                        <td>@((line.Qty - line.ReceivedQty).ToString("N2"))</td>
-                        <td>@line.UnitPrice.ToString("N2")</td>
-                        <td>@line.DiscountAmount.ToString("N2")</td>
-                        <td>@line.LineTotal.ToString("N2")</td>
-                    </tr>
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
                 }
-                </tbody>
-            </table>
+            </div>
         </div>
     </div>
 </div>

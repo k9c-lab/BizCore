@@ -1,10 +1,12 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin")]
 public class SuppliersController : CrudControllerBase
 {
     private const string CodePrefix = "SUP";

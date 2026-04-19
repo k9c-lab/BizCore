@@ -5,6 +5,22 @@
     var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") &&
         Model.PaidAmount <= 0 &&
         !Model.PaymentAllocations.Any();
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : Model.Status == "Cancelled"
+            ? "Cancelled invoices are read-only."
+            : Model.PaidAmount > 0 || Model.PaymentAllocations.Any()
+                ? "Cancel Invoice is blocked because payment already exists."
+                : "Cancel Invoice is available only for Draft or Issued invoices.";
+    var canReceivePayment = Model.BalanceAmount > 0 &&
+        (Model.Status == "Issued" || Model.Status == "PartiallyPaid");
+    var receivePaymentBlockedReason = canReceivePayment
+        ? string.Empty
+        : Model.Status == "Paid"
+            ? "Receive Payment is blocked because the invoice is already paid."
+            : Model.Status == "Cancelled"
+                ? "Receive Payment is blocked because the invoice is cancelled."
+                : "Receive Payment is available only for Issued or PartiallyPaid invoices with open balance.";
     var issueBlockReasons = new List<string>();
     if (Model.Status == "Draft")
     {
@@ -34,7 +50,7 @@
 
 @if (TempData["InvoiceNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="form-alert mb-3">@notice</div>
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="page-header">
@@ -66,6 +82,18 @@
                 <button type="submit" class="btn btn-outline-danger">Cancel Invoice</button>
             </form>
         }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Invoice</button>
+        }
+        @if (canReceivePayment)
+        {
+            <a asp-controller="Payments" asp-action="Create" asp-route-customerId="@Model.CustomerId" asp-route-invoiceId="@Model.InvoiceId" class="btn btn-success">Receive Payment</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@receivePaymentBlockedReason">Receive Payment</button>
+        }
         <a asp-action="Print" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
@@ -76,6 +104,20 @@
     <div class="form-alert mb-3">
         Issue is not allowed because serial numbers are incomplete.
         @string.Join(" ", issueBlockReasons)
+    </div>
+}
+
+@if (!canCancel || !canReceivePayment)
+{
+    <div class="workflow-info mb-3">
+        @if (!canCancel)
+        {
+            <div>@cancelBlockedReason</div>
+        }
+        @if (!canReceivePayment)
+        {
+            <div>@receivePaymentBlockedReason</div>
+        }
     </div>
 }
 
@@ -265,6 +307,39 @@
                             <span class="quotation-summary-amount">@Model.BalanceAmount.ToString("N2")</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Issued</span>
+                        <span class="document-history-value">@(Model.IssuedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.IssuedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    @if (Model.Status == "Cancelled")
+                    {
+                        <div class="document-history-reason">
+                            <span class="document-history-label">Cancel Reason</span>
+                            <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                        </div>
+                    }
                 </div>
             </div>
         </div>

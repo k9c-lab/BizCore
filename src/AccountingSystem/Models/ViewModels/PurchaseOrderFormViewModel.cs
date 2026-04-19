@@ -58,5 +58,6 @@ public class PurchaseOrderFormViewModel
     public IEnumerable<SelectListItem> SupplierOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> StatusOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IReadOnlyList<PurchaseOrderSupplierLookupViewModel> SupplierLookup { get; set; } = Array.Empty<PurchaseOrderSupplierLookupViewModel>();
     public IReadOnlyList<QuotationItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<QuotationItemLookupViewModel>();
 }

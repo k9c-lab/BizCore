@@ -1,174 +1,272 @@
 @model BizCore.Models.ViewModels.ReceivingFormViewModel
 
 @{
-    ViewData["Title"] = "Create Receiving";
+    var isEdit = Model.ReceivingId.HasValue;
+    var formAction = isEdit ? "Edit" : "Create";
+    var pageTitle = isEdit ? "Edit Receiving Draft" : "Create Receiving";
+    ViewData["Title"] = pageTitle;
+    var selectedPo = Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId);
+    var canPost = Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
+    var canSaveDraft = Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
+    var postBlockedReason = canPost
+        ? string.Empty
+        : "Post Receiving is blocked because no open purchase orders are available.";
+    var hasSelectedPo = Model.PurchaseOrderId.HasValue;
+    var startFromPoMessage = "Start receiving from an approved purchase order by using the Receive Goods action.";
 }
 
 <div class="page-header">
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Create Receiving</h1>
-        <p class="page-subtitle">Post received goods from a purchase order. Posting updates stock and creates serials for serial-controlled items.</p>
+        <h1 class="page-title">@pageTitle</h1>
+        <p class="page-subtitle">Save a draft while receiving details are incomplete, then post when stock and serial records are ready to update.</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Receivings</a>
+        <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
+        <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
     </div>
 </div>
 
+@if (!hasSelectedPo || !canPost)
+{
+    <div class="workflow-info mb-3">
+        @if (!hasSelectedPo)
+        {
+            <div>@startFromPoMessage</div>
+        }
+        @if (!canPost)
+        {
+            <div>@postBlockedReason</div>
+        }
+    </div>
+}
+
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
-            <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+        <form asp-action="@formAction" asp-route-id="@Model.ReceivingId" method="post" id="receivingForm">
+            <input type="hidden" asp-for="ReceivingId" />
+            <input type="hidden" asp-for="Status" />
+            <div asp-validation-summary="All" class="form-alert"></div>
             <div class="form-shell">
-                <div class="form-section">
+                <div class="form-section quotation-header-section">
                     <div class="form-section-title">Receiving Header</div>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label asp-for="ReceivingNo" class="form-label"></label>
-                            <input asp-for="ReceivingNo" class="form-control" readonly />
+                    <div class="row g-2 quotation-header-grid">
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="ReceivingNo" class="detail-label"></label>
+                            <input asp-for="ReceivingNo" class="form-control readonly-detail" readonly />
                         </div>
-                        <div class="col-md-3">
-                            <label asp-for="ReceiveDate" class="form-label"></label>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="ReceiveDate" class="detail-label"></label>
                             <input asp-for="ReceiveDate" class="form-control" />
                             <span asp-validation-for="ReceiveDate" class="text-danger"></span>
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="PurchaseOrderId" class="form-label"></label>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="PurchaseOrderId" class="detail-label"></label>
                             <select asp-for="PurchaseOrderId" asp-items="Model.PurchaseOrderOptions" class="form-select" id="receivingPurchaseOrder">
                                 <option value="">Select purchase order</option>
                             </select>
                             <span asp-validation-for="PurchaseOrderId" class="text-danger"></span>
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="SupplierId" class="form-label"></label>
-                            <input asp-for="SupplierId" class="form-control" id="receivingSupplierId" readonly />
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="DeliveryNoteNo" class="form-label"></label>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="DeliveryNoteNo" class="detail-label"></label>
                             <input asp-for="DeliveryNoteNo" class="form-control" />
                             <span asp-validation-for="DeliveryNoteNo" class="text-danger"></span>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">VAT Type</label>
-                            <input type="text" class="form-control" id="receivingVatType" value="@(Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId)?.VatType ?? string.Empty)" readonly />
+                            <div class="detail-label">Status</div>
+                            <div class="form-control readonly-detail">@(isEdit ? Model.Status : "New")</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Subtotal</label>
-                            <input type="text" class="form-control" id="receivingSubtotal" value="@((Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId)?.Subtotal ?? 0m).ToString("N2"))" readonly />
+                            <div class="detail-label">PO No.</div>
+                            <div class="form-control readonly-detail" id="receivingPoNo">@(selectedPo?.PONo ?? "-")</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">VAT</label>
-                            <input type="text" class="form-control" id="receivingVatAmount" value="@((Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId)?.VatAmount ?? 0m).ToString("N2"))" readonly />
+                            <label asp-for="SupplierId" class="detail-label"></label>
+                            <input asp-for="SupplierId" class="form-control readonly-detail" id="receivingSupplierId" readonly />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Total</label>
-                            <input type="text" class="form-control" id="receivingTotalAmount" value="@((Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId)?.TotalAmount ?? 0m).ToString("N2"))" readonly />
+                            <div class="detail-label">Supplier</div>
+                            <div class="form-control readonly-detail" id="receivingSupplierName">@(selectedPo?.SupplierName ?? "-")</div>
                         </div>
                         <div class="col-12">
-                            <label asp-for="Remark" class="form-label"></label>
+                            <label asp-for="Remark" class="detail-label"></label>
                             <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
                             <span asp-validation-for="Remark" class="text-danger"></span>
                         </div>
                     </div>
                 </div>
 
+                <div class="quotation-party-grid">
+                    <div class="quotation-party-column">
+                        <div class="quotation-info-card">
+                            <div class="quotation-info-card-title">PO Information</div>
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">PO No.</span>
+                                    <span class="quotation-info-value" id="poInfoNo">@(selectedPo?.PONo ?? "-")</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Supplier</span>
+                                    <span class="quotation-info-value" id="poInfoSupplier">@(selectedPo?.SupplierName ?? "-")</span>
+                                </div>
+                            </div>
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">VAT Type</span>
+                                    <span class="quotation-info-value" id="receivingVatType">@(selectedPo?.VatType ?? "-")</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Open Lines</span>
+                                    <span class="quotation-info-value" id="receivingOpenLines">@(selectedPo?.Lines.Count.ToString() ?? "0")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quotation-party-column">
+                        <div class="quotation-info-card">
+                            <div class="quotation-info-card-title">PO Financial Summary</div>
+                            <div class="quotation-summary-stack">
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">Subtotal</span>
+                                    <span class="quotation-summary-amount" id="receivingSubtotal">@((selectedPo?.Subtotal ?? 0m).ToString("N2"))</span>
+                                </div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">VAT</span>
+                                    <span class="quotation-summary-amount" id="receivingVatAmount">@((selectedPo?.VatAmount ?? 0m).ToString("N2"))</span>
+                                </div>
+                                <div class="quotation-summary-row total">
+                                    <span class="quotation-summary-name">Total</span>
+                                    <span class="quotation-summary-amount" id="receivingTotalAmount">@((selectedPo?.TotalAmount ?? 0m).ToString("N2"))</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-section">
-                    <div class="form-section-title">Receiving Lines</div>
-                    <div class="table-responsive">
-                        <table class="table entity-table quote-editor-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Ordered</th>
-                                    <th>Received</th>
-                                    <th>Remaining</th>
-                                    <th>Qty Receive</th>
-                                    <th>Supplier Warranty</th>
-                                    <th>Remark</th>
-                                    <th>Serials</th>
-                                </tr>
-                            </thead>
-                            <tbody id="receivingLineBody">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                        <div>
+                            <div class="form-section-title mb-1">Receiving Lines</div>
+                            <div class="table-meta">Enter received quantities. Serial-controlled lines require one serial per unit and supplier warranty dates.</div>
+                        </div>
+                    </div>
+                    <div class="receiving-lines-stack" id="receivingLineBody">
                             @for (var i = 0; i < Model.Details.Count; i++)
                             {
-                                <tr class="receiving-line-row">
-                                    <td>
-                                        <input type="hidden" name="Details[@i].PurchaseOrderDetailId" value="@Model.Details[i].PurchaseOrderDetailId" />
-                                        <input type="hidden" name="Details[@i].ItemId" value="@Model.Details[i].ItemId" />
-                                        <input type="hidden" name="Details[@i].LineNumber" value="@Model.Details[i].LineNumber" />
-                                        <input type="hidden" name="Details[@i].ItemCode" value="@Model.Details[i].ItemCode" />
-                                        <input type="hidden" name="Details[@i].ItemName" value="@Model.Details[i].ItemName" />
-                                        <input type="hidden" name="Details[@i].IsSerialControlled" value="@Model.Details[i].IsSerialControlled.ToString().ToLowerInvariant()" />
-                                        <input type="hidden" name="Details[@i].TrackStock" value="@Model.Details[i].TrackStock.ToString().ToLowerInvariant()" />
-                                        <input type="hidden" name="Details[@i].OrderedQty" value="@Model.Details[i].OrderedQty" />
-                                        <input type="hidden" name="Details[@i].ReceivedQty" value="@Model.Details[i].ReceivedQty" />
-                                        <input type="hidden" name="Details[@i].RemainingQty" value="@Model.Details[i].RemainingQty" />
-                                        <div class="fw-semibold">@Model.Details[i].ItemCode - @Model.Details[i].ItemName</div>
-                                        @if (Model.Details[i].IsSerialControlled)
-                                        {
-                                            <div class="form-text">Serial-controlled</div>
-                                        }
-                                    </td>
-                                    <td>@Model.Details[i].OrderedQty.ToString("N2")</td>
-                                    <td>@Model.Details[i].ReceivedQty.ToString("N2")</td>
-                                    <td>@Model.Details[i].RemainingQty.ToString("N2")</td>
-                                    <td>
+                                <div class="receiving-line-card receiving-line-row">
+                                    <input type="hidden" name="Details[@i].PurchaseOrderDetailId" value="@Model.Details[i].PurchaseOrderDetailId" />
+                                    <input type="hidden" name="Details[@i].ItemId" value="@Model.Details[i].ItemId" />
+                                    <input type="hidden" name="Details[@i].LineNumber" value="@Model.Details[i].LineNumber" />
+                                    <input type="hidden" name="Details[@i].ItemCode" value="@Model.Details[i].ItemCode" />
+                                    <input type="hidden" name="Details[@i].ItemName" value="@Model.Details[i].ItemName" />
+                                    <input type="hidden" name="Details[@i].IsSerialControlled" value="@Model.Details[i].IsSerialControlled.ToString().ToLowerInvariant()" />
+                                    <input type="hidden" name="Details[@i].TrackStock" value="@Model.Details[i].TrackStock.ToString().ToLowerInvariant()" />
+                                    <input type="hidden" name="Details[@i].OrderedQty" value="@Model.Details[i].OrderedQty" />
+                                    <input type="hidden" name="Details[@i].ReceivedQty" value="@Model.Details[i].ReceivedQty" />
+                                    <input type="hidden" name="Details[@i].RemainingQty" value="@Model.Details[i].RemainingQty" />
+                                    <input type="hidden" name="Details[@i].UnitPrice" value="@Model.Details[i].UnitPrice" />
+                                    <input type="hidden" name="Details[@i].LineTotal" value="@Model.Details[i].LineTotal" />
+
+                                    <div class="receiving-line-header">
+                                        <div>
+                                            <div class="receiving-line-title">@Model.Details[i].ItemCode - @Model.Details[i].ItemName</div>
+                                            <div class="table-meta">PO Line @Model.Details[i].LineNumber</div>
+                                        </div>
+                                        <div class="receiving-line-status-wrap">
+                                            <span class="badge-soft">@(Model.Details[i].IsSerialControlled ? "Serial-controlled" : "Standard receiving")</span>
+                                            <span class="receiving-line-status is-muted js-line-status">Not receiving</span>
+                                        </div>
+                                    </div>
+                                    <div class="receiving-line-hint is-muted js-line-hint">Enter Qty Receive to include this item in the receiving.</div>
+
+                                    <div class="receiving-line-metrics">
+                                        <div class="receiving-line-metric">
+                                            <span>Ordered</span>
+                                            <strong>@Model.Details[i].OrderedQty.ToString("N2")</strong>
+                                        </div>
+                                        <div class="receiving-line-metric">
+                                            <span>Received</span>
+                                            <strong>@Model.Details[i].ReceivedQty.ToString("N2")</strong>
+                                        </div>
+                                        <div class="receiving-line-metric">
+                                            <span>Remaining</span>
+                                            <strong>@Model.Details[i].RemainingQty.ToString("N2")</strong>
+                                        </div>
+                                        <div class="receiving-line-metric">
+                                            <span>Unit Price</span>
+                                            <strong>@Model.Details[i].UnitPrice.ToString("N2")</strong>
+                                        </div>
+                                        <div class="receiving-line-metric">
+                                            <span>Line Total</span>
+                                            <strong>@Model.Details[i].LineTotal.ToString("N2")</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="receiving-line-entry-grid">
+                                        <div class="receiving-entry-block">
+                                            <label class="detail-label">Qty Receive</label>
                                         <input type="number" step="0.01" min="0" max="@Model.Details[i].RemainingQty.ToString("0.##")" name="Details[@i].QtyReceivedInput" value="@Model.Details[i].QtyReceivedInput.ToString("0.##")" class="form-control js-receive-qty" />
                                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].QtyReceivedInput" data-valmsg-replace="true"></span>
-                                    </td>
-                                    <td>
+                                        </div>
+
+                                        <div class="receiving-entry-block">
+                                            <div class="detail-label">Supplier Warranty</div>
                                         @if (Model.Details[i].IsSerialControlled)
                                         {
-                                            <div class="serial-entry-group">
-                                                <input type="date" name="Details[@i].SupplierWarrantyStartDate" value="@Model.Details[i].SupplierWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control" />
-                                                <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
-                                                <input type="date" name="Details[@i].SupplierWarrantyEndDate" value="@Model.Details[i].SupplierWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control mt-2" />
-                                                <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span class="table-meta">Not serial-controlled</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <input type="text" name="Details[@i].Remark" value="@Model.Details[i].Remark" class="form-control" />
-                                    </td>
-                                    <td>
-                                        @if (Model.Details[i].IsSerialControlled)
-                                        {
-                                            <div class="serial-entry-group">
-                                                <div class="form-text mb-2">Enter serials as rows or paste one serial per line.</div>
-                                                <div class="serial-stack js-serial-stack" data-line-index="@i">
-                                                @for (var s = 0; s < Math.Max(Model.Details[i].Serials.Count, 1); s++)
-                                                {
-                                                    <input type="text" name="Details[@i].Serials[@s].SerialNo" value="@(s < Model.Details[i].Serials.Count ? Model.Details[i].Serials[s].SerialNo : string.Empty)" class="form-control" placeholder="Serial no." />
-                                                }
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <input type="date" name="Details[@i].SupplierWarrantyStartDate" value="@Model.Details[i].SupplierWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control" title="Supplier warranty start" />
+                                                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
                                                 </div>
-                                                <textarea name="Details[@i].SerialEntryText" class="form-control mt-2 js-serial-textarea" rows="4" placeholder="One serial per line">@Model.Details[i].SerialEntryText</textarea>
-                                                <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SerialEntryText" data-valmsg-replace="true"></span>
-                                                <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Serials" data-valmsg-replace="true"></span>
+                                                <div class="col-6">
+                                                    <input type="date" name="Details[@i].SupplierWarrantyEndDate" value="@Model.Details[i].SupplierWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control" title="Supplier warranty end" />
+                                                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
+                                                </div>
                                             </div>
                                         }
                                         else
                                         {
-                                            <span class="table-meta">Not serial-controlled</span>
+                                            <span class="table-meta">Not required</span>
                                         }
-                                    </td>
-                                </tr>
+                                        </div>
+
+                                        <div class="receiving-entry-block receiving-entry-wide">
+                                            <label class="detail-label">Remark</label>
+                                        <input type="text" name="Details[@i].Remark" value="@Model.Details[i].Remark" class="form-control mb-2" placeholder="Remark" />
+                                        @if (Model.Details[i].IsSerialControlled)
+                                        {
+                                            <div class="detail-label mt-2">Serial Numbers</div>
+                                            <input type="hidden" name="Details[@i].SerialEntryText" value="" />
+                                            <div class="serial-stack js-serial-stack" data-line-index="@i">
+                                            @for (var s = 0; s < Math.Max(Model.Details[i].Serials.Count, 1); s++)
+                                            {
+                                                <input type="text" name="Details[@i].Serials[@s].SerialNo" value="@(s < Model.Details[i].Serials.Count ? Model.Details[i].Serials[s].SerialNo : string.Empty)" class="form-control js-serial-input" placeholder="Serial no. @(s + 1)" />
+                                            }
+                                            </div>
+                                            <div class="table-meta text-danger js-serial-count">Serial count must equal Qty Receive.</div>
+                                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SerialEntryText" data-valmsg-replace="true"></span>
+                                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Serials" data-valmsg-replace="true"></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="table-meta">No serial input needed.</span>
+                                        }
+                                        </div>
+                                    </div>
+                                </div>
                             }
-                            </tbody>
-                        </table>
                     </div>
                     <span asp-validation-for="Details" class="text-danger"></span>
                 </div>
             </div>
 
             <div class="form-actions mt-3">
-                <span class="table-meta">Saving posts the receiving immediately, updates stock, and creates serial records when required.</span>
+                <span class="table-meta" id="receivingPostReason">Save Draft keeps this receiving editable. Post Receiving updates stock and creates serial records.</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Post Receiving</button>
+                    <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
+                    <button type="submit" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="saveDraftButton" disabled="@(!canSaveDraft)">Save Draft</button>
+                    <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)">Post Receiving</button>
                 </div>
             </div>
         </form>
@@ -184,129 +282,304 @@
             const lookup = JSON.parse(document.getElementById("receivingPOLookup").textContent);
             const poSelect = document.getElementById("receivingPurchaseOrder");
             const supplierInput = document.getElementById("receivingSupplierId");
-            const vatTypeInput = document.getElementById("receivingVatType");
-            const subtotalInput = document.getElementById("receivingSubtotal");
-            const vatAmountInput = document.getElementById("receivingVatAmount");
-            const totalAmountInput = document.getElementById("receivingTotalAmount");
             const lineBody = document.getElementById("receivingLineBody");
+            const saveDraftButton = document.getElementById("saveDraftButton");
+            const postButton = document.getElementById("postReceivingButton");
+            const postReason = document.getElementById("receivingPostReason");
 
-            const createSerialInputs = (index, count) => {
-                const rows = [];
-                const total = Math.max(count, 1);
-                for (let s = 0; s < total; s += 1) {
-                    rows.push(`<input type="text" name="Details[${index}].Serials[${s}].SerialNo" class="form-control" placeholder="Serial no." />`);
-                }
-                return rows.join("");
+            const money = value => Number(value || 0).toFixed(2);
+            const escapeHtml = value => String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+
+            const getSerialInputs = row => [...row.querySelectorAll(".js-serial-input")];
+
+            const serialCount = row => getSerialInputs(row)
+                .map(input => input.value.trim())
+                .filter(Boolean)
+                .length;
+
+            const targetSerialCount = qtyValue => {
+                const qty = Number.parseFloat(qtyValue || "0");
+                return Number.isInteger(qty) && qty > 0 ? qty : 1;
             };
 
-            const getSerialCountForQty = qtyValue => {
-                const qty = Number.parseFloat(qtyValue || "0");
-                if (!Number.isFinite(qty) || qty <= 0) {
-                    return 1;
-                }
+            const buildSerialInput = (lineIndex, serialIndex, value = "") =>
+                `<input type="text" name="Details[${lineIndex}].Serials[${serialIndex}].SerialNo" value="${escapeHtml(value)}" class="form-control js-serial-input" placeholder="Serial no. ${serialIndex + 1}" />`;
 
-                if (!Number.isInteger(qty)) {
-                    return 1;
-                }
+            const getLineLabel = row => row.querySelector(".receiving-line-title")?.textContent?.trim() || "Receiving line";
 
-                return Math.max(qty, 1);
+            const setLineStatus = (row, status, message, tone) => {
+                const badge = row.querySelector(".js-line-status");
+                const hint = row.querySelector(".js-line-hint");
+                if (badge) {
+                    badge.textContent = status;
+                    badge.classList.remove("is-ready", "is-warning", "is-muted");
+                    badge.classList.add(tone === "ready" ? "is-ready" : tone === "warning" ? "is-warning" : "is-muted");
+                }
+                if (hint) {
+                    hint.textContent = message;
+                    hint.classList.remove("is-ready", "is-warning", "is-muted");
+                    hint.classList.add(tone === "ready" ? "is-ready" : tone === "warning" ? "is-warning" : "is-muted");
+                }
             };
 
             const syncSerialInputs = row => {
-                if (!row) return;
-
-                const isSerialControlled = row.querySelector('input[name$=".IsSerialControlled"]')?.value === "true";
-                if (!isSerialControlled) {
-                    return;
-                }
-
+                const stack = row.querySelector(".js-serial-stack");
                 const qtyInput = row.querySelector(".js-receive-qty");
-                const serialStack = row.querySelector(".js-serial-stack");
-                if (!qtyInput || !serialStack) {
+                if (!stack || !qtyInput) {
                     return;
                 }
 
-                const lineIndexMatch = serialStack.dataset.lineIndex;
-                const lineIndex = Number.parseInt(lineIndexMatch || "0", 10);
-                serialStack.innerHTML = createSerialInputs(lineIndex, getSerialCountForQty(qtyInput.value));
+                const lineIndex = Number.parseInt(stack.dataset.lineIndex || "0", 10);
+                const existingValues = getSerialInputs(row).map(input => input.value);
+                const nextCount = targetSerialCount(qtyInput.value);
+                stack.innerHTML = Array.from({ length: nextCount }, (_, index) =>
+                    buildSerialInput(lineIndex, index, existingValues[index] || "")).join("");
+            };
+
+            const updatePostState = () => {
+                const selected = lookup.find(x => String(x.PurchaseOrderId) === String(poSelect.value));
+                let reason = "";
+
+                if (!selected) {
+                    reason = "Select a purchase order before posting.";
+                } else {
+                    let totalQty = 0;
+                    lineBody.querySelectorAll(".receiving-line-row").forEach(row => {
+                        const lineLabel = getLineLabel(row);
+                        const qtyInput = row.querySelector(".js-receive-qty");
+                        const qty = Number.parseFloat(qtyInput?.value || "0");
+                        const remaining = Number.parseFloat(qtyInput?.max || "0");
+                        if (Number.isFinite(qty)) {
+                            totalQty += qty;
+                        }
+
+                        if (qty < 0 && !reason) {
+                            reason = `Cannot post: ${lineLabel} has negative Qty Receive.`;
+                        }
+
+                        if (qty > remaining && !reason) {
+                            reason = `Cannot post: ${lineLabel} Qty Receive exceeds remaining quantity.`;
+                        }
+
+                        const isSerial = row.querySelector('input[name$=".IsSerialControlled"]')?.value === "true";
+                        const countLabel = row.querySelector(".js-serial-count");
+                        let lineStatus = "Ready";
+                        let lineMessage = "Ready to post this line.";
+                        let lineTone = "ready";
+
+                        if (qty <= 0) {
+                            lineStatus = "Not receiving";
+                            lineMessage = "Enter Qty Receive to include this item in the receiving.";
+                            lineTone = "muted";
+                        } else if (qty < 0) {
+                            lineStatus = "Qty issue";
+                            lineMessage = "Qty Receive cannot be negative.";
+                            lineTone = "warning";
+                        } else if (qty > remaining) {
+                            lineStatus = "Qty issue";
+                            lineMessage = `Qty Receive cannot exceed remaining quantity (${money(remaining)}).`;
+                            lineTone = "warning";
+                        }
+
+                        if (isSerial && countLabel) {
+                            const count = serialCount(row);
+                            const isReceivingLine = qty > 0;
+                            const matchesQty = isReceivingLine && count === qty && Number.isInteger(qty);
+                            countLabel.textContent = isReceivingLine
+                                ? `Serial count: ${count}. Must equal Qty Receive.`
+                                : "Serials are required only when Qty Receive is greater than 0.";
+                            countLabel.classList.toggle("text-danger", isReceivingLine && !matchesQty);
+                            countLabel.classList.toggle("text-success", matchesQty);
+                            countLabel.classList.toggle("text-muted", !isReceivingLine);
+
+                            if (!isReceivingLine) {
+                                setLineStatus(row, lineStatus, lineMessage, lineTone);
+                                return;
+                            }
+
+                            if (qty > 0 && !Number.isInteger(qty) && !reason) {
+                                reason = `Cannot post: ${lineLabel} serial-controlled quantity must be a whole number.`;
+                            }
+
+                            if (qty > 0 && !Number.isInteger(qty)) {
+                                lineStatus = "Qty issue";
+                                lineMessage = "Serial-controlled items must be received in whole numbers.";
+                                lineTone = "warning";
+                            }
+
+                            if (qty > 0 && count !== qty && !reason) {
+                                reason = `Cannot post: ${lineLabel} requires ${qty} serial numbers, currently ${count}.`;
+                            }
+
+                            if (qty > 0 && count !== qty && Number.isInteger(qty)) {
+                                lineStatus = "Needs serials";
+                                lineMessage = `Enter ${qty} serial numbers. Current count is ${count}.`;
+                                lineTone = "warning";
+                            }
+
+                            const warrantyStart = row.querySelector('input[name$=".SupplierWarrantyStartDate"]');
+                            const warrantyEnd = row.querySelector('input[name$=".SupplierWarrantyEndDate"]');
+                            if (qty > 0 && (!warrantyStart?.value || !warrantyEnd?.value) && !reason) {
+                                reason = `Cannot post: ${lineLabel} requires supplier warranty start and end dates.`;
+                            }
+
+                            if (qty > 0 && (!warrantyStart?.value || !warrantyEnd?.value) && lineTone !== "warning") {
+                                lineStatus = "Needs warranty";
+                                lineMessage = "Enter supplier warranty start and end dates.";
+                                lineTone = "warning";
+                            }
+                        }
+
+                        setLineStatus(row, lineStatus, lineMessage, lineTone);
+                    });
+
+                    if (totalQty <= 0) {
+                        reason = "Cannot post: enter Qty Receive for at least one item.";
+                    }
+                }
+
+                if (saveDraftButton) {
+                    saveDraftButton.disabled = !selected;
+                }
+                postButton.disabled = Boolean(reason);
+                postReason.textContent = reason || "Ready to post. Posting immediately updates stock and creates serial records where required.";
             };
 
             const renderLines = poId => {
                 const selected = lookup.find(x => String(x.PurchaseOrderId) === String(poId));
                 supplierInput.value = selected ? selected.SupplierId : "";
-                vatTypeInput.value = selected ? selected.VatType : "";
-                subtotalInput.value = selected ? Number(selected.Subtotal).toFixed(2) : "";
-                vatAmountInput.value = selected ? Number(selected.VatAmount).toFixed(2) : "";
-                totalAmountInput.value = selected ? Number(selected.TotalAmount).toFixed(2) : "";
+                document.getElementById("receivingPoNo").textContent = selected?.PONo || "-";
+                document.getElementById("receivingSupplierName").textContent = selected?.SupplierName || "-";
+                document.getElementById("poInfoNo").textContent = selected?.PONo || "-";
+                document.getElementById("poInfoSupplier").textContent = selected?.SupplierName || "-";
+                document.getElementById("receivingVatType").textContent = selected?.VatType || "-";
+                document.getElementById("receivingOpenLines").textContent = selected ? String(selected.Lines.length) : "0";
+                document.getElementById("receivingSubtotal").textContent = selected ? money(selected.Subtotal) : "0.00";
+                document.getElementById("receivingVatAmount").textContent = selected ? money(selected.VatAmount) : "0.00";
+                document.getElementById("receivingTotalAmount").textContent = selected ? money(selected.TotalAmount) : "0.00";
                 lineBody.innerHTML = "";
 
                 if (!selected) {
+                    updatePostState();
                     return;
                 }
 
                 selected.Lines.forEach((line, index) => {
-                    const tr = document.createElement("tr");
-                    tr.className = "receiving-line-row";
-                    tr.innerHTML = `
-                        <td>
+                    const card = document.createElement("div");
+                    card.className = "receiving-line-card receiving-line-row";
+                    card.innerHTML = `
                             <input type="hidden" name="Details[${index}].PurchaseOrderDetailId" value="${line.PurchaseOrderDetailId}" />
                             <input type="hidden" name="Details[${index}].ItemId" value="${line.ItemId}" />
                             <input type="hidden" name="Details[${index}].LineNumber" value="${line.LineNumber}" />
-                            <input type="hidden" name="Details[${index}].ItemCode" value="${line.ItemCode}" />
-                            <input type="hidden" name="Details[${index}].ItemName" value="${line.ItemName}" />
+                            <input type="hidden" name="Details[${index}].ItemCode" value="${escapeHtml(line.ItemCode)}" />
+                            <input type="hidden" name="Details[${index}].ItemName" value="${escapeHtml(line.ItemName)}" />
                             <input type="hidden" name="Details[${index}].IsSerialControlled" value="${String(line.IsSerialControlled).toLowerCase()}" />
                             <input type="hidden" name="Details[${index}].TrackStock" value="${String(line.TrackStock).toLowerCase()}" />
                             <input type="hidden" name="Details[${index}].OrderedQty" value="${line.OrderedQty}" />
                             <input type="hidden" name="Details[${index}].ReceivedQty" value="${line.ReceivedQty}" />
                             <input type="hidden" name="Details[${index}].RemainingQty" value="${line.RemainingQty}" />
-                            <div class="fw-semibold">${line.ItemCode} - ${line.ItemName}</div>
-                            ${line.IsSerialControlled ? '<div class="form-text">Serial-controlled</div>' : ''}
-                        </td>
-                        <td>${Number(line.OrderedQty).toFixed(2)}</td>
-                        <td>${Number(line.ReceivedQty).toFixed(2)}</td>
-                        <td>${Number(line.RemainingQty).toFixed(2)}</td>
-                        <td>
-                            <input type="number" step="0.01" min="0" max="${line.RemainingQty}" name="Details[${index}].QtyReceivedInput" value="0" class="form-control js-receive-qty" />
-                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].QtyReceivedInput" data-valmsg-replace="true"></span>
-                        </td>
-                        <td>
-                            ${line.IsSerialControlled
-                                ? `<div class="serial-entry-group">
-                                        <input type="date" name="Details[${index}].SupplierWarrantyStartDate" class="form-control" />
-                                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
-                                        <input type="date" name="Details[${index}].SupplierWarrantyEndDate" class="form-control mt-2" />
-                                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
-                                   </div>`
-                                : '<span class="table-meta">Not serial-controlled</span>'}
-                        </td>
-                        <td><input type="text" name="Details[${index}].Remark" class="form-control" /></td>
-                        <td>
-                            ${line.IsSerialControlled
-                                ? `<div class="serial-entry-group">
-                                        <div class="form-text mb-2">Enter serials as rows or paste one serial per line.</div>
-                                        <div class="serial-stack js-serial-stack" data-line-index="${index}">
-                                            ${createSerialInputs(index, 1)}
-                                        </div>
-                                        <textarea name="Details[${index}].SerialEntryText" class="form-control mt-2 js-serial-textarea" rows="4" placeholder="One serial per line"></textarea>
-                                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SerialEntryText" data-valmsg-replace="true"></span>
-                                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Serials" data-valmsg-replace="true"></span>
-                                   </div>`
-                                : '<span class="table-meta">Not serial-controlled</span>'}
-                        </td>`;
-                    lineBody.appendChild(tr);
+                            <input type="hidden" name="Details[${index}].UnitPrice" value="${line.UnitPrice}" />
+                            <input type="hidden" name="Details[${index}].LineTotal" value="${line.LineTotal}" />
+                            <div class="receiving-line-header">
+                                <div>
+                                    <div class="receiving-line-title">${escapeHtml(line.ItemCode)} - ${escapeHtml(line.ItemName)}</div>
+                                    <div class="table-meta">PO Line ${line.LineNumber}</div>
+                                </div>
+                                <div class="receiving-line-status-wrap">
+                                    <span class="badge-soft">${line.IsSerialControlled ? "Serial-controlled" : "Standard receiving"}</span>
+                                    <span class="receiving-line-status is-muted js-line-status">Not receiving</span>
+                                </div>
+                            </div>
+                            <div class="receiving-line-hint is-muted js-line-hint">Enter Qty Receive to include this item in the receiving.</div>
+                            <div class="receiving-line-metrics">
+                                <div class="receiving-line-metric"><span>Ordered</span><strong>${money(line.OrderedQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>Received</span><strong>${money(line.ReceivedQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>Remaining</span><strong>${money(line.RemainingQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>Unit Price</span><strong>${money(line.UnitPrice)}</strong></div>
+                                <div class="receiving-line-metric"><span>Line Total</span><strong>${money(line.LineTotal)}</strong></div>
+                            </div>
+                            <div class="receiving-line-entry-grid">
+                                <div class="receiving-entry-block">
+                                    <label class="detail-label">Qty Receive</label>
+                                    <input type="number" step="0.01" min="0" max="${line.RemainingQty}" name="Details[${index}].QtyReceivedInput" value="0" class="form-control js-receive-qty" />
+                                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].QtyReceivedInput" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="receiving-entry-block">
+                                    <div class="detail-label">Supplier Warranty</div>
+                                    ${line.IsSerialControlled
+                                        ? `<div class="row g-2">
+                                                <div class="col-6">
+                                                    <input type="date" name="Details[${index}].SupplierWarrantyStartDate" class="form-control" title="Supplier warranty start" />
+                                                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
+                                                </div>
+                                                <div class="col-6">
+                                                    <input type="date" name="Details[${index}].SupplierWarrantyEndDate" class="form-control" title="Supplier warranty end" />
+                                                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
+                                                </div>
+                                           </div>`
+                                        : '<span class="table-meta">Not required</span>'}
+                                </div>
+                                <div class="receiving-entry-block receiving-entry-wide">
+                                    <label class="detail-label">Remark</label>
+                                    <input type="text" name="Details[${index}].Remark" class="form-control mb-2" placeholder="Remark" />
+                                    ${line.IsSerialControlled
+                                        ? `<div class="detail-label mt-2">Serial Numbers</div>
+                                           <input type="hidden" name="Details[${index}].SerialEntryText" value="" />
+                                           <div class="serial-stack js-serial-stack" data-line-index="${index}">
+                                               ${buildSerialInput(index, 0)}
+                                           </div>
+                                           <div class="table-meta text-danger js-serial-count">Serial count must equal Qty Receive.</div>
+                                           <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SerialEntryText" data-valmsg-replace="true"></span>
+                                           <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Serials" data-valmsg-replace="true"></span>`
+                                        : '<span class="table-meta">No serial input needed.</span>'}
+                                </div>
+                            </div>`;
+                    lineBody.appendChild(card);
                 });
+
+                updatePostState();
             };
 
             lineBody.addEventListener("input", event => {
-                if (!event.target.classList.contains("js-receive-qty")) {
+                const row = event.target.closest(".receiving-line-row");
+                if (event.target.classList.contains("js-receive-qty") && row) {
+                    syncSerialInputs(row);
+                }
+
+                updatePostState();
+            });
+
+            lineBody.addEventListener("paste", event => {
+                const input = event.target.closest(".js-serial-input");
+                if (!input) {
                     return;
                 }
 
-                syncSerialInputs(event.target.closest(".receiving-line-row"));
+                const pastedText = event.clipboardData?.getData("text") || "";
+                const serials = pastedText
+                    .split(/\r?\n/)
+                    .map(x => x.trim())
+                    .filter(Boolean);
+                if (serials.length <= 1) {
+                    return;
+                }
+
+                event.preventDefault();
+                const row = input.closest(".receiving-line-row");
+                const stack = row.querySelector(".js-serial-stack");
+                const lineIndex = Number.parseInt(stack.dataset.lineIndex || "0", 10);
+                stack.innerHTML = serials.map((serial, index) => buildSerialInput(lineIndex, index, serial)).join("");
+                updatePostState();
             });
 
             poSelect.addEventListener("change", e => renderLines(e.target.value));
             lineBody.querySelectorAll(".receiving-line-row").forEach(syncSerialInputs);
+            updatePostState();
         })();
     </script>
 }

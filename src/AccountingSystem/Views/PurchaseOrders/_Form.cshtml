@@ -1,6 +1,10 @@
 @model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
+@{
+    var selectedSupplier = Model.SupplierLookup.FirstOrDefault(x => x.SupplierId == Model.SupplierId);
+}
 
 <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<input asp-for="Status" type="hidden" />
 
 <div class="form-shell">
     <div class="form-section">
@@ -22,18 +26,6 @@
                 <span asp-validation-for="ExpectedReceiveDate" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="Status" class="form-label"></label>
-                <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="SupplierId" class="form-label"></label>
-                <select asp-for="SupplierId" asp-items="Model.SupplierOptions" class="form-select">
-                    <option value="">Select supplier</option>
-                </select>
-                <span asp-validation-for="SupplierId" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
                 <label asp-for="ReferenceNo" class="form-label"></label>
                 <input asp-for="ReferenceNo" class="form-control" />
                 <span asp-validation-for="ReferenceNo" class="text-danger"></span>
@@ -51,6 +43,68 @@
         </div>
     </div>
 
+    <div class="quotation-party-grid">
+        <div class="quotation-party-column">
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Supplier Information</div>
+                <label asp-for="SupplierId" class="form-label"></label>
+                <input asp-for="SupplierId" type="hidden" id="SupplierId" />
+                <div class="search-dropdown">
+                    <input type="text"
+                           id="poSupplierSearch"
+                           class="form-control"
+                           value="@(selectedSupplier is null ? string.Empty : $"{selectedSupplier.SupplierCode} - {selectedSupplier.SupplierName}")"
+                           placeholder="Search supplier code, name, or tax ID"
+                           autocomplete="off" />
+                    <div id="poSupplierResults" class="search-dropdown-menu" style="display:none;"></div>
+                </div>
+                <span asp-validation-for="SupplierId" class="text-danger"></span>
+
+                <div class="quotation-info-grid mt-3">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Supplier Name</span>
+                        <span class="quotation-info-value" id="poSupplierName">@(selectedSupplier?.SupplierName ?? "-")</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Tax ID</span>
+                        <span class="quotation-info-value" id="poSupplierTaxId">@(string.IsNullOrWhiteSpace(selectedSupplier?.TaxId) ? "-" : selectedSupplier.TaxId)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-value" id="poSupplierPhone">@(string.IsNullOrWhiteSpace(selectedSupplier?.Phone) ? "-" : selectedSupplier.Phone)</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-value" id="poSupplierEmail">@(string.IsNullOrWhiteSpace(selectedSupplier?.Email) ? "-" : selectedSupplier.Email)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-value" id="poSupplierAddress">@(string.IsNullOrWhiteSpace(selectedSupplier?.Address) ? "-" : selectedSupplier.Address)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="quotation-party-column">
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Workflow</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Current Status</span>
+                        <span class="quotation-info-value">@Model.Status</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Save Action</span>
+                        <span class="quotation-info-value">Save Draft</span>
+                    </div>
+                </div>
+                <div class="table-meta">Approval, cancellation, and receiving are handled from the PO details screen.</div>
+            </div>
+        </div>
+    </div>
+
     <div class="form-section">
         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
             <div>
@@ -59,7 +113,7 @@
             </div>
             <button type="button" class="btn btn-outline-primary btn-sm" id="addPOLine">Add Line</button>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive po-lines-editor-wrap">
             <table class="table entity-table quote-editor-table" id="poLinesTable">
                 <thead>
                     <tr>
@@ -77,22 +131,26 @@
                 <tbody id="poLineBody">
                 @for (var i = 0; i < Model.Details.Count; i++)
                 {
+                    var selectedItem = Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId);
                     <tr class="po-line-row">
                         <td>
                             <input type="hidden" name="Details[@i].PurchaseOrderDetailId" value="@Model.Details[i].PurchaseOrderDetailId" />
                             <input type="hidden" class="js-line-number" name="Details[@i].LineNumber" value="@(i + 1)" />
-                            <select name="Details[@i].ItemId" id="Details_@(i)__ItemId" class="form-select js-item-select">
-                                <option value="">Select item</option>
-                                @foreach (var option in Model.ItemLookup)
-                                {
-                                    <option value="@option.ItemId" selected="@(Model.Details[i].ItemId == option.ItemId ? "selected" : null)">@option.DisplayText</option>
-                                }
-                            </select>
+                            <input type="hidden" name="Details[@i].ItemId" id="Details_@(i)__ItemId" value="@Model.Details[i].ItemId" class="js-item-id" />
+                            <div class="search-dropdown">
+                                <input type="text"
+                                       class="form-control js-item-search"
+                                       value="@(selectedItem is null ? string.Empty : $"{selectedItem.ItemCode} - {selectedItem.ItemName}")"
+                                       placeholder="Search item code, name, or part no."
+                                       autocomplete="off" />
+                                <div id="poItemResults_@i" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                            </div>
+                            <div class="table-meta js-item-meta">@(selectedItem is null ? "Select item from master data." : $"Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)}")</div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
                         </td>
                         <td>
                             <span class="js-serial-flag badge-soft">
-                                @(Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId)?.IsSerialControlled == true ? "Yes" : "No")
+                                @(selectedItem?.IsSerialControlled == true ? "Yes" : "No")
                             </span>
                         </td>
                         <td>
@@ -127,21 +185,28 @@
         <span class="text-danger field-validation-valid" data-valmsg-for="Details" data-valmsg-replace="true"></span>
     </div>
 
-    <div class="mini-summary-grid">
-        <div class="quote-summary-card">
-            <span class="quote-summary-label">Subtotal</span>
-            <p class="quote-summary-value" id="poSubtotal">@Model.Subtotal.ToString("N2")</p>
-        </div>
-        <div class="quote-summary-card">
-            <span class="quote-summary-label">VAT</span>
-            <p class="quote-summary-value" id="poVatDisplay">@Model.VatAmount.ToString("N2")</p>
-            <input asp-for="VatAmount" type="hidden" id="poVatAmount" />
-        </div>
-        <div class="quote-summary-card">
-            <span class="quote-summary-label">Total</span>
-            <p class="quote-summary-value" id="poTotal">@Model.TotalAmount.ToString("N2")</p>
+    <div class="quotation-summary-wrap">
+        <div class="quotation-summary-stack">
+            <div class="quotation-summary-row">
+                <span class="quotation-summary-name">Subtotal</span>
+                <span class="quotation-summary-amount" id="poSubtotal">@Model.Subtotal.ToString("N2")</span>
+            </div>
+            <div class="quotation-summary-row">
+                <span class="quotation-summary-name">Discount</span>
+                <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+            </div>
+            <div class="quotation-summary-row">
+                <span class="quotation-summary-name">VAT</span>
+                <span class="quotation-summary-amount" id="poVatDisplay">@Model.VatAmount.ToString("N2")</span>
+                <input asp-for="VatAmount" type="hidden" id="poVatAmount" />
+            </div>
+            <div class="quotation-summary-row total">
+                <span class="quotation-summary-name">Total</span>
+                <span class="quotation-summary-amount" id="poTotal">@Model.TotalAmount.ToString("N2")</span>
+            </div>
         </div>
     </div>
 </div>
 
+<script type="application/json" id="poSupplierLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SupplierLookup))</script>
 <script type="application/json" id="poItemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>

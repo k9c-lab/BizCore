@@ -6,22 +6,22 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username = N'admin')
 BEGIN
-    INSERT INTO dbo.Users (Username, DisplayName, Email, IsActive)
-    VALUES (N'admin', N'System Administrator', N'admin@bizcore.local', 1);
+    INSERT INTO dbo.Users (Username, DisplayName, Email, PasswordHash, Role, IsActive)
+    VALUES (N'admin', N'System Administrator', N'admin@bizcore.local', N'PBKDF2-SHA256$100000$Qml6Q29yZUFkbWluU2FsdDEyMzQ1Ng==$q5v2GZ/ztGXmJmXF0qB/yRR3hvZIWG+Yh2oxi9GMapI=', N'Admin', 1);
 END;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username = N'sales.manager')
 BEGIN
-    INSERT INTO dbo.Users (Username, DisplayName, Email, IsActive)
-    VALUES (N'sales.manager', N'Sales Manager', N'sales.manager@bizcore.local', 1);
+    INSERT INTO dbo.Users (Username, DisplayName, Email, PasswordHash, Role, IsActive)
+    VALUES (N'sales.manager', N'Sales Manager', N'sales.manager@bizcore.local', N'PBKDF2-SHA256$100000$Qml6Q29yZUFkbWluU2FsdDEyMzQ1Ng==$q5v2GZ/ztGXmJmXF0qB/yRR3hvZIWG+Yh2oxi9GMapI=', N'Sales', 1);
 END;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username = N'inventory.staff')
 BEGIN
-    INSERT INTO dbo.Users (Username, DisplayName, Email, IsActive)
-    VALUES (N'inventory.staff', N'Inventory Staff', N'inventory.staff@bizcore.local', 1);
+    INSERT INTO dbo.Users (Username, DisplayName, Email, PasswordHash, Role, IsActive)
+    VALUES (N'inventory.staff', N'Inventory Staff', N'inventory.staff@bizcore.local', N'PBKDF2-SHA256$100000$Qml6Q29yZUFkbWluU2FsdDEyMzQ1Ng==$q5v2GZ/ztGXmJmXF0qB/yRR3hvZIWG+Yh2oxi9GMapI=', N'Warehouse', 1);
 END;
 GO
 

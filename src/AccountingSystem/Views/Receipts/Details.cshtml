@@ -2,6 +2,16 @@
 
 @{
     ViewData["Title"] = "Receipt Details";
+    var appliedAmount = Model.PaymentHeader?.PaymentAllocations.Sum(x => x.AppliedAmount) ?? 0m;
+    var canCancel = Model.Status == "Issued";
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : $"Cancel Receipt is available only for Issued receipts. Current status is {Model.Status}.";
+}
+
+@if (TempData["ReceiptNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="page-header">
@@ -11,74 +21,195 @@
         <p class="page-subtitle">Review the issued receipt and the related posted payment allocations.</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
         @if (Model.PaymentHeader is not null)
         {
             <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">View Payment</a>
         }
+        <a asp-action="Print" asp-route-id="@Model.ReceiptId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this receipt? Payment and invoice balances will not change.');">Cancel Receipt</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Receipt</button>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
-<div class="card content-card mb-3">
+@if (!canCancel)
+{
+    <div class="workflow-info mb-3">@cancelBlockedReason</div>
+}
+
+<div class="card content-card">
     <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Receipt No.</span><p class="detail-value">@Model.ReceiptNo</p></div>
-            <div class="detail-item"><span class="detail-label">Receipt Date</span><p class="detail-value">@Model.ReceiptDate.ToString("dd MMM yyyy")</p></div>
-            <div class="detail-item"><span class="detail-label">Customer</span><p class="detail-value">@Model.Customer?.CustomerName</p></div>
-            <div class="detail-item"><span class="detail-label">Payment No.</span><p class="detail-value">@Model.PaymentHeader?.PaymentNo</p></div>
-            <div class="detail-item"><span class="detail-label">Payment Method</span><p class="detail-value">@Model.PaymentHeader?.PaymentMethod</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@Model.Status</p></div>
-            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
-        </div>
-    </div>
-</div>
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Receipt Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Receipt No.</div>
+                        <div class="form-control readonly-detail">@Model.ReceiptNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Receipt Date</div>
+                        <div class="form-control readonly-detail">@Model.ReceiptDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Payment No.</div>
+                        <div class="form-control readonly-detail">@(Model.PaymentHeader?.PaymentNo ?? "-")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                </div>
+            </div>
 
-<div class="card content-card table-card mb-3">
-    <div class="table-card-header">
-        <div>
-            <h2 class="section-title">Allocated Invoices</h2>
-            <p class="section-subtitle">Receipt total follows the payment amount for this phase.</p>
-        </div>
-        <div class="table-meta">@Model.PaymentHeader?.PaymentAllocations.Count allocation(s)</div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table entity-table align-middle">
-                <thead>
-                    <tr>
-                        <th>Invoice No.</th>
-                        <th>Invoice Date</th>
-                        <th>Status</th>
-                        <th class="text-end">Applied Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var allocation in Model.PaymentHeader?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo) ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>())
-                {
-                    <tr>
-                        <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
-                        <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
-                        <td>@allocation.InvoiceHeader?.Status</td>
-                        <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Customer Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Customer Code</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.CustomerCode) ? "-" : Model.Customer!.CustomerCode)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Customer Name</span>
+                                <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
+                        </div>
+                    </div>
+                </div>
 
-<div class="quote-summary-grid">
-    <div class="quote-summary-card">
-        <span class="quote-summary-label">Receipt Amount</span>
-        <p class="quote-summary-value">@Model.TotalReceivedAmount.ToString("N2")</p>
-    </div>
-    <div class="quote-summary-card">
-        <span class="quote-summary-label">Payment Amount</span>
-        <p class="quote-summary-value">@Model.PaymentHeader?.Amount.ToString("N2")</p>
-    </div>
-    <div class="quote-summary-card">
-        <span class="quote-summary-label">Applied</span>
-        <p class="quote-summary-value">@((Model.PaymentHeader?.PaymentAllocations.Sum(x => x.AppliedAmount) ?? 0m).ToString("N2"))</p>
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Receipt / Payment Reference</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Payment Method</span>
+                                <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentMethod ?? "-")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Payment Reference</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PaymentHeader?.ReferenceNo) ? "-" : Model.PaymentHeader!.ReferenceNo)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Payment Date</span>
+                                <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentDate.ToString("dd MMM yyyy") ?? "-")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Allocations</span>
+                                <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentAllocations.Count ?? 0) invoice(s)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Allocated Invoices</h2>
+                        <p class="section-subtitle">Receipt total follows the posted payment amount for this phase.</p>
+                    </div>
+                    <div class="table-meta">@(Model.PaymentHeader?.PaymentAllocations.Count ?? 0) allocation(s)</div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Invoice No.</th>
+                                <th>Invoice Date</th>
+                                <th>Status</th>
+                                <th class="text-end">Applied Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var allocation in Model.PaymentHeader?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo) ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>())
+                        {
+                            <tr>
+                                <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
+                                <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
+                                <td><span class="status-pill active">@allocation.InvoiceHeader?.Status</span></td>
+                                <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="quotation-summary-wrap">
+                <div class="quotation-summary-stack">
+                    <div class="quotation-summary-row total">
+                        <span class="quotation-summary-name">Receipt Amount</span>
+                        <span class="quotation-summary-amount">@Model.TotalReceivedAmount.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">Payment Amount</span>
+                        <span class="quotation-summary-amount">@((Model.PaymentHeader?.Amount ?? 0m).ToString("N2"))</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">Applied</span>
+                        <span class="quotation-summary-amount">@appliedAmount.ToString("N2")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Issued</span>
+                        <span class="document-history-value">@(Model.IssuedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.IssuedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    @if (Model.Status == "Cancelled")
+                    {
+                        <div class="document-history-reason">
+                            <span class="document-history-label">Cancel Reason</span>
+                            <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>

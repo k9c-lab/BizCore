@@ -143,6 +143,7 @@
                 const matches = customerLookup
                     .filter(customer =>
                         !keyword ||
+                        (customer.CustomerCode || "").toLowerCase().includes(keyword) ||
                         customer.CustomerName.toLowerCase().includes(keyword) ||
                         (customer.TaxId || "").toLowerCase().includes(keyword))
                     .slice(0, keyword ? 12 : 20);
@@ -156,8 +157,8 @@
                 customerResults.innerHTML = matches
                     .map(customer => `
                         <button type="button" class="search-dropdown-option" data-customer-id="${customer.CustomerId}">
-                            <span class="search-dropdown-title">${customer.CustomerName}</span>
-                            <span class="search-dropdown-meta">${customer.TaxId || "-"} | ${customer.Phone || "-"}</span>
+                            <span class="search-dropdown-title">${customer.CustomerCode || "-"} - ${customer.CustomerName}</span>
+                            <span class="search-dropdown-meta">Tax ID: ${customer.TaxId || "-"} | ${customer.Phone || "-"}</span>
                         </button>`)
                     .join("");
                 customerResults.style.display = "";
@@ -165,7 +166,7 @@
 
             const selectCustomer = customer => {
                 customerInput.value = customer.CustomerId;
-                customerSearch.value = customer.CustomerName;
+                customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
                 customerSearch.dataset.selectedCustomerId = String(customer.CustomerId);
                 hideCustomerResults();
                 updateCustomerInfo();
@@ -398,6 +399,7 @@
                 }
 
                 const match = customerLookup.find(customer =>
+                    `${customer.CustomerCode || "-"} - ${customer.CustomerName}`.toLowerCase() === (customerSearch.value || "").trim().toLowerCase() ||
                     customer.CustomerName.toLowerCase() === (customerSearch.value || "").trim().toLowerCase());
                 if (match) {
                     selectCustomer(match);
@@ -469,7 +471,8 @@
             });
             lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => updateLine(row, false));
             if (customerInput.value && customerMap[customerInput.value]) {
-                customerSearch.value = customerMap[customerInput.value].CustomerName;
+                const customer = customerMap[customerInput.value];
+                customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
                 customerSearch.dataset.selectedCustomerId = customerInput.value;
             }
             updateCustomerInfo();

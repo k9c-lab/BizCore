@@ -13,9 +13,20 @@ CREATE TABLE dbo.PurchaseOrderHeaders
     VatAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_PurchaseOrderHeaders_Vat DEFAULT (0),
     TotalAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_PurchaseOrderHeaders_Total DEFAULT (0),
     Status NVARCHAR(20) NOT NULL CONSTRAINT DF_PurchaseOrderHeaders_Status DEFAULT (N'Draft'),
+    CreatedByUserId INT NULL,
+    UpdatedByUserId INT NULL,
+    ApprovedByUserId INT NULL,
+    ApprovedDate DATETIME2 NULL,
+    CancelledByUserId INT NULL,
+    CancelledDate DATETIME2 NULL,
+    CancelReason NVARCHAR(500) NULL,
     CreatedDate DATETIME2 NOT NULL CONSTRAINT DF_PurchaseOrderHeaders_Created DEFAULT (SYSUTCDATETIME()),
     UpdatedDate DATETIME2 NULL,
-    CONSTRAINT FK_PurchaseOrderHeaders_Suppliers FOREIGN KEY (SupplierId) REFERENCES dbo.Suppliers (SupplierId)
+    CONSTRAINT FK_PurchaseOrderHeaders_Suppliers FOREIGN KEY (SupplierId) REFERENCES dbo.Suppliers (SupplierId),
+    CONSTRAINT FK_PurchaseOrderHeaders_CreatedByUsers FOREIGN KEY (CreatedByUserId) REFERENCES dbo.Users (UserId),
+    CONSTRAINT FK_PurchaseOrderHeaders_UpdatedByUsers FOREIGN KEY (UpdatedByUserId) REFERENCES dbo.Users (UserId),
+    CONSTRAINT FK_PurchaseOrderHeaders_ApprovedByUsers FOREIGN KEY (ApprovedByUserId) REFERENCES dbo.Users (UserId),
+    CONSTRAINT FK_PurchaseOrderHeaders_CancelledByUsers FOREIGN KEY (CancelledByUserId) REFERENCES dbo.Users (UserId)
 );
 GO
 
@@ -54,10 +65,19 @@ CREATE TABLE dbo.ReceivingHeaders
     DeliveryNoteNo NVARCHAR(50) NULL,
     Remark NVARCHAR(500) NULL,
     Status NVARCHAR(20) NOT NULL CONSTRAINT DF_ReceivingHeaders_Status DEFAULT (N'Posted'),
+    CreatedByUserId INT NULL,
+    PostedByUserId INT NULL,
+    PostedDate DATETIME2 NULL,
+    CancelledByUserId INT NULL,
+    CancelledDate DATETIME2 NULL,
+    CancelReason NVARCHAR(500) NULL,
     CreatedDate DATETIME2 NOT NULL CONSTRAINT DF_ReceivingHeaders_Created DEFAULT (SYSUTCDATETIME()),
     UpdatedDate DATETIME2 NULL,
     CONSTRAINT FK_ReceivingHeaders_Suppliers FOREIGN KEY (SupplierId) REFERENCES dbo.Suppliers (SupplierId),
-    CONSTRAINT FK_ReceivingHeaders_PurchaseOrders FOREIGN KEY (PurchaseOrderId) REFERENCES dbo.PurchaseOrderHeaders (PurchaseOrderId)
+    CONSTRAINT FK_ReceivingHeaders_PurchaseOrders FOREIGN KEY (PurchaseOrderId) REFERENCES dbo.PurchaseOrderHeaders (PurchaseOrderId),
+    CONSTRAINT FK_ReceivingHeaders_CreatedByUsers FOREIGN KEY (CreatedByUserId) REFERENCES dbo.Users (UserId),
+    CONSTRAINT FK_ReceivingHeaders_PostedByUsers FOREIGN KEY (PostedByUserId) REFERENCES dbo.Users (UserId),
+    CONSTRAINT FK_ReceivingHeaders_CancelledByUsers FOREIGN KEY (CancelledByUserId) REFERENCES dbo.Users (UserId)
 );
 GO
 

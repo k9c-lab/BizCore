@@ -1,15 +1,22 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
+[Authorize(Roles = "Admin,Warehouse")]
 public class ReceivingsController : CrudControllerBase
 {
     private const string NumberPrefix = "GR";
+    private const string PrintCompanyName = "BizCore Co., Ltd.";
+    private const string PrintCompanyAddress = "99 Business Center Road, Huai Khwang, Bangkok 10310";
+    private const string PrintCompanyTaxId = "0105559999999";
+    private const string PrintCompanyPhone = "02-555-0100";
+    private const string PrintCompanyEmail = "purchasing@bizcore.local";
     private readonly AccountingDbContext _context;
 
     public ReceivingsController(AccountingDbContext context)
@@ -30,7 +37,7 @@ public class ReceivingsController : CrudControllerBase
         return View(receivings);
     }
 
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(int? purchaseOrderId)
     {
         var model = new ReceivingFormViewModel
         {
@@ -38,9 +45,14 @@ public class ReceivingsController : CrudControllerBase
         };
 
         await PopulateLookupsAsync(model);
-        if (model.PurchaseOrderLookup.Count > 0)
+        if (purchaseOrderId.HasValue && model.PurchaseOrderLookup.Any(x => x.PurchaseOrderId == purchaseOrderId.Value))
         {
-            PopulateDetailsFromLookup(model, model.PurchaseOrderLookup[0].PurchaseOrderId);
+            PopulateDetailsFromLookup(model, purchaseOrderId.Value);
+        }
+        else if (purchaseOrderId.HasValue)
+        {
+            TempData["ReceivingNotice"] = "Selected purchase order is not available for receiving.";
+            return RedirectToAction(nameof(Index), "PurchaseOrders");
         }
 
         return View(model);
@@ -48,13 +60,14 @@ public class ReceivingsController : CrudControllerBase
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(ReceivingFormViewModel model)
+    public async Task<IActionResult> Create(ReceivingFormViewModel model, string command)
     {
         model.ReceivingNo = await EnsureReceivingNumberAsync(model.ReceivingNo, model.ReceiveDate);
         ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
+        var saveDraft = IsSaveDraftCommand(command);
 
         await PopulateLookupsAsync(model);
-        if (!await ValidateReceivingAsync(model))
+        if (saveDraft ? !await ValidateReceivingDraftAsync(model) : !await ValidateReceivingAsync(model))
         {
             return View(model);
         }
@@ -63,6 +76,8 @@ public class ReceivingsController : CrudControllerBase
 
         try
         {
+            var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
             var header = new ReceivingHeader
             {
                 ReceivingNo = model.ReceivingNo,
@@ -71,75 +86,22 @@ public class ReceivingsController : CrudControllerBase
                 PurchaseOrderId = model.PurchaseOrderId!.Value,
                 DeliveryNoteNo = model.DeliveryNoteNo?.Trim(),
                 Remark = model.Remark?.Trim(),
-                Status = "Posted",
-                CreatedDate = DateTime.UtcNow
+                Status = saveDraft ? "Draft" : "Posted",
+                CreatedByUserId = userId,
+                PostedByUserId = saveDraft ? null : userId,
+                PostedDate = saveDraft ? null : now,
+                CreatedDate = now
             };
 
             _context.ReceivingHeaders.Add(header);
             await _context.SaveChangesAsync();
 
-            var po = await _context.PurchaseOrderHeaders
-                .Include(x => x.PurchaseOrderDetails)
-                .FirstAsync(x => x.PurchaseOrderId == model.PurchaseOrderId.Value);
-
-            var itemIds = model.Details.Where(x => x.QtyReceivedInput > 0).Select(x => x.ItemId).Distinct().ToList();
-            var itemMap = await _context.Items.Where(x => itemIds.Contains(x.ItemId)).ToDictionaryAsync(x => x.ItemId);
-
-            foreach (var line in model.Details.Where(x => x.QtyReceivedInput > 0).OrderBy(x => x.LineNumber))
+            await AddReceivingDetailsAsync(header.ReceivingId, model);
+            if (!saveDraft)
             {
-                var receivingDetail = new ReceivingDetail
-                {
-                    ReceivingId = header.ReceivingId,
-                    PurchaseOrderDetailId = line.PurchaseOrderDetailId,
-                    ItemId = line.ItemId,
-                    LineNumber = line.LineNumber,
-                    QtyReceived = line.QtyReceivedInput,
-                    Remark = line.Remark?.Trim()
-                };
-
-                _context.ReceivingDetails.Add(receivingDetail);
-                await _context.SaveChangesAsync();
-
-                var poDetail = po.PurchaseOrderDetails.First(x => x.PurchaseOrderDetailId == line.PurchaseOrderDetailId);
-                poDetail.ReceivedQty += line.QtyReceivedInput;
-
-                var item = itemMap[line.ItemId];
-                if (item.TrackStock)
-                {
-                    item.CurrentStock += line.QtyReceivedInput;
-                }
-
-                if (item.IsSerialControlled)
-                {
-                    foreach (var serialNo in ExtractSerialNumbers(line))
-                    {
-                        _context.ReceivingSerials.Add(new ReceivingSerial
-                        {
-                            ReceivingDetailId = receivingDetail.ReceivingDetailId,
-                            ItemId = line.ItemId,
-                            SerialNo = serialNo,
-                            CreatedDate = DateTime.UtcNow
-                        });
-
-                        _context.SerialNumbers.Add(new SerialNumber
-                        {
-                            ItemId = line.ItemId,
-                            SerialNo = serialNo,
-                            Status = "InStock",
-                            SupplierId = header.SupplierId,
-                            CurrentCustomerId = null,
-                            InvoiceId = null,
-                            SupplierWarrantyStartDate = line.SupplierWarrantyStartDate?.Date,
-                            SupplierWarrantyEndDate = line.SupplierWarrantyEndDate?.Date,
-                            CustomerWarrantyStartDate = null,
-                            CustomerWarrantyEndDate = null,
-                            CreatedDate = DateTime.UtcNow
-                        });
-                    }
-                }
+                await ApplyPostedReceivingAsync(header, model);
             }
 
-            po.Status = ComputePOStatus(po);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -150,6 +112,93 @@ public class ReceivingsController : CrudControllerBase
             await transaction.RollbackAsync();
             ModelState.AddModelError(string.Empty, "Receiving number or serial number must be unique.");
             return View(model);
+        }
+    }
+
+    public async Task<IActionResult> Edit(int? id)
+    {
+        if (id is null)
+        {
+            return NotFound();
+        }
+
+        var receiving = await GetReceivingForEditAsync(id.Value);
+        if (receiving is null)
+        {
+            return NotFound();
+        }
+
+        if (receiving.Status != "Draft")
+        {
+            TempData["ReceivingNotice"] = "Only Draft receiving documents can be edited.";
+            return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
+        }
+
+        var model = await BuildFormModelFromReceivingAsync(receiving);
+        return View("Create", model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, ReceivingFormViewModel model, string command)
+    {
+        var receiving = await GetReceivingForEditAsync(id);
+        if (receiving is null)
+        {
+            return NotFound();
+        }
+
+        if (receiving.Status != "Draft")
+        {
+            TempData["ReceivingNotice"] = "Only Draft receiving documents can be edited.";
+            return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
+        }
+
+        model.ReceivingId = id;
+        model.ReceivingNo = await EnsureReceivingNumberAsync(model.ReceivingNo, model.ReceiveDate);
+        ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
+        var saveDraft = IsSaveDraftCommand(command);
+
+        await PopulateLookupsAsync(model);
+        if (saveDraft ? !await ValidateReceivingDraftAsync(model) : !await ValidateReceivingAsync(model))
+        {
+            return View("Create", model);
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
+            receiving.ReceivingNo = model.ReceivingNo;
+            receiving.ReceiveDate = model.ReceiveDate;
+            receiving.SupplierId = model.SupplierId!.Value;
+            receiving.PurchaseOrderId = model.PurchaseOrderId!.Value;
+            receiving.DeliveryNoteNo = model.DeliveryNoteNo?.Trim();
+            receiving.Remark = model.Remark?.Trim();
+            receiving.Status = saveDraft ? "Draft" : "Posted";
+            receiving.UpdatedByUserId = userId;
+            receiving.PostedByUserId = saveDraft ? receiving.PostedByUserId : userId;
+            receiving.PostedDate = saveDraft ? receiving.PostedDate : now;
+            receiving.UpdatedDate = now;
+
+            await ReplaceReceivingDetailsAsync(receiving, model);
+            if (!saveDraft)
+            {
+                await ApplyPostedReceivingAsync(receiving, model);
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
+        }
+        catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
+        {
+            await transaction.RollbackAsync();
+            ModelState.AddModelError(string.Empty, "Receiving number or serial number must be unique.");
+            return View("Create", model);
         }
     }
 
@@ -164,6 +213,12 @@ public class ReceivingsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.PurchaseOrderHeader)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.PostedByUser)
+            .Include(x => x.CancelledByUser)
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.PurchaseOrderDetail)
             .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.ReceivingDetails)
@@ -171,6 +226,104 @@ public class ReceivingsController : CrudControllerBase
             .FirstOrDefaultAsync(x => x.ReceivingId == id.Value);
 
         return receiving is null ? NotFound() : View(receiving);
+    }
+
+    public async Task<IActionResult> Print(int? id)
+    {
+        if (id is null)
+        {
+            return NotFound();
+        }
+
+        var receiving = await _context.ReceivingHeaders
+            .AsNoTracking()
+            .Include(x => x.Supplier)
+            .Include(x => x.PurchaseOrderHeader)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.PostedByUser)
+            .Include(x => x.CancelledByUser)
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.PurchaseOrderDetail)
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.Item)
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.ReceivingSerials)
+            .FirstOrDefaultAsync(x => x.ReceivingId == id.Value);
+
+        if (receiving is null)
+        {
+            return NotFound();
+        }
+
+        if (receiving.Status != "Posted")
+        {
+            TempData["ReceivingNotice"] = "Print is available after receiving is posted.";
+            return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
+        }
+
+        ViewData["PrintCompanyName"] = PrintCompanyName;
+        ViewData["PrintCompanyAddress"] = PrintCompanyAddress;
+        ViewData["PrintCompanyTaxId"] = PrintCompanyTaxId;
+        ViewData["PrintCompanyPhone"] = PrintCompanyPhone;
+        ViewData["PrintCompanyEmail"] = PrintCompanyEmail;
+        return View(receiving);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id, string? cancelReason)
+    {
+        var receiving = await _context.ReceivingHeaders
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.Item)
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.ReceivingSerials)
+            .FirstOrDefaultAsync(x => x.ReceivingId == id);
+
+        if (receiving is null)
+        {
+            return NotFound();
+        }
+
+        var blockReason = await GetCancelBlockedReasonAsync(receiving);
+        if (!string.IsNullOrWhiteSpace(blockReason))
+        {
+            TempData["ReceivingNotice"] = blockReason;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        var now = DateTime.UtcNow;
+        var userId = CurrentUserId();
+        var reason = NormalizeCancelReason(cancelReason);
+
+        if (receiving.Status == "Draft")
+        {
+            await ReleaseDraftSerialsAsync(receiving);
+            receiving.Status = "Cancelled";
+            receiving.CancelledByUserId = userId;
+            receiving.CancelledDate = now;
+            receiving.CancelReason = reason;
+            receiving.UpdatedByUserId = userId;
+            receiving.UpdatedDate = now;
+        }
+        else
+        {
+            await ReversePostedReceivingAsync(receiving);
+            receiving.Status = "Cancelled";
+            receiving.CancelledByUserId = userId;
+            receiving.CancelledDate = now;
+            receiving.CancelReason = reason;
+            receiving.UpdatedByUserId = userId;
+            receiving.UpdatedDate = now;
+        }
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        TempData["ReceivingNotice"] = "Receiving cancelled successfully.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     private async Task PopulateLookupsAsync(ReceivingFormViewModel model)
@@ -208,7 +361,9 @@ public class ReceivingsController : CrudControllerBase
                         TrackStock = d.Item?.TrackStock ?? false,
                         OrderedQty = d.Qty,
                         ReceivedQty = d.ReceivedQty,
-                        RemainingQty = d.Qty - d.ReceivedQty
+                        RemainingQty = d.Qty - d.ReceivedQty,
+                        UnitPrice = d.UnitPrice,
+                        LineTotal = d.LineTotal
                     })
                     .ToList()
             })
@@ -245,11 +400,356 @@ public class ReceivingsController : CrudControllerBase
                 OrderedQty = x.OrderedQty,
                 ReceivedQty = x.ReceivedQty,
                 RemainingQty = x.RemainingQty,
+                UnitPrice = x.UnitPrice,
+                LineTotal = x.LineTotal,
                 QtyReceivedInput = 0,
                 SerialEntryText = string.Empty,
                 Serials = x.IsSerialControlled ? new List<ReceivingSerialEditorViewModel> { new() } : new List<ReceivingSerialEditorViewModel>()
             })
             .ToList();
+    }
+
+    private async Task<ReceivingHeader?> GetReceivingForEditAsync(int id)
+    {
+        return await _context.ReceivingHeaders
+            .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.ReceivingSerials)
+            .FirstOrDefaultAsync(x => x.ReceivingId == id);
+    }
+
+    private async Task<ReceivingFormViewModel> BuildFormModelFromReceivingAsync(ReceivingHeader receiving)
+    {
+        var model = new ReceivingFormViewModel
+        {
+            ReceivingId = receiving.ReceivingId,
+            ReceivingNo = receiving.ReceivingNo,
+            ReceiveDate = receiving.ReceiveDate,
+            PurchaseOrderId = receiving.PurchaseOrderId,
+            SupplierId = receiving.SupplierId,
+            DeliveryNoteNo = receiving.DeliveryNoteNo,
+            Remark = receiving.Remark,
+            Status = receiving.Status
+        };
+
+        await PopulateLookupsAsync(model);
+        PopulateDetailsFromLookup(model, receiving.PurchaseOrderId);
+
+        foreach (var savedLine in receiving.ReceivingDetails)
+        {
+            var line = model.Details.FirstOrDefault(x => x.PurchaseOrderDetailId == savedLine.PurchaseOrderDetailId);
+            if (line is null)
+            {
+                continue;
+            }
+
+            line.QtyReceivedInput = savedLine.QtyReceived;
+            line.Remark = savedLine.Remark;
+            line.SupplierWarrantyStartDate = savedLine.SupplierWarrantyStartDate;
+            line.SupplierWarrantyEndDate = savedLine.SupplierWarrantyEndDate;
+            line.Serials = savedLine.ReceivingSerials
+                .OrderBy(x => x.ReceivingSerialId)
+                .Select(x => new ReceivingSerialEditorViewModel { SerialNo = x.SerialNo })
+                .DefaultIfEmpty(new ReceivingSerialEditorViewModel())
+                .ToList();
+        }
+
+        return model;
+    }
+
+    private async Task AddReceivingDetailsAsync(int receivingId, ReceivingFormViewModel model)
+    {
+        foreach (var line in NormalizeReceivingDetails(model.Details).OrderBy(x => x.LineNumber))
+        {
+            var receivingDetail = new ReceivingDetail
+            {
+                ReceivingId = receivingId,
+                PurchaseOrderDetailId = line.PurchaseOrderDetailId,
+                ItemId = line.ItemId,
+                LineNumber = line.LineNumber,
+                QtyReceived = line.QtyReceivedInput,
+                Remark = line.Remark?.Trim(),
+                SupplierWarrantyStartDate = line.SupplierWarrantyStartDate?.Date,
+                SupplierWarrantyEndDate = line.SupplierWarrantyEndDate?.Date
+            };
+
+            _context.ReceivingDetails.Add(receivingDetail);
+            await _context.SaveChangesAsync();
+
+            foreach (var serialNo in ExtractSerialNumbers(line))
+            {
+                _context.ReceivingSerials.Add(new ReceivingSerial
+                {
+                    ReceivingDetailId = receivingDetail.ReceivingDetailId,
+                    ItemId = line.ItemId,
+                    SerialNo = serialNo,
+                    CreatedDate = DateTime.UtcNow
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task ReplaceReceivingDetailsAsync(ReceivingHeader receiving, ReceivingFormViewModel model)
+    {
+        var existingDetails = await _context.ReceivingDetails
+            .Include(x => x.ReceivingSerials)
+            .Where(x => x.ReceivingId == receiving.ReceivingId)
+            .ToListAsync();
+
+        _context.ReceivingSerials.RemoveRange(existingDetails.SelectMany(x => x.ReceivingSerials));
+        _context.ReceivingDetails.RemoveRange(existingDetails);
+        await _context.SaveChangesAsync();
+
+        await AddReceivingDetailsAsync(receiving.ReceivingId, model);
+    }
+
+    private async Task ApplyPostedReceivingAsync(ReceivingHeader receiving, ReceivingFormViewModel model)
+    {
+        var po = await _context.PurchaseOrderHeaders
+            .Include(x => x.PurchaseOrderDetails)
+            .FirstAsync(x => x.PurchaseOrderId == receiving.PurchaseOrderId);
+
+        var details = await _context.ReceivingDetails
+            .Include(x => x.Item)
+            .Include(x => x.ReceivingSerials)
+            .Where(x => x.ReceivingId == receiving.ReceivingId)
+            .ToListAsync();
+
+        foreach (var detail in details.OrderBy(x => x.LineNumber))
+        {
+            var poDetail = po.PurchaseOrderDetails.First(x => x.PurchaseOrderDetailId == detail.PurchaseOrderDetailId);
+            poDetail.ReceivedQty += detail.QtyReceived;
+
+            if (detail.Item?.TrackStock == true)
+            {
+                detail.Item.CurrentStock += detail.QtyReceived;
+            }
+
+            if (detail.Item?.IsSerialControlled == true)
+            {
+                foreach (var serial in detail.ReceivingSerials)
+                {
+                    _context.SerialNumbers.Add(new SerialNumber
+                    {
+                        ItemId = detail.ItemId,
+                        SerialNo = serial.SerialNo,
+                        Status = "InStock",
+                        SupplierId = receiving.SupplierId,
+                        CurrentCustomerId = null,
+                        InvoiceId = null,
+                        SupplierWarrantyStartDate = detail.SupplierWarrantyStartDate?.Date,
+                        SupplierWarrantyEndDate = detail.SupplierWarrantyEndDate?.Date,
+                        CustomerWarrantyStartDate = null,
+                        CustomerWarrantyEndDate = null,
+                        CreatedDate = DateTime.UtcNow
+                    });
+                }
+            }
+        }
+
+        po.Status = ComputePOStatus(po);
+    }
+
+    private async Task<string?> GetCancelBlockedReasonAsync(ReceivingHeader receiving)
+    {
+        if (receiving.Status == "Cancelled")
+        {
+            return "Cancelled receiving documents are read-only.";
+        }
+
+        if (receiving.Status == "Draft")
+        {
+            return null;
+        }
+
+        if (receiving.Status != "Posted")
+        {
+            return $"Cancel Receiving is available only for Draft or Posted receiving documents. Current status is {receiving.Status}.";
+        }
+
+        foreach (var detail in receiving.ReceivingDetails)
+        {
+            if (detail.Item?.TrackStock == true && detail.Item.CurrentStock < detail.QtyReceived)
+            {
+                return $"Cancel Receiving is blocked because item {detail.Item.ItemCode} does not have enough stock to reverse.";
+            }
+        }
+
+        var serialNos = receiving.ReceivingDetails
+            .SelectMany(x => x.ReceivingSerials)
+            .Select(x => x.SerialNo)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (serialNos.Count == 0)
+        {
+            return null;
+        }
+
+        var serials = await _context.SerialNumbers
+            .AsNoTracking()
+            .Where(x => serialNos.Contains(x.SerialNo))
+            .ToListAsync();
+
+        if (serials.Count != serialNos.Count)
+        {
+            return "Cancel Receiving is blocked because one or more receiving serials are no longer in stock records.";
+        }
+
+        var unavailable = serials.FirstOrDefault(x =>
+            !string.Equals(x.Status, "InStock", StringComparison.OrdinalIgnoreCase) ||
+            x.InvoiceId.HasValue ||
+            x.CurrentCustomerId.HasValue);
+        if (unavailable is not null)
+        {
+            return $"Cancel Receiving is blocked because serial {unavailable.SerialNo} has already been used by another workflow.";
+        }
+
+        var serialIds = serials.Select(x => x.SerialId).ToList();
+        var hasClaim = await _context.SerialClaimLogs
+            .AsNoTracking()
+            .AnyAsync(x => serialIds.Contains(x.SerialId));
+        if (hasClaim)
+        {
+            return "Cancel Receiving is blocked because one or more serials already have supplier claim history.";
+        }
+
+        return null;
+    }
+
+    private async Task ReleaseDraftSerialsAsync(ReceivingHeader receiving)
+    {
+        var serials = receiving.ReceivingDetails.SelectMany(x => x.ReceivingSerials).ToList();
+        if (serials.Count > 0)
+        {
+            _context.ReceivingSerials.RemoveRange(serials);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    private async Task ReversePostedReceivingAsync(ReceivingHeader receiving)
+    {
+        var po = await _context.PurchaseOrderHeaders
+            .Include(x => x.PurchaseOrderDetails)
+            .FirstAsync(x => x.PurchaseOrderId == receiving.PurchaseOrderId);
+
+        var serialNos = receiving.ReceivingDetails
+            .SelectMany(x => x.ReceivingSerials)
+            .Select(x => x.SerialNo)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var serialNumbers = serialNos.Count == 0
+            ? new List<SerialNumber>()
+            : await _context.SerialNumbers
+                .Where(x => serialNos.Contains(x.SerialNo))
+                .ToListAsync();
+
+        foreach (var detail in receiving.ReceivingDetails)
+        {
+            var poDetail = po.PurchaseOrderDetails.First(x => x.PurchaseOrderDetailId == detail.PurchaseOrderDetailId);
+            poDetail.ReceivedQty = Math.Max(0m, poDetail.ReceivedQty - detail.QtyReceived);
+
+            if (detail.Item?.TrackStock == true)
+            {
+                detail.Item.CurrentStock -= detail.QtyReceived;
+            }
+        }
+
+        if (serialNumbers.Count > 0)
+        {
+            _context.SerialNumbers.RemoveRange(serialNumbers);
+        }
+
+        po.Status = ComputePOStatus(po);
+        po.UpdatedDate = DateTime.UtcNow;
+    }
+
+    private async Task<bool> ValidateReceivingDraftAsync(ReceivingFormViewModel model)
+    {
+        if (!model.PurchaseOrderId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Please select a purchase order.");
+            return false;
+        }
+
+        var selectedLookup = model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == model.PurchaseOrderId.Value);
+        if (selectedLookup is null)
+        {
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Selected PO is not available for receiving.");
+            return false;
+        }
+
+        model.SupplierId = selectedLookup.SupplierId;
+        var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId.Value);
+        if (!supplierExists)
+        {
+            ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
+        }
+
+        var requestLines = model.Details
+            .Select((line, index) => new { Line = line, Index = index })
+            .Where(x => x.Line.QtyReceivedInput > 0)
+            .ToList();
+
+        foreach (var requestLine in requestLines)
+        {
+            var line = requestLine.Line;
+            var i = requestLine.Index;
+            var lookupLine = selectedLookup.Lines.FirstOrDefault(x => x.PurchaseOrderDetailId == line.PurchaseOrderDetailId);
+            if (lookupLine is null)
+            {
+                ModelState.AddModelError(nameof(model.Details), "One or more receiving lines are not valid for the selected PO.");
+                continue;
+            }
+
+            if (line.QtyReceivedInput > lookupLine.RemainingQty)
+            {
+                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Qty received cannot exceed remaining PO quantity.");
+            }
+
+            if (lookupLine.IsSerialControlled && line.QtyReceivedInput != Math.Truncate(line.QtyReceivedInput))
+            {
+                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Serial-controlled items must be received in whole numbers.");
+            }
+
+            var serials = ExtractSerialNumbers(line);
+            if (serials.Count != serials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+            {
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same receiving line.");
+            }
+
+            if (line.SupplierWarrantyStartDate.HasValue &&
+                line.SupplierWarrantyEndDate.HasValue &&
+                line.SupplierWarrantyEndDate.Value.Date < line.SupplierWarrantyStartDate.Value.Date)
+            {
+                ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "Supplier warranty end date must be on or after the supplier warranty start date.");
+            }
+        }
+
+        var serialNos = requestLines
+            .SelectMany(x => ExtractSerialNumbers(x.Line))
+            .ToList();
+
+        if (serialNos.Count != serialNos.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            ModelState.AddModelError(string.Empty, "Duplicate serial numbers are not allowed.");
+        }
+
+        if (serialNos.Count > 0)
+        {
+            var existingSerials = await _context.SerialNumbers
+                .AsNoTracking()
+                .AnyAsync(x => serialNos.Contains(x.SerialNo));
+
+            if (existingSerials)
+            {
+                ModelState.AddModelError(string.Empty, "One or more serial numbers already exist in stock.");
+            }
+        }
+
+        return ModelState.IsValid;
     }
 
     private async Task<bool> ValidateReceivingAsync(ReceivingFormViewModel model)
@@ -281,10 +781,15 @@ public class ReceivingsController : CrudControllerBase
             ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
         }
 
-        var requestLines = model.Details.Where(x => x.QtyReceivedInput > 0).ToList();
-        for (var i = 0; i < requestLines.Count; i++)
+        var requestLines = model.Details
+            .Select((line, index) => new { Line = line, Index = index })
+            .Where(x => x.Line.QtyReceivedInput > 0)
+            .ToList();
+
+        foreach (var requestLine in requestLines)
         {
-            var line = requestLines[i];
+            var line = requestLine.Line;
+            var i = requestLine.Index;
             var lookupLine = selectedLookup.Lines.FirstOrDefault(x => x.PurchaseOrderDetailId == line.PurchaseOrderDetailId);
             if (lookupLine is null)
             {
@@ -341,7 +846,7 @@ public class ReceivingsController : CrudControllerBase
         }
 
         var serialNos = requestLines
-            .SelectMany(ExtractSerialNumbers)
+            .SelectMany(x => ExtractSerialNumbers(x.Line))
             .ToList();
 
         if (serialNos.Count != serialNos.Distinct(StringComparer.OrdinalIgnoreCase).Count())
@@ -376,8 +881,9 @@ public class ReceivingsController : CrudControllerBase
         }
 
         return (line.Serials ?? new List<ReceivingSerialEditorViewModel>())
-            .Where(x => !string.IsNullOrWhiteSpace(x.SerialNo))
-            .Select(x => x.SerialNo.Trim())
+            .Select(x => x.SerialNo?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
             .ToList();
     }
 
@@ -386,6 +892,22 @@ public class ReceivingsController : CrudControllerBase
         return (details ?? Enumerable.Empty<ReceivingLineEditorViewModel>())
             .Where(x => x.QtyReceivedInput > 0)
             .ToList();
+    }
+
+    private static bool IsSaveDraftCommand(string? command)
+    {
+        return string.Equals(command, "SaveDraft", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeCancelReason(string? cancelReason)
+    {
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            return null;
+        }
+
+        var trimmed = cancelReason.Trim();
+        return trimmed.Length <= 500 ? trimmed : trimmed[..500];
     }
 
     private static string ComputePOStatus(PurchaseOrderHeader po)

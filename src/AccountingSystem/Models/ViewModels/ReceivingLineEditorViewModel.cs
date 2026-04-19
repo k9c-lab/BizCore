@@ -14,6 +14,8 @@ public class ReceivingLineEditorViewModel
     public decimal OrderedQty { get; set; }
     public decimal ReceivedQty { get; set; }
     public decimal RemainingQty { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal { get; set; }
 
     [Range(typeof(decimal), "0", "9999999999999999.99")]
     [Display(Name = "Qty Received")]

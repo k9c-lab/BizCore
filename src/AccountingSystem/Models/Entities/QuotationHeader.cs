@@ -63,8 +63,18 @@ public class QuotationHeader
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedDate { get; set; }
+    public int? CreatedByUserId { get; set; }
+    public int? UpdatedByUserId { get; set; }
+    public int? ApprovedByUserId { get; set; }
+    public DateTime? ApprovedDate { get; set; }
+    public int? ConvertedByUserId { get; set; }
+    public DateTime? ConvertedDate { get; set; }
 
     public Customer? Customer { get; set; }
     public Salesperson? Salesperson { get; set; }
+    public User? CreatedByUser { get; set; }
+    public User? UpdatedByUser { get; set; }
+    public User? ApprovedByUser { get; set; }
+    public User? ConvertedByUser { get; set; }
     public ICollection<QuotationDetail> QuotationDetails { get; set; } = new List<QuotationDetail>();
 }
