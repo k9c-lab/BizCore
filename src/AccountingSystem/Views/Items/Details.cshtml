@@ -1,0 +1,34 @@
+@model BizCore.Models.Entities.Item
+
+@{
+    ViewData["Title"] = "Item Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Item Catalog</div>
+        <h1 class="page-title">Item Details</h1>
+        <p class="page-subtitle">Review pricing and stock control settings in a clearer product summary view.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">Edit Item</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.ItemCode</p></div>
+            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
+            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.ItemName</p></div>
+            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</p></div>
+            <div class="detail-item"><span class="detail-label">Item Type</span><p class="detail-value">@Model.ItemType</p></div>
+            <div class="detail-item"><span class="detail-label">Unit</span><p class="detail-value">@Model.Unit</p></div>
+            <div class="detail-item"><span class="detail-label">Unit Price</span><p class="detail-value">@Model.UnitPrice.ToString("N2")</p></div>
+            <div class="detail-item"><span class="detail-label">Current Stock</span><p class="detail-value">@Model.CurrentStock.ToString("N2")</p></div>
+            <div class="detail-item"><span class="detail-label">Track Stock</span><p class="detail-value">@(Model.TrackStock ? "Yes" : "No")</p></div>
+            <div class="detail-item"><span class="detail-label">Serial Controlled</span><p class="detail-value">@(Model.IsSerialControlled ? "Yes" : "No")</p></div>
+        </div>
+    </div>
+</div>

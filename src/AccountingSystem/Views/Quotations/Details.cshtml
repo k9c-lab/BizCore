@@ -1,0 +1,205 @@
+@model BizCore.Models.Entities.QuotationHeader
+
+@{
+    ViewData["Title"] = "Quotation Details";
+    var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+}
+
+@if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="form-alert mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Module</div>
+        <h1 class="page-title">Quotation Details</h1>
+        <p class="page-subtitle">Review quotation details, VAT totals, and conversion readiness before creating an invoice.</p>
+    </div>
+    <div class="page-actions">
+        @if (Model.Status == "Draft")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">Edit Quotation</a>
+            <form asp-action="Approve" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Approve</button>
+            </form>
+        }
+        <a asp-action="Print" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        @if (Model.Status == "Approved")
+        {
+            <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Convert to Invoice</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled>Convert to Invoice</button>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Quotation Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Quotation No.</div>
+                        <div class="form-control readonly-detail">@Model.QuotationNumber</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Quotation Date</div>
+                        <div class="form-control readonly-detail">@Model.QuotationDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Reference No.</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Expiry Date</div>
+                        <div class="form-control readonly-detail">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "No expiry")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Discount Mode</div>
+                        <div class="form-control readonly-detail">@Model.DiscountMode</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">VAT Type</div>
+                        <div class="form-control readonly-detail">@Model.VatType</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Header Discount</div>
+                        <div class="form-control readonly-detail">@Model.HeaderDiscountAmount.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remarks</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Customer Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Customer Name</span>
+                                <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Email) ? "-" : Model.Customer!.Email)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Salesperson Information</div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Salesperson Name</span>
+                            <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.SalespersonName) ? "-" : Model.Salesperson!.SalespersonName)</span>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.PhoneNumber) ? "-" : Model.Salesperson!.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.Email) ? "-" : Model.Salesperson!.Email)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section quotation-lines-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">Quotation Lines</div>
+                        <div class="table-meta">@Model.QuotationDetails.Count line(s). Descriptions support multi-line quotation text.</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table quote-editor-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">#</th>
+                                <th style="width: 24%;">Item</th>
+                                <th>Description</th>
+                                <th style="width: 10%;">Qty</th>
+                                <th style="width: 12%;">Unit Price</th>
+                                <th style="width: 12%;">Discount</th>
+                                <th style="width: 12%;">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.QuotationDetails.OrderBy(x => x.LineNumber))
+                        {
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemName</div>
+                                    <div class="table-meta">@line.Item?.ItemCode</div>
+                                </td>
+                                <td class="quote-notes">@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
+                                <td>@line.Quantity.ToString("N2")</td>
+                                <td>@line.UnitPrice.ToString("N2")</td>
+                                <td>@line.DiscountAmount.ToString("N2")</td>
+                                <td>@line.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="quotation-summary-wrap">
+                    <div class="quotation-summary-stack">
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Subtotal</span>
+                            <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Discount</span>
+                            <span class="quotation-summary-amount">@appliedDiscount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">VAT</span>
+                            <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">Total</span>
+                            <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

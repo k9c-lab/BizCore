@@ -1,0 +1,70 @@
+@model IEnumerable<BizCore.Models.Entities.Supplier>
+
+@{
+    ViewData["Title"] = "Suppliers";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Core Module</div>
+        <h1 class="page-title">Suppliers</h1>
+        <p class="page-subtitle">Maintain supplier records in a cleaner directory view, ready for the purchasing module.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Supplier</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Supplier Directory</h2>
+            <p class="section-subtitle">Readable master data table for procurement and finance teams.</p>
+        </div>
+        <div class="table-meta">@Model.Count() records</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Supplier Code</th>
+                        <th>Supplier Name</th>
+                        <th>Phone</th>
+                        <th>Credit Limit</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@item.SupplierCode</span></td>
+                        <td class="fw-semibold">@item.SupplierName</td>
+                        <td>@(string.IsNullOrWhiteSpace(item.PhoneNumber) ? "-" : item.PhoneNumber)</td>
+                        <td>@item.CreditLimit.ToString("N2")</td>
+                        <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <div class="table-actions">
+                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="table-empty">No suppliers yet. Add supplier records to prepare for purchasing workflows.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

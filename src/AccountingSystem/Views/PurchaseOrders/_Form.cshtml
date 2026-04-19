@@ -1,0 +1,147 @@
+@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+<div class="form-shell">
+    <div class="form-section">
+        <div class="form-section-title">PO Header</div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label asp-for="PONo" class="form-label"></label>
+                <input asp-for="PONo" class="form-control" readonly />
+                <div class="form-text">Auto-generated monthly PO number.</div>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="PODate" class="form-label"></label>
+                <input asp-for="PODate" class="form-control" />
+                <span asp-validation-for="PODate" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="ExpectedReceiveDate" class="form-label"></label>
+                <input asp-for="ExpectedReceiveDate" class="form-control" />
+                <span asp-validation-for="ExpectedReceiveDate" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="SupplierId" class="form-label"></label>
+                <select asp-for="SupplierId" asp-items="Model.SupplierOptions" class="form-select">
+                    <option value="">Select supplier</option>
+                </select>
+                <span asp-validation-for="SupplierId" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ReferenceNo" class="form-label"></label>
+                <input asp-for="ReferenceNo" class="form-control" />
+                <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="VatType" class="form-label"></label>
+                <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="poVatType"></select>
+                <span asp-validation-for="VatType" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Remark" class="form-label"></label>
+                <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Remark" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+            <div>
+                <div class="form-section-title mb-1">PO Lines</div>
+                <div class="table-meta">Supplier order lines using existing item master data.</div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addPOLine">Add Line</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table entity-table quote-editor-table" id="poLinesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Item</th>
+                        <th style="width: 8%;">Is Serial</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 11%;">Received</th>
+                        <th style="width: 12%;">Unit Price</th>
+                        <th style="width: 12%;">Discount</th>
+                        <th style="width: 10%;">Line Total</th>
+                        <th style="width: 11%;">Remark</th>
+                        <th style="width: 6%;" class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="poLineBody">
+                @for (var i = 0; i < Model.Details.Count; i++)
+                {
+                    <tr class="po-line-row">
+                        <td>
+                            <input type="hidden" name="Details[@i].PurchaseOrderDetailId" value="@Model.Details[i].PurchaseOrderDetailId" />
+                            <input type="hidden" class="js-line-number" name="Details[@i].LineNumber" value="@(i + 1)" />
+                            <select name="Details[@i].ItemId" id="Details_@(i)__ItemId" class="form-select js-item-select">
+                                <option value="">Select item</option>
+                                @foreach (var option in Model.ItemLookup)
+                                {
+                                    <option value="@option.ItemId" selected="@(Model.Details[i].ItemId == option.ItemId ? "selected" : null)">@option.DisplayText</option>
+                                }
+                            </select>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <span class="js-serial-flag badge-soft">
+                                @(Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId)?.IsSerialControlled == true ? "Yes" : "No")
+                            </span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" name="Details[@i].Qty" id="Details_@(i)__Qty" value="@Model.Details[i].Qty.ToString("0.##")" class="form-control js-line-qty" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Qty" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="Details[@i].ReceivedQty" id="Details_@(i)__ReceivedQty" value="@Model.Details[i].ReceivedQty.ToString("0.##")" class="form-control" readonly />
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="Details[@i].UnitPrice" id="Details_@(i)__UnitPrice" value="@Model.Details[i].UnitPrice.ToString("0.##")" class="form-control js-line-price" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].UnitPrice" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="Details[@i].DiscountAmount" id="Details_@(i)__DiscountAmount" value="@Model.Details[i].DiscountAmount.ToString("0.##")" class="form-control js-line-discount" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountAmount" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="Details[@i].LineTotal" id="Details_@(i)__LineTotal" value="@Model.Details[i].LineTotal.ToString("0.##")" class="form-control js-line-total" readonly />
+                        </td>
+                        <td>
+                            <input type="text" name="Details[@i].Remark" id="Details_@(i)__Remark" value="@Model.Details[i].Remark" class="form-control" />
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <span class="text-danger field-validation-valid" data-valmsg-for="Details" data-valmsg-replace="true"></span>
+    </div>
+
+    <div class="mini-summary-grid">
+        <div class="quote-summary-card">
+            <span class="quote-summary-label">Subtotal</span>
+            <p class="quote-summary-value" id="poSubtotal">@Model.Subtotal.ToString("N2")</p>
+        </div>
+        <div class="quote-summary-card">
+            <span class="quote-summary-label">VAT</span>
+            <p class="quote-summary-value" id="poVatDisplay">@Model.VatAmount.ToString("N2")</p>
+            <input asp-for="VatAmount" type="hidden" id="poVatAmount" />
+        </div>
+        <div class="quote-summary-card">
+            <span class="quote-summary-label">Total</span>
+            <p class="quote-summary-value" id="poTotal">@Model.TotalAmount.ToString("N2")</p>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="poItemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>

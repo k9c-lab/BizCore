@@ -1,0 +1,243 @@
+@model BizCore.Models.ViewModels.QuotationFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+<div class="form-shell">
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">Quotation Header</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="QuotationNumber" class="form-label"></label>
+                <input asp-for="QuotationNumber" class="form-control" readonly />
+                <div class="form-text">Auto-generated monthly quotation number.</div>
+                <span asp-validation-for="QuotationNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="QuotationDate" class="form-label"></label>
+                <input asp-for="QuotationDate" class="form-control" />
+                <span asp-validation-for="QuotationDate" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="ReferenceNo" class="form-label"></label>
+                <input asp-for="ReferenceNo" class="form-control" />
+                <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-8">
+                <label class="form-label">Expiry Date</label>
+                <div class="quotation-expiry-group">
+                    <input asp-for="ExpiryDate" class="form-control" />
+                    <label class="quotation-inline-check" for="quotationNoExpiry">
+                        <input class="form-check-input" type="checkbox" id="quotationNoExpiry" @(Model.ExpiryDate.HasValue ? null : "checked") />
+                        <span>No Expiry</span>
+                    </label>
+                </div>
+                <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <label asp-for="Status" class="form-label"></label>
+                <input asp-for="Status" type="hidden" />
+                <input type="text" class="form-control" value="@Model.Status" readonly />
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DiscountMode" class="form-label"></label>
+                <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
+                <span asp-validation-for="DiscountMode" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="VatType" class="form-label"></label>
+                <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="VatType"></select>
+                <span asp-validation-for="VatType" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="HeaderDiscountAmount" class="form-label"></label>
+                <input asp-for="HeaderDiscountAmount" class="form-control" id="HeaderDiscountAmount" />
+                <div class="form-text" id="quotationHeaderDiscountHelp">Used only in header discount mode.</div>
+                <span asp-validation-for="HeaderDiscountAmount" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Remarks" class="form-label"></label>
+                <textarea asp-for="Remarks" class="form-control" rows="3"></textarea>
+                <div class="form-text">Internal notes or customer-facing quotation notes.</div>
+                <span asp-validation-for="Remarks" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="quotation-party-grid">
+        <div class="quotation-party-column">
+            <label asp-for="CustomerId" class="form-label"></label>
+            <input asp-for="CustomerId" type="hidden" id="CustomerId" />
+            <div class="search-dropdown">
+                <input type="text"
+                       id="quotationCustomerSearch"
+                       class="form-control"
+                       autocomplete="off"
+                       placeholder="Search customer" />
+                <div id="quotationCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+            </div>
+            <span asp-validation-for="CustomerId" class="text-danger"></span>
+            <div class="quotation-info-card mt-2" id="quotationCustomerInfo">
+                <div class="quotation-info-card-title">Customer Information</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Customer Name</span>
+                        <span class="quotation-info-value" id="quotationCustomerName">-</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Tax ID</span>
+                        <span class="quotation-info-value" id="quotationCustomerTaxId">-</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-value" id="quotationCustomerPhone">-</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-value" id="quotationCustomerEmail">-</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-value" id="quotationCustomerBillingAddress">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="quotation-party-column">
+            <label asp-for="SalespersonId" class="form-label"></label>
+            <select asp-for="SalespersonId" asp-items="Model.SalespersonOptions" class="form-select" id="SalespersonId">
+                <option value="">Select salesperson</option>
+            </select>
+            <span asp-validation-for="SalespersonId" class="text-danger"></span>
+            <div class="quotation-info-card mt-2" id="quotationSalespersonInfo">
+                <div class="quotation-info-card-title">Salesperson Information</div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Salesperson Name</span>
+                    <span class="quotation-info-value" id="quotationSalespersonName">-</span>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-value" id="quotationSalespersonPhone">-</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-value" id="quotationSalespersonEmail">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section quotation-lines-section">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+            <div>
+                <div class="form-section-title mb-1">Quotation Lines</div>
+                <div class="table-meta" id="quotationDiscountModeText">Search items by code, name, or part number. Descriptions support multi-line quotation text.</div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addQuotationLine">Add Line</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table entity-table quote-editor-table" id="quotationLinesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 24%;">Item</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 12%;">Unit Price</th>
+                        <th style="width: 12%;">Discount</th>
+                        <th style="width: 12%;">Line Total</th>
+                        <th style="width: 10%;" class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="quotationLineBody">
+                @for (var i = 0; i < Model.Details.Count; i++)
+                {
+                    <tr class="quotation-line-row quotation-line-row-main">
+                        <td>
+                            <input type="hidden" name="Details[@i].QuotationDetailId" value="@Model.Details[i].QuotationDetailId" />
+                            <input type="hidden" class="js-line-number" name="Details[@i].LineNumber" value="@(i + 1)" />
+                            <input type="hidden" name="Details[@i].ItemId" id="Details_@(i)__ItemId" value="@Model.Details[i].ItemId" class="js-item-id" />
+                            <div class="search-dropdown">
+                                <input type="text"
+                                       id="Details_@(i)__ItemSearch"
+                                       value="@(Model.Details[i].ItemId.HasValue ? Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId)?.DisplayText : string.Empty)"
+                                       class="form-control js-item-search"
+                                       autocomplete="off"
+                                       placeholder="Search by item code, name, or part number" />
+                                <div id="quotationItemResults_@i" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                            </div>
+                            @{
+                                var selectedItem = Model.Details[i].ItemId.HasValue
+                                    ? Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId)
+                                    : null;
+                            }
+                            <div class="table-meta js-stock-hint">
+                                @if (selectedItem?.ItemType == "Product")
+                                {
+                                    <span>Current stock: @selectedItem.CurrentStock.ToString("N2")</span>
+                                }
+                            </div>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" name="Details[@i].Quantity" id="Details_@(i)__Quantity" value="@Model.Details[i].Quantity.ToString("0.##")" class="form-control js-line-quantity" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Quantity" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="Details[@i].UnitPrice" id="Details_@(i)__UnitPrice" value="@Model.Details[i].UnitPrice.ToString("0.##")" class="form-control js-line-unit-price" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].UnitPrice" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" name="Details[@i].DiscountAmount" id="Details_@(i)__DiscountAmount" value="@Model.Details[i].DiscountAmount.ToString("0.##")" class="form-control js-line-discount" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountAmount" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="Details[@i].LineTotal" id="Details_@(i)__LineTotal" value="@Model.Details[i].LineTotal.ToString("0.##")" class="form-control js-line-total" readonly />
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                        </td>
+                    </tr>
+                    <tr class="quotation-line-row quotation-line-row-detail">
+                        <td colspan="6">
+                            <label class="form-label">Description</label>
+                            <textarea name="Details[@i].Description" id="Details_@(i)__Description" class="form-control js-line-description" rows="3">@Model.Details[i].Description</textarea>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Description" data-valmsg-replace="true"></span>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <span class="text-danger field-validation-valid" data-valmsg-for="Details" data-valmsg-replace="true"></span>
+
+        <div class="quotation-summary-wrap">
+            <div class="quotation-summary-stack">
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">Subtotal</span>
+                    <span class="quotation-summary-amount" id="quotationSubtotal">@Model.Subtotal.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">Discount</span>
+                    <span class="quotation-summary-amount" id="quotationDiscount">@Model.DiscountAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">VAT</span>
+                    <span class="quotation-summary-amount" id="quotationVat">@Model.VatAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row total">
+                    <span class="quotation-summary-name">Total</span>
+                    <span class="quotation-summary-amount" id="quotationTotal">@Model.TotalAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="quotationItemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>
+<script type="application/json" id="quotationCustomerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
+<script type="application/json" id="quotationSalespersonLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalespersonLookup))</script>

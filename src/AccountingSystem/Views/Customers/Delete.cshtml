@@ -1,0 +1,30 @@
+@model BizCore.Models.Entities.Customer
+
+@{
+    ViewData["Title"] = "Delete Customer";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Customer Record</div>
+        <h1 class="page-title">Delete Customer</h1>
+        <p class="page-subtitle">Confirm deletion carefully before removing this customer from the master data list.</p>
+    </div>
+</div>
+
+<div class="card content-card danger-card">
+    <div class="card-body">
+        <div class="danger-banner">
+            This action removes <strong>@Model.CustomerName</strong> from the customer master. Continue only if this record is no longer needed.
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.CustomerCode</p></div>
+            <div class="detail-item"><span class="detail-label">Email</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</p></div>
+        </div>
+        <form asp-action="Delete" method="post" class="form-actions mt-4">
+            <input type="hidden" asp-for="CustomerId" />
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-danger px-4">Delete Customer</button>
+        </form>
+    </div>
+</div>

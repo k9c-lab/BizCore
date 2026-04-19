@@ -1,0 +1,46 @@
+@{
+    ViewData["Title"] = "Core Module";
+}
+
+<section class="py-2">
+    <div class="row g-4 align-items-stretch">
+        <div class="col-lg-7">
+            <div class="card hero-card h-100">
+                <div class="card-body p-4">
+                    <span class="badge text-bg-primary mb-3">Phase 1</span>
+                    <h1 class="display-6 mb-3">BizCore Master Data Module</h1>
+                    <p class="lead text-muted mb-4">
+                        Manage the master data used by sales and inventory flows: customers, suppliers,
+                        items, and salespeople.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" asp-controller="Customers" asp-action="Index">Customers</a>
+                        <a class="btn btn-outline-primary" asp-controller="Quotations" asp-action="Index">Quotations</a>
+                        <a class="btn btn-outline-primary" asp-controller="Invoices" asp-action="Index">Invoices</a>
+                        <a class="btn btn-outline-primary" asp-controller="Payments" asp-action="Index">Payments</a>
+                        <a class="btn btn-outline-primary" asp-controller="Receipts" asp-action="Index">Receipts</a>
+                        <a class="btn btn-outline-primary" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
+                        <a class="btn btn-outline-primary" asp-controller="Receivings" asp-action="Index">Receivings</a>
+                        <a class="btn btn-outline-primary" asp-controller="Items" asp-action="Index">Items</a>
+                        <a class="btn btn-outline-primary" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                        <a class="btn btn-outline-primary" asp-controller="Salespersons" asp-action="Index">Salespersons</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card content-card h-100">
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-3">Included in this start</h2>
+                    <ul class="mb-0">
+                        <li>EF Core entities with validation attributes</li>
+                        <li>SQL Server `DbContext` with unique constraints</li>
+                        <li>CRUD screens for the phase 1 master data</li>
+                        <li>Purchasing start: PO and receiving foundations</li>
+                        <li>Database bootstrap script in `/database`</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

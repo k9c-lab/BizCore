@@ -1,0 +1,117 @@
+@model BizCore.Models.ViewModels.StockInquirySerialsPageViewModel
+
+@{
+    ViewData["Title"] = "Item Serials";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Inquiry</div>
+        <h1 class="page-title">Item Serials</h1>
+        <p class="page-subtitle">Read-only serial listing for the selected serial-controlled item.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Stock Inquiry</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Item Code</span><p class="detail-value">@Model.ItemCode</p></div>
+            <div class="detail-item"><span class="detail-label">Item Name</span><p class="detail-value">@Model.ItemName</p></div>
+            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@Model.PartNumber</p></div>
+            <div class="detail-item"><span class="detail-label">Current Stock</span><p class="detail-value">@Model.CurrentStock.ToString("N2")</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <form method="get" asp-action="Serials" asp-route-itemId="@Model.ItemId" class="form-shell">
+            <div class="form-section">
+                <div class="form-section-title">Search Serials</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="serialNo" class="form-label">Serial No.</label>
+                        <input id="serialNo" name="serialNo" value="@Model.SerialNo" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-actions mt-3">
+                    <span class="table-meta">Inquiry only. Serials shown here belong to this item only.</span>
+                    <div class="page-actions">
+                        <a asp-action="Serials" asp-route-itemId="@Model.ItemId" class="btn btn-outline-secondary">Clear</a>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Serial List</h2>
+            <p class="section-subtitle">Serial records for the selected item.</p>
+        </div>
+        <div class="table-meta">@Model.Results.Count record(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Serial No.</th>
+                        <th>Status</th>
+                        <th>Supplier</th>
+                        <th>Customer</th>
+                        <th>Invoice Code</th>
+                        <th>Supplier Warranty Start</th>
+                        <th>Supplier Warranty End</th>
+                        <th>Customer Warranty Start</th>
+                        <th>Customer Warranty End</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Results.Any())
+                {
+                    @foreach (var serial in Model.Results)
+                    {
+                        var isWarrantyExpired = !serial.SupplierWarrantyEndDate.HasValue || serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today;
+                        <tr>
+                            <td><span class="code-chip">@serial.SerialNo</span></td>
+                            <td>@serial.Status</td>
+                            <td>@serial.SupplierName</td>
+                            <td>@serial.CurrentCustomerName</td>
+                            <td>@serial.InvoiceCode</td>
+                            <td>@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>@(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>@(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td class="text-end">
+                                @if (isWarrantyExpired)
+                                {
+                                    <span class="status-pill inactive">Warranty Expired</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" disabled>Claim</button>
+                                }
+                                else
+                                {
+                                    <a asp-controller="SupplierClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-primary">Claim</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="10" class="table-empty">No serial records matched the current search for this item.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

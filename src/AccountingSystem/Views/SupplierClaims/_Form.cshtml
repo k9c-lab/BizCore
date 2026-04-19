@@ -1,0 +1,75 @@
+@model BizCore.Models.ViewModels.SupplierClaimFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<input asp-for="SerialId" type="hidden" />
+
+@if (Model.IsClaimBlocked)
+{
+    <div class="danger-banner">@Model.ClaimBlockMessage</div>
+}
+
+<div class="form-shell">
+    <div class="form-section">
+        <div class="form-section-title">Selected Serial</div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Serial No.</label>
+                <input type="text" class="form-control" value="@Model.SerialNo" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Item Code</label>
+                <input type="text" class="form-control" value="@Model.ItemCode" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Item Name</label>
+                <input type="text" class="form-control" value="@Model.ItemName" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Part Number</label>
+                <input type="text" class="form-control" value="@Model.PartNumber" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Supplier</label>
+                <input type="text" class="form-control" value="@Model.SupplierName" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Current Serial Status</label>
+                <input type="text" class="form-control" value="@Model.CurrentSerialStatus" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Supplier Warranty Start</label>
+                <input type="text" class="form-control" value="@(Model.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")" readonly />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Supplier Warranty End</label>
+                <input type="text" class="form-control" value="@(Model.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")" readonly />
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-title">Claim Information</div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label asp-for="ClaimDate" class="form-label"></label>
+                <input asp-for="ClaimDate" class="form-control" />
+                <span asp-validation-for="ClaimDate" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ClaimStatus" class="form-label"></label>
+                <select asp-for="ClaimStatus" asp-items="Model.StatusOptions" class="form-select"></select>
+                <span asp-validation-for="ClaimStatus" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="ProblemDescription" class="form-label"></label>
+                <textarea asp-for="ProblemDescription" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="ProblemDescription" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Remark" class="form-label"></label>
+                <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Remark" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>

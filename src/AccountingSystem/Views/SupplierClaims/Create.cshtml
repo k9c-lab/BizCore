@@ -1,0 +1,42 @@
+@model BizCore.Models.ViewModels.SupplierClaimFormViewModel
+
+@{
+    ViewData["Title"] = "Supplier Claim";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Supplier Claim Module</div>
+        <h1 class="page-title">Supplier Claim</h1>
+        <p class="page-subtitle">Create a simple supplier claim log from the selected serial only.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Claims</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">This action saves a serial claim log and updates the serial status to ClaimedToSupplier.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    @if (Model.IsClaimBlocked)
+                    {
+                        <button type="submit" class="btn btn-primary px-4" disabled>Save Claim</button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary px-4">Save Claim</button>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

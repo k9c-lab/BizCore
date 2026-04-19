@@ -1,0 +1,36 @@
+@model BizCore.Models.Entities.SerialClaimLog
+
+@{
+    ViewData["Title"] = "Supplier Claim Details";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Supplier Claim Module</div>
+        <h1 class="page-title">Supplier Claim Details</h1>
+        <p class="page-subtitle">Review the saved serial claim log and the current serial status.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.ClaimDate.ToString("dd MMM yyyy")</p></div>
+            <div class="detail-item"><span class="detail-label">Claim Status</span><p class="detail-value">@Model.ClaimStatus</p></div>
+            <div class="detail-item"><span class="detail-label">Serial No.</span><p class="detail-value">@Model.SerialNumber?.SerialNo</p></div>
+            <div class="detail-item"><span class="detail-label">Current Serial Status</span><p class="detail-value">@Model.SerialNumber?.Status</p></div>
+            <div class="detail-item"><span class="detail-label">Item Code</span><p class="detail-value">@Model.SerialNumber?.Item?.ItemCode</p></div>
+            <div class="detail-item"><span class="detail-label">Item Name</span><p class="detail-value">@Model.SerialNumber?.Item?.ItemName</p></div>
+            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@Model.SerialNumber?.Item?.PartNumber</p></div>
+            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
+            <div class="detail-item"><span class="detail-label">Supplier Warranty Start</span><p class="detail-value">@(Model.SerialNumber?.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
+            <div class="detail-item"><span class="detail-label">Supplier Warranty End</span><p class="detail-value">@(Model.SerialNumber?.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
+            <div class="detail-item"><span class="detail-label">Problem Description</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
+            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+            <div class="detail-item"><span class="detail-label">Created Date</span><p class="detail-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p></div>
+        </div>
+    </div>
+</div>
