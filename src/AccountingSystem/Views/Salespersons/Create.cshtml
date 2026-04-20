@@ -11,15 +11,16 @@
         <p class="page-subtitle">Capture team details in a cleaner CRM-style create form.</p>
     </div>
     <div class="page-actions">
+        <button type="submit" form="salespersonForm" class="btn btn-primary px-4">Save Salesperson</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="salespersonForm">
             <partial name="_Form" model="Model" />
-            <div class="form-actions">
+            <div class="form-actions mt-3">
                 <span class="table-meta">Commission and contact information stay visible in one place.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

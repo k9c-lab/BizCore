@@ -11,16 +11,17 @@
         <p class="page-subtitle">Refine item setup with cleaner spacing and clearer control visibility.</p>
     </div>
     <div class="page-actions">
+        <button type="submit" form="itemForm" class="btn btn-primary px-4">Save Changes</button>
         <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">View Details</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Edit" method="post">
+        <form asp-action="Edit" method="post" id="itemForm">
             <input type="hidden" asp-for="ItemId" />
             <partial name="_Form" model="Model" />
-            <div class="form-actions">
+            <div class="form-actions mt-3">
                 <span class="table-meta">Validation remains unchanged and now appears more prominently.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Back</a>

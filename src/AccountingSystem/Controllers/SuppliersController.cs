@@ -1,5 +1,6 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
+using BizCore.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +18,31 @@ public class SuppliersController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, int page = 1, int pageSize = 20)
     {
-        return View(await _context.Suppliers.OrderBy(x => x.SupplierCode).ToListAsync());
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+
+        var query = _context.Suppliers.AsNoTracking();
+        var keyword = search?.Trim();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            query = query.Where(x =>
+                x.SupplierCode.Contains(keyword) ||
+                x.SupplierName.Contains(keyword) ||
+                (x.TaxId != null && x.TaxId.Contains(keyword)) ||
+                (x.PhoneNumber != null && x.PhoneNumber.Contains(keyword)) ||
+                (x.Email != null && x.Email.Contains(keyword)));
+        }
+
+        query = status switch
+        {
+            "Active" => query.Where(x => x.IsActive),
+            "Inactive" => query.Where(x => !x.IsActive),
+            _ => query
+        };
+
+        return View(await PaginatedList<Supplier>.CreateAsync(query.OrderBy(x => x.SupplierCode), page, pageSize));
     }
 
     public async Task<IActionResult> Create()

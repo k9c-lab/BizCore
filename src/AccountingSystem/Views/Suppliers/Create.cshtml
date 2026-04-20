@@ -11,15 +11,16 @@
         <p class="page-subtitle">Create supplier master data with cleaner grouping for operations and finance.</p>
     </div>
     <div class="page-actions">
+        <button type="submit" form="supplierForm" class="btn btn-primary px-4">Save Supplier</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="supplierForm">
             <partial name="_Form" model="Model" />
-            <div class="form-actions">
+            <div class="form-actions mt-3">
                 <span class="table-meta">Use supplier contact details that stay readable in future purchasing screens.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

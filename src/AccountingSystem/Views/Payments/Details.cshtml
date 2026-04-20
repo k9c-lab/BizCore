@@ -221,6 +221,11 @@
                         <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
                         <span class="document-history-label">Posted</span>
                         <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>

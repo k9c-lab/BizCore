@@ -1,0 +1,31 @@
+@model BizCore.Models.ViewModels.PaginationViewModel
+
+@if (Model.TotalPages > 1)
+{
+    string PageUrl(int page)
+    {
+        var request = ViewContext.HttpContext.Request;
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(request.QueryString.Value);
+        var values = query.ToDictionary(x => x.Key, x => x.Value.ToString());
+        values["page"] = page.ToString();
+        values["pageSize"] = Model.PageSize.ToString();
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(request.Path, values!);
+    }
+
+    var startPage = Math.Max(1, Model.PageIndex - 2);
+    var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+
+    <nav class="pagination-shell" aria-label="List pagination">
+        <div class="pagination-summary">
+            Page @Model.PageIndex of @Model.TotalPages · @Model.TotalCount record(s)
+        </div>
+        <div class="pagination-actions">
+            <a href="@PageUrl(Model.PageIndex - 1)" class="btn btn-sm btn-outline-secondary @(Model.HasPreviousPage ? "" : "disabled")" aria-disabled="@(!Model.HasPreviousPage)">Previous</a>
+            @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+            {
+                <a href="@PageUrl(pageNumber)" class="btn btn-sm @(pageNumber == Model.PageIndex ? "btn-primary" : "btn-outline-secondary")">@pageNumber</a>
+            }
+            <a href="@PageUrl(Model.PageIndex + 1)" class="btn btn-sm btn-outline-secondary @(Model.HasNextPage ? "" : "disabled")" aria-disabled="@(!Model.HasNextPage)">Next</a>
+        </div>
+    </nav>
+}

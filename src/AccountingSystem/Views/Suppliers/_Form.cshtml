@@ -4,63 +4,65 @@
 }
 
 <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
 <div class="form-shell">
-<div class="form-section">
-    <div class="form-section-title">Supplier Profile</div>
-    <div class="row g-3">
-    <div class="col-md-4">
-        <label asp-for="SupplierCode" class="form-label"></label>
-        <input asp-for="SupplierCode" class="form-control" readonly="@codeReadOnly" />
-        @if (codeReadOnly)
-        {
-            <div class="form-text">Auto-generated code in `SUP-0001` format.</div>
-        }
-        <span asp-validation-for="SupplierCode" class="text-danger"></span>
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">Supplier Profile</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="SupplierCode" class="form-label"></label>
+                <input asp-for="SupplierCode" class="form-control" readonly="@codeReadOnly" />
+                @if (codeReadOnly)
+                {
+                    <div class="form-text">Auto-generated code in SUP-0001 format.</div>
+                }
+                <span asp-validation-for="SupplierCode" class="text-danger"></span>
+            </div>
+            <div class="col-lg-5 col-md-6">
+                <label asp-for="SupplierName" class="form-label"></label>
+                <input asp-for="SupplierName" class="form-control" />
+                <span asp-validation-for="SupplierName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="CreditLimit" class="form-label"></label>
+                <input asp-for="CreditLimit" class="form-control" />
+                <div class="form-text">Use this as the purchasing credit threshold for this supplier.</div>
+                <span asp-validation-for="CreditLimit" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="TaxId" class="form-label"></label>
+                <div class="quotation-expiry-group master-status-group">
+                    <input asp-for="TaxId" class="form-control" />
+                    <label class="quotation-inline-check" asp-for="IsActive">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <span>Active</span>
+                    </label>
+                </div>
+                <span asp-validation-for="TaxId" class="text-danger"></span>
+            </div>
+        </div>
     </div>
-    <div class="col-md-8">
-        <label asp-for="SupplierName" class="form-label"></label>
-        <input asp-for="SupplierName" class="form-control" />
-        <span asp-validation-for="SupplierName" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="CreditLimit" class="form-label"></label>
-        <input asp-for="CreditLimit" class="form-control" />
-        <div class="form-text">Use this as the purchasing credit threshold for this supplier.</div>
-        <span asp-validation-for="CreditLimit" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="TaxId" class="form-label"></label>
-        <input asp-for="TaxId" class="form-control" />
-        <span asp-validation-for="TaxId" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <div class="form-check mt-md-4">
-            <input asp-for="IsActive" class="form-check-input" />
-            <label asp-for="IsActive" class="form-check-label"></label>
+
+    <div class="form-section">
+        <div class="form-section-title">Contact Information</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Address" class="form-label"></label>
+                <textarea asp-for="Address" class="form-control" rows="3"></textarea>
+                <div class="form-text">Store the supplier billing or warehouse address for future purchasing flows.</div>
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
         </div>
     </div>
 </div>
-</div>
-<div class="form-section">
-    <div class="form-section-title">Contact Information</div>
-    <div class="row g-3">
-    <div class="col-md-4">
-        <label asp-for="PhoneNumber" class="form-label"></label>
-        <input asp-for="PhoneNumber" class="form-control" />
-        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control" />
-        <span asp-validation-for="Email" class="text-danger"></span>
-    </div>
-    <div class="col-md-8">
-        <label asp-for="Address" class="form-label"></label>
-        <textarea asp-for="Address" class="form-control" rows="3"></textarea>
-        <div class="form-text">Store the supplier billing or warehouse address for future purchasing flows.</div>
-        <span asp-validation-for="Address" class="text-danger"></span>
-    </div>
-    </div>
-</div>
-</div>
-</div>
+

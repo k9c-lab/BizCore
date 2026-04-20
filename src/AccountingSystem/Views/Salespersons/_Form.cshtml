@@ -4,52 +4,54 @@
 }
 
 <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
 <div class="form-shell">
-<div class="form-section">
-    <div class="form-section-title">Sales Profile</div>
-    <div class="row g-3">
-    <div class="col-md-4">
-        <label asp-for="SalespersonCode" class="form-label"></label>
-        <input asp-for="SalespersonCode" class="form-control" readonly="@codeReadOnly" />
-        @if (codeReadOnly)
-        {
-            <div class="form-text">Auto-generated code in `SAL-0001` format.</div>
-        }
-        <span asp-validation-for="SalespersonCode" class="text-danger"></span>
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">Sales Profile</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="SalespersonCode" class="form-label"></label>
+                <input asp-for="SalespersonCode" class="form-control" readonly="@codeReadOnly" />
+                @if (codeReadOnly)
+                {
+                    <div class="form-text">Auto-generated code in SAL-0001 format.</div>
+                }
+                <span asp-validation-for="SalespersonCode" class="text-danger"></span>
+            </div>
+            <div class="col-lg-5 col-md-6">
+                <label asp-for="SalespersonName" class="form-label"></label>
+                <input asp-for="SalespersonName" class="form-control" />
+                <span asp-validation-for="SalespersonName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="CommissionRate" class="form-label"></label>
+                <div class="quotation-expiry-group master-status-group">
+                    <input asp-for="CommissionRate" class="form-control" />
+                    <label class="quotation-inline-check" asp-for="IsActive">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <span>Active</span>
+                    </label>
+                </div>
+                <div class="form-text">Enter a percentage between 0 and 100.</div>
+                <span asp-validation-for="CommissionRate" class="text-danger"></span>
+            </div>
+        </div>
     </div>
-    <div class="col-md-8">
-        <label asp-for="SalespersonName" class="form-label"></label>
-        <input asp-for="SalespersonName" class="form-control" />
-        <span asp-validation-for="SalespersonName" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="CommissionRate" class="form-label"></label>
-        <input asp-for="CommissionRate" class="form-control" />
-        <div class="form-text">Enter a percentage between 0 and 100.</div>
-        <span asp-validation-for="CommissionRate" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <div class="form-check mt-md-4">
-            <input asp-for="IsActive" class="form-check-input" />
-            <label asp-for="IsActive" class="form-check-label"></label>
+
+    <div class="form-section">
+        <div class="form-section-title">Contact Information</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
         </div>
     </div>
 </div>
-</div>
-<div class="form-section">
-    <div class="form-section-title">Contact Information</div>
-    <div class="row g-3">
-    <div class="col-md-4">
-        <label asp-for="PhoneNumber" class="form-label"></label>
-        <input asp-for="PhoneNumber" class="form-control" />
-        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-    </div>
-    <div class="col-md-4">
-        <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control" />
-        <span asp-validation-for="Email" class="text-danger"></span>
-    </div>
-    </div>
-</div>
-</div>
-</div>
+

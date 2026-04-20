@@ -1,7 +1,11 @@
-@model IEnumerable<BizCore.Models.Entities.SerialClaimLog>
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SerialClaimLog>
 
 @{
     ViewData["Title"] = "Supplier Claims";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
 }
 
 <div class="page-header">
@@ -18,9 +22,38 @@
             <h2 class="section-title">Claim Register</h2>
             <p class="section-subtitle">Each record is a direct claim log from one selected serial.</p>
         </div>
-        <div class="table-meta">@Model.Count() record(s)</div>
+        <div class="table-meta">@Model.TotalCount record(s)</div>
     </div>
     <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Serial no., item, part number, supplier, problem, or remark" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Claim Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Open" selected="@(status == "Open")">Open</option>
+                    <option value="Sent" selected="@(status == "Sent")">Sent</option>
+                    <option value="Returned" selected="@(status == "Returned")">Returned</option>
+                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
+                    <option value="Closed" selected="@(status == "Closed")">Closed</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
@@ -59,5 +92,6 @@
                 </tbody>
             </table>
         </div>
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>

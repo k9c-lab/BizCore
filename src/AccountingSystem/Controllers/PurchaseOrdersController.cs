@@ -24,9 +24,9 @@ public class PurchaseOrdersController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var orders = await _context.PurchaseOrderHeaders
+        var query = _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.CreatedByUser)
@@ -34,9 +34,44 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.ApprovedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.PONo.Contains(keyword) ||
+                (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.Supplier != null && (
+                    x.Supplier.SupplierCode.Contains(keyword) ||
+                    x.Supplier.SupplierName.Contains(keyword) ||
+                    (x.Supplier.TaxId != null && x.Supplier.TaxId.Contains(keyword)))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.PODate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.PODate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var orders = await PaginatedList<PurchaseOrderHeader>.CreateAsync(query
             .OrderByDescending(x => x.PODate)
-            .ThenByDescending(x => x.PurchaseOrderId)
-            .ToListAsync();
+            .ThenByDescending(x => x.PurchaseOrderId), page, pageSize);
 
         return View(orders);
     }

@@ -16,55 +16,67 @@ public class StockInquiryController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index(string? itemCode, string? itemName, string? partNumber)
+    public async Task<IActionResult> Index(string? search, string? itemType, string? status, int page = 1, int pageSize = 20)
     {
         var query = _context.Items
             .AsNoTracking()
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(itemCode))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var trimmed = itemCode.Trim();
-            query = query.Where(x => x.ItemCode.Contains(trimmed));
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.ItemCode.Contains(keyword) ||
+                x.ItemName.Contains(keyword) ||
+                x.PartNumber.Contains(keyword) ||
+                x.ItemType.Contains(keyword) ||
+                x.Unit.Contains(keyword));
         }
 
-        if (!string.IsNullOrWhiteSpace(itemName))
+        if (!string.IsNullOrWhiteSpace(itemType))
         {
-            var trimmed = itemName.Trim();
-            query = query.Where(x => x.ItemName.Contains(trimmed));
+            query = query.Where(x => x.ItemType == itemType);
         }
 
-        if (!string.IsNullOrWhiteSpace(partNumber))
+        if (string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase))
         {
-            var trimmed = partNumber.Trim();
-            query = query.Where(x => x.PartNumber.Contains(trimmed));
+            query = query.Where(x => x.IsActive);
         }
+        else if (string.Equals(status, "Inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(x => !x.IsActive);
+        }
+
+        var results = await PaginatedList<StockInquiryRowViewModel>.CreateAsync(query
+            .OrderBy(x => x.ItemCode)
+            .Select(x => new StockInquiryRowViewModel
+            {
+                ItemId = x.ItemId,
+                ItemCode = x.ItemCode,
+                ItemName = x.ItemName,
+                PartNumber = x.PartNumber,
+                ItemType = x.ItemType,
+                Unit = x.Unit,
+                CurrentStock = x.CurrentStock,
+                TrackStock = x.TrackStock,
+                IsSerialControlled = x.IsSerialControlled,
+                IsActive = x.IsActive
+            }), page, pageSize);
 
         var model = new StockInquiryPageViewModel
         {
-            ItemCode = itemCode?.Trim(),
-            ItemName = itemName?.Trim(),
-            PartNumber = partNumber?.Trim(),
-            Results = await query
-                .OrderBy(x => x.ItemCode)
-                .Select(x => new StockInquiryRowViewModel
-                {
-                    ItemId = x.ItemId,
-                    ItemCode = x.ItemCode,
-                    ItemName = x.ItemName,
-                    PartNumber = x.PartNumber,
-                    CurrentStock = x.CurrentStock,
-                    TrackStock = x.TrackStock,
-                    IsSerialControlled = x.IsSerialControlled
-                })
-                .ToListAsync()
+            Search = search?.Trim(),
+            ItemType = itemType,
+            Status = status,
+            Pagination = results.Pagination,
+            Results = results.Items
         };
 
         return View(model);
     }
 
     [HttpGet("StockInquiry/Serials/{itemId:int}")]
-    public async Task<IActionResult> Serials(int itemId, string? serialNo)
+    public async Task<IActionResult> Serials(int itemId, string? search, string? status, int page = 1, int pageSize = 20)
     {
         var item = await _context.Items
             .AsNoTracking()
@@ -82,11 +94,49 @@ public class StockInquiryController : Controller
             .Include(x => x.InvoiceHeader)
             .Where(x => x.ItemId == itemId);
 
-        if (!string.IsNullOrWhiteSpace(serialNo))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var trimmed = serialNo.Trim();
-            serialQuery = serialQuery.Where(x => x.SerialNo.Contains(trimmed));
+            var keyword = search.Trim();
+            serialQuery = serialQuery.Where(x =>
+                x.SerialNo.Contains(keyword) ||
+                x.Status.Contains(keyword) ||
+                (x.Supplier != null && (
+                    x.Supplier.SupplierCode.Contains(keyword) ||
+                    x.Supplier.SupplierName.Contains(keyword) ||
+                    (x.Supplier.TaxId != null && x.Supplier.TaxId.Contains(keyword)))) ||
+                (x.CurrentCustomer != null && (
+                    x.CurrentCustomer.CustomerCode.Contains(keyword) ||
+                    x.CurrentCustomer.CustomerName.Contains(keyword) ||
+                    (x.CurrentCustomer.TaxId != null && x.CurrentCustomer.TaxId.Contains(keyword)))) ||
+                (x.InvoiceHeader != null && (
+                    x.InvoiceHeader.InvoiceNo.Contains(keyword) ||
+                    (x.InvoiceHeader.ReferenceNo != null && x.InvoiceHeader.ReferenceNo.Contains(keyword)))));
         }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            serialQuery = serialQuery.Where(x => x.Status == status);
+        }
+
+        var results = await PaginatedList<SerialInquiryRowViewModel>.CreateAsync(serialQuery
+            .OrderBy(x => x.SerialNo)
+            .Select(x => new SerialInquiryRowViewModel
+            {
+                SerialId = x.SerialId,
+                SerialNo = x.SerialNo,
+                ItemCode = item.ItemCode,
+                ItemName = item.ItemName,
+                PartNumber = item.PartNumber,
+                Status = x.Status,
+                SupplierName = x.Supplier != null ? x.Supplier.SupplierName : "-",
+                CurrentCustomerName = x.CurrentCustomer != null ? x.CurrentCustomer.CustomerName : "-",
+                InvoiceId = x.InvoiceId,
+                InvoiceCode = x.InvoiceHeader != null ? x.InvoiceHeader.InvoiceNo : "-",
+                SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
+                SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
+                CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
+                CustomerWarrantyEndDate = x.CustomerWarrantyEndDate
+            }), page, pageSize);
 
         var model = new StockInquirySerialsPageViewModel
         {
@@ -95,27 +145,10 @@ public class StockInquiryController : Controller
             ItemName = item.ItemName,
             PartNumber = item.PartNumber,
             CurrentStock = item.CurrentStock,
-            SerialNo = serialNo?.Trim(),
-            Results = await serialQuery
-                .OrderBy(x => x.SerialNo)
-                .Select(x => new SerialInquiryRowViewModel
-                {
-                    SerialId = x.SerialId,
-                    SerialNo = x.SerialNo,
-                    ItemCode = item.ItemCode,
-                    ItemName = item.ItemName,
-                    PartNumber = item.PartNumber,
-                    Status = x.Status,
-                    SupplierName = x.Supplier != null ? x.Supplier.SupplierName : "-",
-                    CurrentCustomerName = x.CurrentCustomer != null ? x.CurrentCustomer.CustomerName : "-",
-                    InvoiceId = x.InvoiceId,
-                    InvoiceCode = x.InvoiceHeader != null ? x.InvoiceHeader.InvoiceNo : "-",
-                    SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
-                    SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
-                    CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
-                    CustomerWarrantyEndDate = x.CustomerWarrantyEndDate
-                })
-                .ToListAsync()
+            Search = search?.Trim(),
+            Status = status,
+            Pagination = results.Pagination,
+            Results = results.Items
         };
 
         return View(model);

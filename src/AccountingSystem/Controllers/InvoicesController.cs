@@ -24,17 +24,54 @@ public class InvoicesController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var invoices = await _context.InvoiceHeaders
+        var query = _context.InvoiceHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
             .Include(x => x.Quotation)
             .Include(x => x.PaymentAllocations)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.InvoiceNo.Contains(keyword) ||
+                (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.Customer != null && (
+                    x.Customer.CustomerCode.Contains(keyword) ||
+                    x.Customer.CustomerName.Contains(keyword) ||
+                    (x.Customer.TaxId != null && x.Customer.TaxId.Contains(keyword)))) ||
+                (x.Quotation != null && x.Quotation.QuotationNumber.Contains(keyword)) ||
+                (x.Salesperson != null && x.Salesperson.SalespersonName.Contains(keyword)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.InvoiceDate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.InvoiceDate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var invoices = await PaginatedList<InvoiceHeader>.CreateAsync(query
             .OrderByDescending(x => x.InvoiceDate)
-            .ThenByDescending(x => x.InvoiceId)
-            .ToListAsync();
+            .ThenByDescending(x => x.InvoiceId), page, pageSize);
 
         return View(invoices);
     }

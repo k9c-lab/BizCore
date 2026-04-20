@@ -24,15 +24,51 @@ public class ReceivingsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var receivings = await _context.ReceivingHeaders
+        var query = _context.ReceivingHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.PurchaseOrderHeader)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.ReceivingNo.Contains(keyword) ||
+                (x.Remark != null && x.Remark.Contains(keyword)) ||
+                (x.PurchaseOrderHeader != null && x.PurchaseOrderHeader.PONo.Contains(keyword)) ||
+                (x.Supplier != null && (
+                    x.Supplier.SupplierCode.Contains(keyword) ||
+                    x.Supplier.SupplierName.Contains(keyword) ||
+                    (x.Supplier.TaxId != null && x.Supplier.TaxId.Contains(keyword)))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.ReceiveDate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.ReceiveDate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var receivings = await PaginatedList<ReceivingHeader>.CreateAsync(query
             .OrderByDescending(x => x.ReceiveDate)
-            .ThenByDescending(x => x.ReceivingId)
-            .ToListAsync();
+            .ThenByDescending(x => x.ReceivingId), page, pageSize);
 
         return View(receivings);
     }
@@ -549,6 +585,8 @@ public class ReceivingsController : CrudControllerBase
         }
 
         po.Status = ComputePOStatus(po);
+        po.UpdatedByUserId = CurrentUserId();
+        po.UpdatedDate = DateTime.UtcNow;
     }
 
     private async Task<string?> GetCancelBlockedReasonAsync(ReceivingHeader receiving)
@@ -663,6 +701,7 @@ public class ReceivingsController : CrudControllerBase
         }
 
         po.Status = ComputePOStatus(po);
+        po.UpdatedByUserId = CurrentUserId();
         po.UpdatedDate = DateTime.UtcNow;
     }
 

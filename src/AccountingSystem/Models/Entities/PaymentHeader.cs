@@ -42,6 +42,7 @@ public class PaymentHeader
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedDate { get; set; }
     public int? CreatedByUserId { get; set; }
+    public int? UpdatedByUserId { get; set; }
     public int? PostedByUserId { get; set; }
     public DateTime? PostedDate { get; set; }
     public int? CancelledByUserId { get; set; }
@@ -52,6 +53,7 @@ public class PaymentHeader
 
     public Customer? Customer { get; set; }
     public User? CreatedByUser { get; set; }
+    public User? UpdatedByUser { get; set; }
     public User? PostedByUser { get; set; }
     public User? CancelledByUser { get; set; }
     public ReceiptHeader? ReceiptHeader { get; set; }

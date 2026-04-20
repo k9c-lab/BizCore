@@ -1,0 +1,104 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.User>
+
+@{
+    ViewData["Title"] = "Users";
+    var search = ViewData["Search"] as string;
+    var role = ViewData["Role"] as string;
+    var status = ViewData["Status"] as string;
+}
+
+@if (TempData["UserNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Administration</div>
+        <h1 class="page-title">User Management</h1>
+        <p class="page-subtitle">Manage login accounts, roles, and access status.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary">New User</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="table-card-header px-0 pt-0">
+            <div>
+                <h2 class="section-title">Users</h2>
+                <p class="section-subtitle">Inactive users cannot sign in.</p>
+            </div>
+            <div class="table-meta">@Model.TotalCount account(s)</div>
+        </div>
+
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Username, display name, or email" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="role">Role</label>
+                <select id="role" name="role" class="form-select">
+                    <option value="">All</option>
+                    <option value="Admin" selected="@(role == "Admin")">Admin</option>
+                    <option value="Sales" selected="@(role == "Sales")">Sales</option>
+                    <option value="Warehouse" selected="@(role == "Warehouse")">Warehouse</option>
+                    <option value="Viewer" selected="@(role == "Viewer")">Viewer</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Active" selected="@(status == "Active")">Active</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Display Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var user in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@user.Username</span></td>
+                        <td class="fw-semibold">@user.DisplayName</td>
+                        <td>@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
+                        <td>@user.Role</td>
+                        <td>
+                            <span class="status-pill @(user.IsActive ? "active" : "inactive")">@(user.IsActive ? "Active" : "Inactive")</span>
+                        </td>
+                        <td>@user.CreatedAt.ToString("dd MMM yyyy")</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@user.UserId" class="btn btn-outline-secondary">Details</a>
+                                <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-outline-primary">Edit</a>
+                                <a asp-action="ResetPassword" asp-route-id="@user.UserId" class="btn btn-outline-secondary">Reset Password</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

@@ -1,6 +1,8 @@
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     string ActiveLink(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty;
+    string ActiveSection(params string[] controllers) => controllers.Any(controller => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)) ? " active" : string.Empty;
+    string? AriaCurrent(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "page" : null;
     var canUseSales = User.IsInRole("Admin") || User.IsInRole("Sales");
     var canUseWarehouse = User.IsInRole("Admin") || User.IsInRole("Warehouse");
     var canUseMasterData = User.IsInRole("Admin");
@@ -24,50 +26,51 @@
             </div>
 
             <nav class="sidebar-nav">
-                <div class="sidebar-section">
+                <div class="sidebar-section@(ActiveSection("Home"))">
                     <div class="sidebar-section-title">Dashboard</div>
-                    <a class="sidebar-link@(ActiveLink("Home"))" asp-controller="Home" asp-action="Index">Dashboard</a>
+                    <a class="sidebar-link@(ActiveLink("Home"))" asp-controller="Home" asp-action="Index" aria-current="@AriaCurrent("Home")">Dashboard</a>
                 </div>
 
                 @if (canUseSales)
                 {
-                    <div class="sidebar-section">
+                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "Payments", "Receipts"))">
                         <div class="sidebar-section-title">Sales</div>
-                        <a class="sidebar-link@(ActiveLink("Quotations"))" asp-controller="Quotations" asp-action="Index">Quotations</a>
-                        <a class="sidebar-link@(ActiveLink("Invoices"))" asp-controller="Invoices" asp-action="Index">Invoices</a>
-                        <a class="sidebar-link@(ActiveLink("Payments"))" asp-controller="Payments" asp-action="Index">Payments</a>
-                        <a class="sidebar-link@(ActiveLink("Receipts"))" asp-controller="Receipts" asp-action="Index">Receipts</a>
+                        <a class="sidebar-link@(ActiveLink("Quotations"))" asp-controller="Quotations" asp-action="Index" aria-current="@AriaCurrent("Quotations")">Quotations</a>
+                        <a class="sidebar-link@(ActiveLink("Invoices"))" asp-controller="Invoices" asp-action="Index" aria-current="@AriaCurrent("Invoices")">Invoices</a>
+                        <a class="sidebar-link@(ActiveLink("Payments"))" asp-controller="Payments" asp-action="Index" aria-current="@AriaCurrent("Payments")">Payments</a>
+                        <a class="sidebar-link@(ActiveLink("Receipts"))" asp-controller="Receipts" asp-action="Index" aria-current="@AriaCurrent("Receipts")">Receipts</a>
                     </div>
                 }
 
                 @if (canUseWarehouse)
                 {
-                    <div class="sidebar-section">
+                    <div class="sidebar-section@(ActiveSection("PurchaseOrders", "Receivings"))">
                         <div class="sidebar-section-title">Purchasing</div>
-                        <a class="sidebar-link@(ActiveLink("PurchaseOrders"))" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
-                        <a class="sidebar-link@(ActiveLink("Receivings"))" asp-controller="Receivings" asp-action="Index">Receivings</a>
+                        <a class="sidebar-link@(ActiveLink("PurchaseOrders"))" asp-controller="PurchaseOrders" asp-action="Index" aria-current="@AriaCurrent("PurchaseOrders")">Purchase Orders</a>
+                        <a class="sidebar-link@(ActiveLink("Receivings"))" asp-controller="Receivings" asp-action="Index" aria-current="@AriaCurrent("Receivings")">Receivings</a>
                     </div>
 
-                    <div class="sidebar-section">
+                    <div class="sidebar-section@(ActiveSection("StockInquiry", "SerialInquiry"))">
                         <div class="sidebar-section-title">Inventory</div>
-                        <a class="sidebar-link@(ActiveLink("StockInquiry"))" asp-controller="StockInquiry" asp-action="Index">Stock Inquiry</a>
-                        <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index">Serial Inquiry</a>
+                        <a class="sidebar-link@(ActiveLink("StockInquiry"))" asp-controller="StockInquiry" asp-action="Index" aria-current="@AriaCurrent("StockInquiry")">Stock Inquiry</a>
+                        <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index" aria-current="@AriaCurrent("SerialInquiry")">Serial Inquiry</a>
                     </div>
 
-                    <div class="sidebar-section">
+                    <div class="sidebar-section@(ActiveSection("SupplierClaims"))">
                         <div class="sidebar-section-title">Warranty</div>
-                        <a class="sidebar-link@(ActiveLink("SupplierClaims"))" asp-controller="SupplierClaims" asp-action="Index">Supplier Claims</a>
+                        <a class="sidebar-link@(ActiveLink("SupplierClaims"))" asp-controller="SupplierClaims" asp-action="Index" aria-current="@AriaCurrent("SupplierClaims")">Supplier Claims</a>
                     </div>
                 }
 
                 @if (canUseMasterData)
                 {
-                    <div class="sidebar-section">
+                    <div class="sidebar-section@(ActiveSection("Customers", "Suppliers", "Salespersons", "Items", "Users"))">
                         <div class="sidebar-section-title">Master Data</div>
-                        <a class="sidebar-link@(ActiveLink("Customers"))" asp-controller="Customers" asp-action="Index">Customers</a>
-                        <a class="sidebar-link@(ActiveLink("Suppliers"))" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
-                        <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index">Salespersons</a>
-                        <a class="sidebar-link@(ActiveLink("Items"))" asp-controller="Items" asp-action="Index">Items</a>
+                        <a class="sidebar-link@(ActiveLink("Customers"))" asp-controller="Customers" asp-action="Index" aria-current="@AriaCurrent("Customers")">Customers</a>
+                        <a class="sidebar-link@(ActiveLink("Suppliers"))" asp-controller="Suppliers" asp-action="Index" aria-current="@AriaCurrent("Suppliers")">Suppliers</a>
+                        <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index" aria-current="@AriaCurrent("Salespersons")">Salespersons</a>
+                        <a class="sidebar-link@(ActiveLink("Items"))" asp-controller="Items" asp-action="Index" aria-current="@AriaCurrent("Items")">Items</a>
+                        <a class="sidebar-link@(ActiveLink("Users"))" asp-controller="Users" asp-action="Index" aria-current="@AriaCurrent("Users")">Users</a>
                     </div>
                 }
             </nav>

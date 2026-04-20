@@ -18,16 +18,57 @@ public class SupplierClaimsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var claims = await _context.SerialClaimLogs
+        var query = _context.SerialClaimLogs
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.SerialNumber)
                 .ThenInclude(x => x!.Item)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                (x.ProblemDescription != null && x.ProblemDescription.Contains(keyword)) ||
+                (x.Remark != null && x.Remark.Contains(keyword)) ||
+                (x.Supplier != null && (
+                    x.Supplier.SupplierCode.Contains(keyword) ||
+                    x.Supplier.SupplierName.Contains(keyword) ||
+                    (x.Supplier.TaxId != null && x.Supplier.TaxId.Contains(keyword)))) ||
+                (x.SerialNumber != null && (
+                    x.SerialNumber.SerialNo.Contains(keyword) ||
+                    (x.SerialNumber.Item != null && (
+                        x.SerialNumber.Item.ItemCode.Contains(keyword) ||
+                        x.SerialNumber.Item.ItemName.Contains(keyword) ||
+                        (x.SerialNumber.Item.PartNumber != null && x.SerialNumber.Item.PartNumber.Contains(keyword)))))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.ClaimStatus == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.ClaimDate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.ClaimDate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var claims = await PaginatedList<SerialClaimLog>.CreateAsync(query
             .OrderByDescending(x => x.ClaimDate)
-            .ThenByDescending(x => x.SerialClaimLogId)
-            .ToListAsync();
+            .ThenByDescending(x => x.SerialClaimLogId), page, pageSize);
 
         return View(claims);
     }

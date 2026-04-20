@@ -1,5 +1,6 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
+using BizCore.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +18,30 @@ public class SalespersonsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, int page = 1, int pageSize = 20)
     {
-        return View(await _context.Salespersons.OrderBy(x => x.SalespersonCode).ToListAsync());
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+
+        var query = _context.Salespersons.AsNoTracking();
+        var keyword = search?.Trim();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            query = query.Where(x =>
+                x.SalespersonCode.Contains(keyword) ||
+                x.SalespersonName.Contains(keyword) ||
+                (x.PhoneNumber != null && x.PhoneNumber.Contains(keyword)) ||
+                (x.Email != null && x.Email.Contains(keyword)));
+        }
+
+        query = status switch
+        {
+            "Active" => query.Where(x => x.IsActive),
+            "Inactive" => query.Where(x => !x.IsActive),
+            _ => query
+        };
+
+        return View(await PaginatedList<Salesperson>.CreateAsync(query.OrderBy(x => x.SalespersonCode), page, pageSize));
     }
 
     public async Task<IActionResult> Create()

@@ -235,6 +235,10 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.PostedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.PostedByUserId)
@@ -278,6 +282,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.IssuedByUser)
                 .WithMany()

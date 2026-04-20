@@ -6,9 +6,9 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Customer Record</div>
+        <div class="page-eyebrow">Master Data</div>
         <h1 class="page-title">Customer Details</h1>
-        <p class="page-subtitle">Review customer profile information in a more readable business summary layout.</p>
+        <p class="page-subtitle">Review customer profile, finance setting, and contact information.</p>
     </div>
     <div class="page-actions">
         <a asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-primary">Edit Customer</a>
@@ -18,15 +18,71 @@
 
 <div class="card content-card">
     <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.CustomerCode</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
-            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.CustomerName</p></div>
-            <div class="detail-item"><span class="detail-label">Credit Limit</span><p class="detail-value">@Model.CreditLimit.ToString("N2")</p></div>
-            <div class="detail-item"><span class="detail-label">Tax ID</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.TaxId) ? "-" : Model.TaxId)</p></div>
-            <div class="detail-item"><span class="detail-label">Phone</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</p></div>
-            <div class="detail-item"><span class="detail-label">Email</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</p></div>
-            <div class="detail-item"><span class="detail-label">Address</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</p></div>
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Customer Profile</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Customer Code</div>
+                        <div class="form-control readonly-detail">@Model.CustomerCode</div>
+                    </div>
+                    <div class="col-lg-5 col-md-6">
+                        <div class="detail-label">Customer Name</div>
+                        <div class="form-control readonly-detail">@Model.CustomerName</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Credit Limit</div>
+                        <div class="form-control readonly-detail">@Model.CreditLimit.ToString("N2")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Tax ID</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.TaxId) ? "-" : Model.TaxId)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Contact Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Sales Usage</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Invoices / Receipts</span>
+                                <span class="quotation-info-value">Uses customer code, tax ID, and billing address.</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Availability</span>
+                                <span class="quotation-info-value">@(Model.IsActive ? "Selectable in documents" : "Hidden from normal selection")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+

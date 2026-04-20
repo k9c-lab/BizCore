@@ -33,6 +33,8 @@ GO
 
 IF COL_LENGTH('dbo.PaymentHeaders', 'CreatedByUserId') IS NULL
     ALTER TABLE dbo.PaymentHeaders ADD CreatedByUserId INT NULL;
+IF COL_LENGTH('dbo.PaymentHeaders', 'UpdatedByUserId') IS NULL
+    ALTER TABLE dbo.PaymentHeaders ADD UpdatedByUserId INT NULL;
 IF COL_LENGTH('dbo.PaymentHeaders', 'PostedByUserId') IS NULL
     ALTER TABLE dbo.PaymentHeaders ADD PostedByUserId INT NULL;
 IF COL_LENGTH('dbo.PaymentHeaders', 'PostedDate') IS NULL
@@ -47,6 +49,8 @@ GO
 
 IF COL_LENGTH('dbo.ReceiptHeaders', 'CreatedByUserId') IS NULL
     ALTER TABLE dbo.ReceiptHeaders ADD CreatedByUserId INT NULL;
+IF COL_LENGTH('dbo.ReceiptHeaders', 'UpdatedByUserId') IS NULL
+    ALTER TABLE dbo.ReceiptHeaders ADD UpdatedByUserId INT NULL;
 IF COL_LENGTH('dbo.ReceiptHeaders', 'IssuedByUserId') IS NULL
     ALTER TABLE dbo.ReceiptHeaders ADD IssuedByUserId INT NULL;
 IF COL_LENGTH('dbo.ReceiptHeaders', 'IssuedDate') IS NULL
@@ -94,6 +98,7 @@ BEGIN
 
     UPDATE dbo.PaymentHeaders
     SET CreatedByUserId = COALESCE(CreatedByUserId, @DefaultUserId),
+        UpdatedByUserId = CASE WHEN UpdatedDate IS NOT NULL THEN COALESCE(UpdatedByUserId, @DefaultUserId) ELSE UpdatedByUserId END,
         PostedByUserId = CASE WHEN Status = N'Posted' THEN COALESCE(PostedByUserId, @DefaultUserId) ELSE PostedByUserId END,
         PostedDate = CASE WHEN Status = N'Posted' THEN COALESCE(PostedDate, CreatedDate) ELSE PostedDate END,
         CancelledByUserId = CASE WHEN Status = N'Cancelled' THEN COALESCE(CancelledByUserId, @DefaultUserId) ELSE CancelledByUserId END,
@@ -101,6 +106,7 @@ BEGIN
 
     UPDATE dbo.ReceiptHeaders
     SET CreatedByUserId = COALESCE(CreatedByUserId, @DefaultUserId),
+        UpdatedByUserId = CASE WHEN UpdatedDate IS NOT NULL THEN COALESCE(UpdatedByUserId, @DefaultUserId) ELSE UpdatedByUserId END,
         IssuedByUserId = CASE WHEN Status = N'Issued' THEN COALESCE(IssuedByUserId, @DefaultUserId) ELSE IssuedByUserId END,
         IssuedDate = CASE WHEN Status = N'Issued' THEN COALESCE(IssuedDate, CreatedDate) ELSE IssuedDate END,
         CancelledByUserId = CASE WHEN Status = N'Cancelled' THEN COALESCE(CancelledByUserId, @DefaultUserId) ELSE CancelledByUserId END,
@@ -130,6 +136,8 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_PaymentHeaders_Users_CreatedByUserId')
     ALTER TABLE dbo.PaymentHeaders ADD CONSTRAINT FK_PaymentHeaders_Users_CreatedByUserId FOREIGN KEY (CreatedByUserId) REFERENCES dbo.Users(UserId);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_PaymentHeaders_Users_UpdatedByUserId')
+    ALTER TABLE dbo.PaymentHeaders ADD CONSTRAINT FK_PaymentHeaders_Users_UpdatedByUserId FOREIGN KEY (UpdatedByUserId) REFERENCES dbo.Users(UserId);
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_PaymentHeaders_Users_PostedByUserId')
     ALTER TABLE dbo.PaymentHeaders ADD CONSTRAINT FK_PaymentHeaders_Users_PostedByUserId FOREIGN KEY (PostedByUserId) REFERENCES dbo.Users(UserId);
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_PaymentHeaders_Users_CancelledByUserId')
@@ -138,6 +146,8 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_ReceiptHeaders_Users_CreatedByUserId')
     ALTER TABLE dbo.ReceiptHeaders ADD CONSTRAINT FK_ReceiptHeaders_Users_CreatedByUserId FOREIGN KEY (CreatedByUserId) REFERENCES dbo.Users(UserId);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_ReceiptHeaders_Users_UpdatedByUserId')
+    ALTER TABLE dbo.ReceiptHeaders ADD CONSTRAINT FK_ReceiptHeaders_Users_UpdatedByUserId FOREIGN KEY (UpdatedByUserId) REFERENCES dbo.Users(UserId);
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_ReceiptHeaders_Users_IssuedByUserId')
     ALTER TABLE dbo.ReceiptHeaders ADD CONSTRAINT FK_ReceiptHeaders_Users_IssuedByUserId FOREIGN KEY (IssuedByUserId) REFERENCES dbo.Users(UserId);
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_ReceiptHeaders_Users_CancelledByUserId')

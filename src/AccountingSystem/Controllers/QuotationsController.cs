@@ -25,15 +25,51 @@ public class QuotationsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var quotations = await _context.QuotationHeaders
+        var query = _context.QuotationHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.QuotationNumber.Contains(keyword) ||
+                (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.Customer != null && (
+                    x.Customer.CustomerCode.Contains(keyword) ||
+                    x.Customer.CustomerName.Contains(keyword) ||
+                    (x.Customer.TaxId != null && x.Customer.TaxId.Contains(keyword)))) ||
+                (x.Salesperson != null && x.Salesperson.SalespersonName.Contains(keyword)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.QuotationDate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.QuotationDate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var quotations = await PaginatedList<QuotationHeader>.CreateAsync(query
             .OrderByDescending(x => x.QuotationDate)
-            .ThenByDescending(x => x.QuotationHeaderId)
-            .ToListAsync();
+            .ThenByDescending(x => x.QuotationHeaderId), page, pageSize);
 
         return View(quotations);
     }

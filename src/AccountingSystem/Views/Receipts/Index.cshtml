@@ -1,7 +1,11 @@
-@model IEnumerable<BizCore.Models.Entities.ReceiptHeader>
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.ReceiptHeader>
 
 @{
     ViewData["Title"] = "Receipts";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
 }
 
 <div class="page-header">
@@ -18,9 +22,35 @@
             <h2 class="section-title">Receipt Register</h2>
             <p class="section-subtitle">Receipts are read-only after issue in this phase.</p>
         </div>
-        <div class="table-meta">@Model.Count() record(s)</div>
+        <div class="table-meta">@Model.TotalCount record(s)</div>
     </div>
     <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Receipt no., payment no., reference, or customer" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Issued" selected="@(status == "Issued")">Issued</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
@@ -68,5 +98,6 @@
                 </tbody>
             </table>
         </div>
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>

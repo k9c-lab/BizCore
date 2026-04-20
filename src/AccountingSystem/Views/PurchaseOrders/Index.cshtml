@@ -1,7 +1,11 @@
-@model IEnumerable<BizCore.Models.Entities.PurchaseOrderHeader>
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseOrderHeader>
 
 @{
     ViewData["Title"] = "Purchase Orders";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
 }
 
 <div class="page-header">
@@ -26,9 +30,38 @@
             <h2 class="section-title">PO Register</h2>
             <p class="section-subtitle">Track supplier orders and received progress without AP.</p>
         </div>
-        <div class="table-meta">@Model.Count() records</div>
+        <div class="table-meta">@Model.TotalCount records</div>
     </div>
     <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="PO no., reference, supplier, or tax ID" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
+                    <option value="Approved" selected="@(status == "Approved")">Approved</option>
+                    <option value="PartiallyReceived" selected="@(status == "PartiallyReceived")">Partially Received</option>
+                    <option value="FullyReceived" selected="@(status == "FullyReceived")">Fully Received</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
@@ -117,5 +150,6 @@
                 </tbody>
             </table>
         </div>
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>

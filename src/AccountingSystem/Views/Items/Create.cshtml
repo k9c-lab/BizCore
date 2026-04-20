@@ -11,15 +11,16 @@
         <p class="page-subtitle">Add a product or service with clearer pricing and control sections.</p>
     </div>
     <div class="page-actions">
+        <button type="submit" form="itemForm" class="btn btn-primary px-4">Save Item</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="itemForm">
             <partial name="_Form" model="Model" />
-            <div class="form-actions">
+            <div class="form-actions mt-3">
                 <span class="table-meta">Use product-level fields like unit, stock, and unit price to prepare item records for sales testing.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
@@ -32,4 +33,25 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const itemTypeSelect = document.getElementById("ItemType");
+            const itemCodeInput = document.getElementById("ItemCode");
+            const codeMapElement = document.getElementById("itemNextCodeMapData");
+            if (!itemTypeSelect || !itemCodeInput || !codeMapElement) {
+                return;
+            }
+
+            const nextCodeMap = JSON.parse(codeMapElement.textContent || "{}");
+            const updateCodePreview = () => {
+                const nextCode = nextCodeMap[itemTypeSelect.value];
+                if (nextCode) {
+                    itemCodeInput.value = nextCode;
+                }
+            };
+
+            itemTypeSelect.addEventListener("change", updateCodePreview);
+            updateCodePreview();
+        })();
+    </script>
 }

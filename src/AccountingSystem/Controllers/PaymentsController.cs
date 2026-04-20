@@ -20,15 +20,51 @@ public class PaymentsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
-        var payments = await _context.PaymentHeaders
+        var query = _context.PaymentHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.ReceiptHeader)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.PaymentNo.Contains(keyword) ||
+                (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.Customer != null && (
+                    x.Customer.CustomerCode.Contains(keyword) ||
+                    x.Customer.CustomerName.Contains(keyword) ||
+                    (x.Customer.TaxId != null && x.Customer.TaxId.Contains(keyword)))) ||
+                (x.ReceiptHeader != null && x.ReceiptHeader.ReceiptNo.Contains(keyword)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            query = query.Where(x => x.PaymentDate >= dateFrom.Value.Date);
+        }
+
+        if (dateTo.HasValue)
+        {
+            var endDate = dateTo.Value.Date.AddDays(1);
+            query = query.Where(x => x.PaymentDate < endDate);
+        }
+
+        ViewData["Search"] = search;
+        ViewData["Status"] = status;
+        ViewData["DateFrom"] = dateFrom?.ToString("yyyy-MM-dd");
+        ViewData["DateTo"] = dateTo?.ToString("yyyy-MM-dd");
+
+        var payments = await PaginatedList<PaymentHeader>.CreateAsync(query
             .OrderByDescending(x => x.PaymentDate)
-            .ThenByDescending(x => x.PaymentId)
-            .ToListAsync();
+            .ThenByDescending(x => x.PaymentId), page, pageSize);
 
         return View(payments);
     }
@@ -91,6 +127,8 @@ public class PaymentsController : CrudControllerBase
 
         try
         {
+            var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
             var invoiceIds = model.Allocations.Where(x => x.AppliedAmount > 0).Select(x => x.InvoiceId).Distinct().ToList();
             var invoiceMap = await _context.InvoiceHeaders
                 .Where(x => invoiceIds.Contains(x.InvoiceId))
@@ -106,10 +144,10 @@ public class PaymentsController : CrudControllerBase
                 Amount = model.Amount,
                 Remark = model.Remark?.Trim(),
                 Status = "Posted",
-                CreatedDate = DateTime.UtcNow,
-                CreatedByUserId = CurrentUserId(),
-                PostedByUserId = CurrentUserId(),
-                PostedDate = DateTime.UtcNow,
+                CreatedDate = now,
+                CreatedByUserId = userId,
+                PostedByUserId = userId,
+                PostedDate = now,
                 PaymentAllocations = model.Allocations
                     .Where(x => x.AppliedAmount > 0)
                     .Select(x => new PaymentAllocation
@@ -129,7 +167,8 @@ public class PaymentsController : CrudControllerBase
                 invoice.PaidAmount += allocation.AppliedAmount;
                 invoice.BalanceAmount = Math.Max(invoice.TotalAmount - invoice.PaidAmount, 0m);
                 invoice.Status = ComputeInvoiceStatus(invoice);
-                invoice.UpdatedDate = DateTime.UtcNow;
+                invoice.UpdatedDate = now;
+                invoice.UpdatedByUserId = userId;
             }
 
             await _context.SaveChangesAsync();
@@ -158,6 +197,7 @@ public class PaymentsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
             .Include(x => x.PostedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.ReceiptHeader)
@@ -193,6 +233,8 @@ public class PaymentsController : CrudControllerBase
             return RedirectToAction("Details", "Receipts", new { id = payment.ReceiptHeader.ReceiptId });
         }
 
+        var now = DateTime.UtcNow;
+        var userId = CurrentUserId();
         var receipt = new ReceiptHeader
         {
             ReceiptNo = await GetNextReceiptNumberAsync(DateTime.Today),
@@ -202,10 +244,10 @@ public class PaymentsController : CrudControllerBase
             TotalReceivedAmount = payment.Amount,
             Remark = payment.Remark,
             Status = "Issued",
-            CreatedDate = DateTime.UtcNow,
-            CreatedByUserId = CurrentUserId(),
-            IssuedByUserId = CurrentUserId(),
-            IssuedDate = DateTime.UtcNow
+            CreatedDate = now,
+            CreatedByUserId = userId,
+            IssuedByUserId = userId,
+            IssuedDate = now
         };
 
         _context.ReceiptHeaders.Add(receipt);
@@ -252,6 +294,8 @@ public class PaymentsController : CrudControllerBase
 
         try
         {
+            var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
             var invoiceIds = payment.PaymentAllocations.Select(x => x.InvoiceId).Distinct().ToList();
             var invoiceMap = await _context.InvoiceHeaders
                 .Where(x => invoiceIds.Contains(x.InvoiceId))
@@ -267,13 +311,15 @@ public class PaymentsController : CrudControllerBase
                 invoice.PaidAmount = Math.Max(invoice.PaidAmount - allocation.AppliedAmount, 0m);
                 invoice.BalanceAmount = Math.Max(invoice.TotalAmount - invoice.PaidAmount, 0m);
                 invoice.Status = ComputeInvoiceStatus(invoice);
-                invoice.UpdatedDate = DateTime.UtcNow;
+                invoice.UpdatedDate = now;
+                invoice.UpdatedByUserId = userId;
             }
 
             payment.Status = "Cancelled";
-            payment.UpdatedDate = DateTime.UtcNow;
-            payment.CancelledByUserId = CurrentUserId();
-            payment.CancelledDate = DateTime.UtcNow;
+            payment.UpdatedDate = now;
+            payment.UpdatedByUserId = userId;
+            payment.CancelledByUserId = userId;
+            payment.CancelledDate = now;
             payment.CancelReason = string.IsNullOrWhiteSpace(cancelReason) ? null : cancelReason.Trim();
 
             await _context.SaveChangesAsync();

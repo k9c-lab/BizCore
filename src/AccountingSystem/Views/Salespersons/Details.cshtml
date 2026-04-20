@@ -6,9 +6,9 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Team</div>
+        <div class="page-eyebrow">Master Data</div>
         <h1 class="page-title">Salesperson Details</h1>
-        <p class="page-subtitle">Review sales team data in a more readable summary layout.</p>
+        <p class="page-subtitle">Review sales team profile, commission, and contact information.</p>
     </div>
     <div class="page-actions">
         <a asp-action="Edit" asp-route-id="@Model.SalespersonId" class="btn btn-primary">Edit Salesperson</a>
@@ -18,13 +18,63 @@
 
 <div class="card content-card">
     <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.SalespersonCode</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
-            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.SalespersonName</p></div>
-            <div class="detail-item"><span class="detail-label">Commission</span><p class="detail-value">@Model.CommissionRate.ToString("N2")%</p></div>
-            <div class="detail-item"><span class="detail-label">Phone</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</p></div>
-            <div class="detail-item"><span class="detail-label">Email</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</p></div>
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Sales Profile</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Salesperson Code</div>
+                        <div class="form-control readonly-detail">@Model.SalespersonCode</div>
+                    </div>
+                    <div class="col-lg-5 col-md-6">
+                        <div class="detail-label">Salesperson Name</div>
+                        <div class="form-control readonly-detail">@Model.SalespersonName</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Commission</div>
+                        <div class="form-control readonly-detail">@Model.CommissionRate.ToString("N2")%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Contact Information</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Sales Usage</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Quotations / Invoices</span>
+                                <span class="quotation-info-value">Can be selected as salesperson on sales documents.</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Availability</span>
+                                <span class="quotation-info-value">@(Model.IsActive ? "Selectable in documents" : "Hidden from normal selection")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+

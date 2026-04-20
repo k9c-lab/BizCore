@@ -16,7 +16,7 @@ public class SerialInquiryController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index(string? serialNo, string? itemCode, string? partNumber)
+    public async Task<IActionResult> Index(string? search, string? status, int page = 1, int pageSize = 20)
     {
         var query = _context.SerialNumbers
             .AsNoTracking()
@@ -26,49 +26,62 @@ public class SerialInquiryController : Controller
             .Include(x => x.InvoiceHeader)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(serialNo))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var trimmed = serialNo.Trim();
-            query = query.Where(x => x.SerialNo.Contains(trimmed));
+            var keyword = search.Trim();
+            query = query.Where(x =>
+                x.SerialNo.Contains(keyword) ||
+                x.Status.Contains(keyword) ||
+                (x.Item != null && (
+                    x.Item.ItemCode.Contains(keyword) ||
+                    x.Item.ItemName.Contains(keyword) ||
+                    x.Item.PartNumber.Contains(keyword) ||
+                    x.Item.ItemType.Contains(keyword) ||
+                    x.Item.Unit.Contains(keyword))) ||
+                (x.Supplier != null && (
+                    x.Supplier.SupplierCode.Contains(keyword) ||
+                    x.Supplier.SupplierName.Contains(keyword) ||
+                    (x.Supplier.TaxId != null && x.Supplier.TaxId.Contains(keyword)))) ||
+                (x.CurrentCustomer != null && (
+                    x.CurrentCustomer.CustomerCode.Contains(keyword) ||
+                    x.CurrentCustomer.CustomerName.Contains(keyword) ||
+                    (x.CurrentCustomer.TaxId != null && x.CurrentCustomer.TaxId.Contains(keyword)))) ||
+                (x.InvoiceHeader != null && (
+                    x.InvoiceHeader.InvoiceNo.Contains(keyword) ||
+                    (x.InvoiceHeader.ReferenceNo != null && x.InvoiceHeader.ReferenceNo.Contains(keyword)))));
         }
 
-        if (!string.IsNullOrWhiteSpace(itemCode))
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            var trimmed = itemCode.Trim();
-            query = query.Where(x => x.Item != null && x.Item.ItemCode.Contains(trimmed));
+            query = query.Where(x => x.Status == status);
         }
 
-        if (!string.IsNullOrWhiteSpace(partNumber))
-        {
-            var trimmed = partNumber.Trim();
-            query = query.Where(x => x.Item != null && x.Item.PartNumber.Contains(trimmed));
-        }
+        var results = await PaginatedList<SerialInquiryRowViewModel>.CreateAsync(query
+            .OrderBy(x => x.SerialNo)
+            .Select(x => new SerialInquiryRowViewModel
+            {
+                SerialId = x.SerialId,
+                SerialNo = x.SerialNo,
+                ItemCode = x.Item != null ? x.Item.ItemCode : string.Empty,
+                ItemName = x.Item != null ? x.Item.ItemName : string.Empty,
+                PartNumber = x.Item != null ? x.Item.PartNumber : string.Empty,
+                Status = x.Status,
+                SupplierName = x.Supplier != null ? x.Supplier.SupplierName : "-",
+                CurrentCustomerName = x.CurrentCustomer != null ? x.CurrentCustomer.CustomerName : "-",
+                InvoiceId = x.InvoiceId,
+                InvoiceCode = x.InvoiceHeader != null ? x.InvoiceHeader.InvoiceNo : "-",
+                SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
+                SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
+                CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
+                CustomerWarrantyEndDate = x.CustomerWarrantyEndDate
+            }), page, pageSize);
 
         var model = new SerialInquiryPageViewModel
         {
-            SerialNo = serialNo?.Trim(),
-            ItemCode = itemCode?.Trim(),
-            PartNumber = partNumber?.Trim(),
-            Results = await query
-                .OrderBy(x => x.SerialNo)
-                .Select(x => new SerialInquiryRowViewModel
-                {
-                    SerialId = x.SerialId,
-                    SerialNo = x.SerialNo,
-                    ItemCode = x.Item != null ? x.Item.ItemCode : string.Empty,
-                    ItemName = x.Item != null ? x.Item.ItemName : string.Empty,
-                    PartNumber = x.Item != null ? x.Item.PartNumber : string.Empty,
-                    Status = x.Status,
-                    SupplierName = x.Supplier != null ? x.Supplier.SupplierName : "-",
-                    CurrentCustomerName = x.CurrentCustomer != null ? x.CurrentCustomer.CustomerName : "-",
-                    InvoiceId = x.InvoiceId,
-                    InvoiceCode = x.InvoiceHeader != null ? x.InvoiceHeader.InvoiceNo : "-",
-                    SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
-                    SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
-                    CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
-                    CustomerWarrantyEndDate = x.CustomerWarrantyEndDate
-                })
-                .ToListAsync()
+            Search = search?.Trim(),
+            Status = status,
+            Pagination = results.Pagination,
+            Results = results.Items
         };
 
         return View(model);

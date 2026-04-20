@@ -1,0 +1,66 @@
+@model BizCore.Models.Entities.User
+
+@{
+    ViewData["Title"] = "User Details";
+}
+
+@if (TempData["UserNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Administration</div>
+        <h1 class="page-title">User Details</h1>
+        <p class="page-subtitle">Review account access, role, and sign-in status.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn btn-primary">Edit User</a>
+        <a asp-action="ResetPassword" asp-route-id="@Model.UserId" class="btn btn-outline-secondary">Reset Password</a>
+        <form asp-action="ToggleActive" asp-route-id="@Model.UserId" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Change active status for this user?');">
+                @(Model.IsActive ? "Deactivate" : "Activate")
+            </button>
+        </form>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Account Information</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Username</div>
+                        <div class="form-control readonly-detail">@Model.Username</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Display Name</div>
+                        <div class="form-control readonly-detail">@Model.DisplayName</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Role</div>
+                        <div class="form-control readonly-detail">@Model.Role</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="detail-label">Email</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="detail-label">Created</div>
+                        <div class="form-control readonly-detail">@Model.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

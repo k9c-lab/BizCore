@@ -11,15 +11,16 @@
         <p class="page-subtitle">Add a customer record with clearer form sections and validation feedback.</p>
     </div>
     <div class="page-actions">
+        <button type="submit" form="customerForm" class="btn btn-primary px-4">Save Customer</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="customerForm">
             <partial name="_Form" model="Model" />
-            <div class="form-actions">
+            <div class="form-actions mt-3">
                 <span class="table-meta">Fields with validation feedback need correction before save.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

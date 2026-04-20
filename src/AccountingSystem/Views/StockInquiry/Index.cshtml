@@ -12,46 +12,42 @@
     </div>
 </div>
 
-<div class="card content-card mb-3">
-    <div class="card-body">
-        <form method="get" class="form-shell">
-            <div class="form-section">
-                <div class="form-section-title">Search Filters</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="itemCode" class="form-label">Item Code</label>
-                        <input id="itemCode" name="itemCode" value="@Model.ItemCode" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label for="itemName" class="form-label">Item Name</label>
-                        <input id="itemName" name="itemName" value="@Model.ItemName" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label for="partNumber" class="form-label">Part Number</label>
-                        <input id="partNumber" name="partNumber" value="@Model.PartNumber" class="form-control" />
-                    </div>
-                </div>
-                <div class="form-actions mt-3">
-                    <span class="table-meta">Inquiry only. Editing remains in the item master screen.</span>
-                    <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                        <button type="submit" class="btn btn-primary">Search</button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Stock Balances</h2>
             <p class="section-subtitle">Current item-level stock and control flags.</p>
         </div>
-        <div class="table-meta">@Model.Results.Count record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
     </div>
     <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label for="search" class="form-label">Search</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Code, name, part number, type, or unit" />
+            </div>
+            <div class="list-filter-field">
+                <label for="itemType" class="form-label">Type</label>
+                <select id="itemType" name="itemType" class="form-select">
+                    <option value="">All</option>
+                    <option value="Product" selected="@(Model.ItemType == "Product")">Product</option>
+                    <option value="Service" selected="@(Model.ItemType == "Service")">Service</option>
+                    <option value="Spare Part" selected="@(Model.ItemType == "Spare Part")">Spare Part</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Active" selected="@(Model.Status == "Active")">Active</option>
+                    <option value="Inactive" selected="@(Model.Status == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
@@ -59,9 +55,12 @@
                         <th>Item Code</th>
                         <th>Item Name</th>
                         <th>Part Number</th>
+                        <th>Type</th>
+                        <th>Unit</th>
                         <th>Current Stock</th>
                         <th>Track Stock</th>
                         <th>Is Serial Controlled</th>
+                        <th>Status</th>
                         <th class="text-end">Action</th>
                     </tr>
                 </thead>
@@ -74,9 +73,12 @@
                             <td><span class="code-chip">@item.ItemCode</span></td>
                             <td class="fw-semibold">@item.ItemName</td>
                             <td>@item.PartNumber</td>
+                            <td>@item.ItemType</td>
+                            <td>@item.Unit</td>
                             <td>@item.CurrentStock.ToString("N2")</td>
                             <td>@(item.TrackStock ? "Yes" : "No")</td>
                             <td>@(item.IsSerialControlled ? "Yes" : "No")</td>
+                            <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
                             <td class="text-end">
                                 @if (item.IsSerialControlled)
                                 {
@@ -93,11 +95,12 @@
                 else
                 {
                     <tr>
-                        <td colspan="7" class="table-empty">No stock records matched the current search.</td>
+                        <td colspan="10" class="table-empty">No stock records matched the current search.</td>
                     </tr>
                 }
                 </tbody>
             </table>
         </div>
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>

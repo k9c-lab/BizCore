@@ -109,6 +109,13 @@ a {
 .sidebar-section {
   display: grid;
   gap: 0.22rem;
+  position: relative;
+  padding: 0.2rem 0;
+  border-radius: 0.8rem;
+}
+
+.sidebar-section.active {
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .sidebar-section-title {
@@ -120,11 +127,16 @@ a {
   text-transform: uppercase;
 }
 
+.sidebar-section.active .sidebar-section-title {
+  color: rgba(255, 255, 255, 0.76);
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;
+  position: relative;
   min-height: 2.25rem;
-  padding: 0.5rem 0.8rem;
+  padding: 0.5rem 0.8rem 0.5rem 1rem;
   border-radius: 0.7rem;
   color: rgba(255, 255, 255, 0.76);
   font-weight: 600;
@@ -136,6 +148,22 @@ a {
 .sidebar-link.active {
   color: #fff;
   background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-link.active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.82), rgba(14, 165, 233, 0.52));
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.16);
+}
+
+.sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0.42rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: #fff;
 }
 
 .sidebar-footer {
@@ -402,6 +430,58 @@ a {
 .table-actions {
   display: inline-flex;
   gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.list-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.85rem;
+  background: rgba(248, 250, 252, 0.74);
+}
+
+.list-filter-field {
+  flex: 0 0 180px;
+  min-width: 160px;
+}
+
+.list-filter-field.grow {
+  flex: 1 1 280px;
+}
+
+.list-filter-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.pagination-shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.pagination-summary {
+  color: var(--muted-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.pagination-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -877,6 +957,67 @@ a {
   margin: 0;
 }
 
+.master-status-group .form-control {
+  min-width: 0;
+}
+
+.item-control-group {
+  display: flex;
+  align-items: center;
+  min-height: 2.55rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.item-control-group .quotation-inline-check {
+  margin-left: 0;
+}
+
+@media (max-width: 575.98px) {
+  .list-filter-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .list-filter-field,
+  .list-filter-field.grow {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .list-filter-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .list-filter-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .pagination-shell {
+    align-items: stretch;
+  }
+
+  .pagination-actions,
+  .pagination-actions .btn {
+    width: 100%;
+  }
+
+  .pagination-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .master-status-group {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .master-status-group .quotation-inline-check {
+    margin-left: 0;
+  }
+}
+
 .quotation-info-card {
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--surface-border);
@@ -1062,6 +1203,45 @@ textarea.form-control {
 .form-check-label {
   margin-bottom: 0;
   font-weight: 600;
+}
+
+.user-form-grid,
+.user-access-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.user-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.user-access-grid {
+  grid-template-columns: minmax(280px, 520px);
+  margin-top: 1rem;
+  max-width: 560px;
+}
+
+.user-form-field {
+  min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+  .user-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+
+  .user-access-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .user-form-grid,
+  .user-access-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-text {

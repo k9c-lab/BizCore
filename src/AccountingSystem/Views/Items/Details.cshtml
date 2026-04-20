@@ -6,9 +6,9 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Item Catalog</div>
+        <div class="page-eyebrow">Master Data</div>
         <h1 class="page-title">Item Details</h1>
-        <p class="page-subtitle">Review pricing and stock control settings in a clearer product summary view.</p>
+        <p class="page-subtitle">Review pricing, item type, and inventory control settings.</p>
     </div>
     <div class="page-actions">
         <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">Edit Item</a>
@@ -18,17 +18,78 @@
 
 <div class="card content-card">
     <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Code</span><p class="detail-value">@Model.ItemCode</p></div>
-            <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value">@(Model.IsActive ? "Active" : "Inactive")</p></div>
-            <div class="detail-item"><span class="detail-label">Name</span><p class="detail-value">@Model.ItemName</p></div>
-            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</p></div>
-            <div class="detail-item"><span class="detail-label">Item Type</span><p class="detail-value">@Model.ItemType</p></div>
-            <div class="detail-item"><span class="detail-label">Unit</span><p class="detail-value">@Model.Unit</p></div>
-            <div class="detail-item"><span class="detail-label">Unit Price</span><p class="detail-value">@Model.UnitPrice.ToString("N2")</p></div>
-            <div class="detail-item"><span class="detail-label">Current Stock</span><p class="detail-value">@Model.CurrentStock.ToString("N2")</p></div>
-            <div class="detail-item"><span class="detail-label">Track Stock</span><p class="detail-value">@(Model.TrackStock ? "Yes" : "No")</p></div>
-            <div class="detail-item"><span class="detail-label">Serial Controlled</span><p class="detail-value">@(Model.IsSerialControlled ? "Yes" : "No")</p></div>
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Item Profile</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Item Code</div>
+                        <div class="form-control readonly-detail">@Model.ItemCode</div>
+                    </div>
+                    <div class="col-lg-5 col-md-6">
+                        <div class="detail-label">Item Name</div>
+                        <div class="form-control readonly-detail">@Model.ItemName</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="detail-label">Item Type</div>
+                        <div class="form-control readonly-detail">@Model.ItemType</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Part Number</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Unit</div>
+                        <div class="form-control readonly-detail">@Model.Unit</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Unit Price</div>
+                        <div class="form-control readonly-detail">@Model.UnitPrice.ToString("N2")</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Inventory Controls</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Track Stock</span>
+                                <span class="quotation-info-value">@(Model.TrackStock ? "Yes" : "No")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Serial Controlled</span>
+                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "Yes" : "No")</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">Current Stock</span>
+                            <span class="quotation-info-value">@Model.CurrentStock.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Document Usage</div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Sales / Purchasing</span>
+                                <span class="quotation-info-value">@(Model.IsActive ? "Selectable in documents" : "Hidden from normal selection")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Serial Requirement</span>
+                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "Serial number required when receiving/issuing" : "No serial entry required")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

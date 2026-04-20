@@ -12,46 +12,35 @@
     </div>
 </div>
 
-<div class="card content-card mb-3">
-    <div class="card-body">
-        <form method="get" class="form-shell">
-            <div class="form-section">
-                <div class="form-section-title">Search Filters</div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="serialNo" class="form-label">Serial No.</label>
-                        <input id="serialNo" name="serialNo" value="@Model.SerialNo" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label for="itemCode" class="form-label">Item Code</label>
-                        <input id="itemCode" name="itemCode" value="@Model.ItemCode" class="form-control" />
-                    </div>
-                    <div class="col-md-4">
-                        <label for="partNumber" class="form-label">Part Number</label>
-                        <input id="partNumber" name="partNumber" value="@Model.PartNumber" class="form-control" />
-                    </div>
-                </div>
-                <div class="form-actions mt-3">
-                    <span class="table-meta">Inquiry only. Serial creation still comes from receiving workflow.</span>
-                    <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                        <button type="submit" class="btn btn-primary">Search</button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Serial Register</h2>
             <p class="section-subtitle">Serial-level status and warranty visibility without edit actions.</p>
         </div>
-        <div class="table-meta">@Model.Results.Count record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
     </div>
     <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label for="search" class="form-label">Search</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Serial, item, part number, supplier, customer, or invoice" />
+            </div>
+            <div class="list-filter-field">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="InStock" selected="@(Model.Status == "InStock")">In Stock</option>
+                    <option value="Sold" selected="@(Model.Status == "Sold")">Sold</option>
+                    <option value="ClaimedToSupplier" selected="@(Model.Status == "ClaimedToSupplier")">Claimed To Supplier</option>
+                    <option value="Available" selected="@(Model.Status == "Available")">Available</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
         @if (Model.Results.Any())
         {
             <div class="inquiry-card-list">
@@ -111,5 +100,6 @@
         {
             <div class="table-empty">No serial records matched the current search.</div>
         }
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
