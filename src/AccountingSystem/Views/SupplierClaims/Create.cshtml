@@ -20,7 +20,7 @@
         <form asp-action="Create" method="post">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">This action saves a serial claim log and updates the serial status to ClaimedToSupplier.</span>
+                <span class="table-meta">Saving this claim creates a supplier claim log and updates the serial status to ClaimedToSupplier.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
                     @if (Model.IsClaimBlocked)

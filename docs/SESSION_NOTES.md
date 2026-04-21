@@ -35,6 +35,168 @@
   - Stock Inquiry serial detail page
   - Serial Inquiry
 
+## Latest Session Update - Customer Claim / RMA - 2026-04-20
+- Customer Claim / RMA module was implemented in phases.
+- Phase 1: Customer Claim Intake
+  - Added SQL script `database/022_customer_claim_module.sql`.
+  - Added `CustomerClaimHeaders` and `CustomerClaimDetails`.
+  - Added Customer Claim list/create/details pages.
+  - Customer Claim can be created from a sold serial.
+  - Create validation checks:
+    - serial exists
+    - status is `Sold`
+    - serial has `CurrentCustomerId`
+    - serial has `InvoiceId`
+    - customer warranty exists and claim date is within warranty
+    - duplicate open customer claim is blocked
+  - On create:
+    - claim status = `Open`
+    - serial status = `CustomerClaim`
+  - Cancel claim restores serial status to `Sold`.
+- Phase 2: Customer Claim Workflow
+  - Added SQL script `database/023_customer_claim_workflow_audit.sql`.
+  - Added action buttons on Customer Claim details:
+    - `Receive Item`
+    - `Send To Supplier`
+    - `Repair Complete`
+    - `Reject Claim`
+    - `Return To Customer`
+    - `Close Claim`
+    - `Cancel Claim`
+  - Workflow status rules:
+    - `Open` -> `Received`
+    - `Received` / `Repairing` -> `SentToSupplier`
+    - `Received` / `Repairing` / `SentToSupplier` -> `ReadyToReturn`
+    - `ReadyToReturn` -> `ReturnedToCustomer`
+    - `ReturnedToCustomer` / `Rejected` -> `Closed`
+  - Serial status rules:
+    - active customer claim -> `CustomerClaim`
+    - sent to supplier -> `ClaimedToSupplier`
+    - returned/rejected/closed/cancelled without replacement -> `Sold`
+  - Workflow audit fields added:
+    - received
+    - sent to supplier
+    - resolved
+    - returned
+    - closed
+    - cancelled
+- Phase 3: Supplier Claim Link and Replacement
+  - Added SQL script `database/024_customer_claim_supplier_replacement.sql`.
+  - Added `SerialClaimLogs.CustomerClaimId` link.
+  - Customer Claim details can create a linked Supplier Claim.
+  - Supplier Claim details show a link back to the Customer Claim.
+  - Customer Claim details can assign a replacement serial.
+  - Replacement serial validation:
+    - must be `InStock`
+    - must be same `ItemId`
+    - cannot be the original claimed serial
+  - On replacement assignment:
+    - original serial status = `Replaced`
+    - replacement serial status = `Sold`
+    - replacement serial gets original customer and invoice reference
+    - claim status = `ReadyToReturn`
+  - If replacement has been assigned:
+    - reject is blocked
+    - cancel is blocked
+    - return/close does not change original serial back to `Sold`
+- Customer Claim UI changes:
+  - Customer and Serial/Item sections were compacted to match PO details information-card style.
+  - Supplier Claim / Replacement section was added to Customer Claim details.
+  - Disabled workflow actions show neutral info/tooltip reasons.
+- Supplier Claim UI changes:
+  - Details page layout was compacted.
+  - Details page now shows linked Customer Claim if available.
+- Build verification:
+  - `BizCoreCustomerClaimPhase2Build` passed with 0 warnings and 0 errors.
+  - `BizCoreCustomerClaimPhase3Build` passed with 0 warnings and 0 errors.
+- Important current limitation:
+  - Supplier Claim Receiving / Supplier Claim Resolution is not implemented yet.
+  - The system can send/link supplier claim, but cannot yet receive supplier result back.
+  - Missing supplier-result cases:
+    - supplier repaired original serial and returned it
+    - supplier replaced with a new serial
+    - supplier rejected the claim
+    - close supplier claim with proper serial result
+- Recommended next module:
+  - Supplier Claim Receiving / Supplier Claim Resolution.
+  - Suggested actions:
+    - `Mark Sent`
+    - `Receive Repaired Original`
+    - `Receive Replacement From Supplier`
+    - `Supplier Rejected`
+    - `Close Supplier Claim`
+  - Suggested serial results:
+    - repaired original -> `InStock` or `Sold` depending destination
+    - supplier replacement -> original `Replaced`/`Defective`, new serial `InStock`
+    - supplier rejected -> original `Defective`
+- Supplier Claim Receiving / Supplier Claim Resolution was implemented after this note:
+  - Added SQL script `database/025_supplier_claim_resolution.sql`.
+  - Added Supplier Claim actions:
+    - `Mark Sent`
+    - `Receive Repaired Original`
+    - `Receive Replacement`
+    - `Supplier Rejected`
+    - `Close Claim`
+  - Added Supplier Claim result tracking:
+    - `ResultType`
+    - `SentDate`
+    - `ReceivedDate`
+    - `ClosedDate`
+    - `SupplierReplacementSerialId`
+  - Result behavior:
+    - repaired original returns the original serial to `CustomerClaim` when linked to an active customer claim without replacement
+    - repaired original returns the serial to `InStock` when not tied to an active customer return
+    - supplier replacement creates a new `InStock` serial and marks original serial `Replaced`
+    - supplier rejected marks original serial `Defective`
+    - close only allowed after `Returned`, `Replaced`, or `Rejected`
+  - Build verification:
+    - `BizCoreSupplierClaimResolutionBuild` passed with 0 warnings and 0 errors.
+- Customer Claim workflow was simplified after UX review:
+  - `Receive Item` is no longer shown as a user action.
+  - `Create Supplier Claim` is no longer shown as a separate user action.
+  - `Send To Supplier` now creates and links the Supplier Claim automatically.
+  - `Repair Complete` / `ReadyToReturn` is no longer the main visible path.
+  - Main visible Customer Claim actions are now:
+    - `Send To Supplier`
+    - `Return To Customer`
+    - `Close Claim`
+    - `Reject Claim`
+    - `Cancel Claim`
+  - Date entry was added for backdated operations:
+    - Customer Claim `Send To Supplier`
+    - Customer Claim `Return To Customer`
+    - Customer Claim `Close Claim`
+    - Supplier Claim `Mark Sent`
+    - Supplier Claim `Receive Repaired Original`
+    - Supplier Claim `Receive Replacement`
+    - Supplier Claim `Supplier Rejected`
+    - Supplier Claim `Close Claim`
+  - Build verification:
+    - `BizCoreClaimFlowDateBuild` passed with 0 warnings and 0 errors.
+
+## Customer Claim Test Flow Notes
+- Repair original item and return same serial:
+  - Customer Claim -> Return To Customer -> Close Claim
+  - No replacement serial is selected.
+  - Original serial returns to `Sold` when returned/closed.
+- Replace item for customer:
+  - Customer Claim -> Assign Replacement Serial -> Return To Customer -> Close Claim
+  - Replacement serial must be `InStock`.
+  - Original serial becomes `Replaced`.
+  - Replacement serial becomes `Sold` and is assigned to the customer.
+- Send to supplier:
+  - Customer Claim -> Send To Supplier
+  - The system creates and links the Supplier Claim automatically.
+  - Supplier Claim -> Mark Sent if needed -> Receive Supplier Result -> Close Claim.
+
+## Latest SQL Scripts To Run For Customer Claim
+- For Customer Claim on an existing database, run in order:
+  - `database/022_customer_claim_module.sql`
+  - `database/023_customer_claim_workflow_audit.sql`
+  - `database/024_customer_claim_supplier_replacement.sql`
+- For Supplier Claim result receiving, also run:
+  - `database/025_supplier_claim_resolution.sql`
+
 ## Latest Session Update - 2026-04-20
 - User login MVP is implemented and tested by user.
   - Cookie authentication is enabled globally.

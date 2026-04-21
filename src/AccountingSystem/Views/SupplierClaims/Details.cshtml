@@ -2,6 +2,22 @@
 
 @{
     ViewData["Title"] = "Supplier Claim Details";
+    var dateValue = DateTime.Today.ToString("yyyy-MM-dd");
+    var canMarkSent = Model.ClaimStatus == "Open";
+    var markSentBlockedReason = canMarkSent ? string.Empty : "Mark sent is available only for Open supplier claims.";
+    var canReceiveResult = Model.ClaimStatus == "Open" || Model.ClaimStatus == "Sent";
+    var receiveBlockedReason = canReceiveResult ? string.Empty : "Receiving supplier result is available only for Open or Sent supplier claims.";
+    var canClose = Model.ClaimStatus == "Returned" || Model.ClaimStatus == "Replaced" || Model.ClaimStatus == "Rejected";
+    var closeBlockedReason = canClose ? string.Empty : "Close is available only after supplier claim result is received.";
+    var workflowReasons = new[] { markSentBlockedReason, receiveBlockedReason, closeBlockedReason }
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
+        .ToList();
+}
+
+@if (TempData["ClaimNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
 }
 
 <div class="page-header">
@@ -12,25 +28,226 @@
     </div>
     <div class="page-actions">
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        @if (canMarkSent)
+        {
+            <form asp-action="MarkSent" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <input type="date" name="sentDate" value="@dateValue" class="form-control form-control-sm" title="Sent date" />
+                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Mark this supplier claim as sent?');">Mark Sent</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@markSentBlockedReason">Mark Sent</button>
+        }
+        @if (canClose)
+        {
+            <form asp-action="Close" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Close this supplier claim?');">Close Claim</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">Close Claim</button>
+        }
     </div>
 </div>
 
+@if (workflowReasons.Any())
+{
+    <div class="workflow-info mb-3">
+        @foreach (var reason in workflowReasons)
+        {
+            <div>@reason</div>
+        }
+    </div>
+}
+
 <div class="card content-card mb-3">
-    <div class="card-body">
-        <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.ClaimDate.ToString("dd MMM yyyy")</p></div>
-            <div class="detail-item"><span class="detail-label">Claim Status</span><p class="detail-value">@Model.ClaimStatus</p></div>
-            <div class="detail-item"><span class="detail-label">Serial No.</span><p class="detail-value">@Model.SerialNumber?.SerialNo</p></div>
-            <div class="detail-item"><span class="detail-label">Current Serial Status</span><p class="detail-value">@Model.SerialNumber?.Status</p></div>
-            <div class="detail-item"><span class="detail-label">Item Code</span><p class="detail-value">@Model.SerialNumber?.Item?.ItemCode</p></div>
-            <div class="detail-item"><span class="detail-label">Item Name</span><p class="detail-value">@Model.SerialNumber?.Item?.ItemName</p></div>
-            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@Model.SerialNumber?.Item?.PartNumber</p></div>
-            <div class="detail-item"><span class="detail-label">Supplier</span><p class="detail-value">@Model.Supplier?.SupplierName</p></div>
-            <div class="detail-item"><span class="detail-label">Supplier Warranty Start</span><p class="detail-value">@(Model.SerialNumber?.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
-            <div class="detail-item"><span class="detail-label">Supplier Warranty End</span><p class="detail-value">@(Model.SerialNumber?.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</p></div>
-            <div class="detail-item"><span class="detail-label">Problem Description</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
-            <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
-            <div class="detail-item"><span class="detail-label">Created Date</span><p class="detail-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p></div>
+    <div class="card-body form-shell">
+        <div class="form-section">
+            <div class="form-section-title">Claim Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.ClaimDate.ToString("dd MMM yyyy")</p></div>
+                <div class="detail-item"><span class="detail-label">Claim Status</span><p class="detail-value">@Model.ClaimStatus</p></div>
+                <div class="detail-item"><span class="detail-label">Result Type</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ResultType) ? "-" : Model.ResultType)</p></div>
+                <div class="detail-item">
+                    <span class="detail-label">Customer Claim</span>
+                    <p class="detail-value">
+                        @if (Model.CustomerClaimHeader is not null)
+                        {
+                            <a asp-controller="CustomerClaims" asp-action="Details" asp-route-id="@Model.CustomerClaimHeader.CustomerClaimId">@Model.CustomerClaimHeader.CustomerClaimNo</a>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </p>
+                </div>
+                <div class="detail-item"><span class="detail-label">Created Date</span><p class="detail-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p></div>
+                <div class="detail-item"><span class="detail-label">Sent Date</span><p class="detail-value">@(Model.SentDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">Received Date</span><p class="detail-value">@(Model.ReceivedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">Closed Date</span><p class="detail-value">@(Model.ClosedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Supplier</div>
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Supplier Information</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Supplier Name</span>
+                        <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Supplier Code</span>
+                        <span class="quotation-info-value">@(Model.Supplier?.SupplierCode ?? "-")</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Address) ? "-" : Model.Supplier!.Address)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Serial / Item</div>
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Serial / Item Information</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Serial No.</span>
+                        <span class="quotation-info-value">@Model.SerialNumber?.SerialNo</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Current Serial Status</span>
+                        <span class="quotation-info-value">@Model.SerialNumber?.Status</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Item</span>
+                        <span class="quotation-info-value">@Model.SerialNumber?.Item?.ItemCode - @Model.SerialNumber?.Item?.ItemName</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Part Number</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.SerialNumber?.Item?.PartNumber) ? "-" : Model.SerialNumber.Item.PartNumber)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Supplier Warranty</span>
+                    <span class="quotation-info-value">@(Model.SerialNumber?.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(Model.SerialNumber?.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Problem / Remark</div>
+            <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">Problem Description</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
+                <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Supplier Result</div>
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Repaired Original</div>
+                        <div class="quotation-info-field mb-2">
+                            <span class="quotation-info-label">Result</span>
+                            <span class="quotation-info-value">Receive the same serial back from supplier after repair.</span>
+                        </div>
+                        <form asp-action="ReceiveRepairedOriginal" asp-route-id="@Model.SerialClaimLogId" method="post">
+                            @Html.AntiForgeryToken()
+                            <label class="quotation-info-label" for="repairedReceivedDate">Received Date</label>
+                            <input id="repairedReceivedDate" name="receivedDate" type="date" value="@dateValue" class="form-control mb-2" disabled="@(!canReceiveResult)" />
+                            <label class="quotation-info-label" for="repairedRemark">Remark</label>
+                            <textarea id="repairedRemark" name="remark" class="form-control mb-2" rows="2" disabled="@(!canReceiveResult)"></textarea>
+                            <button type="submit" class="btn btn-outline-primary" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Receive repaired original serial from supplier?');">Receive Repaired Original</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Replacement From Supplier</div>
+                        @if (Model.SupplierReplacementSerialNumber is not null)
+                        {
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Replacement Serial</span>
+                                    <span class="quotation-info-value">@Model.SupplierReplacementSerialNumber.SerialNo</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Status</span>
+                                    <span class="quotation-info-value">@Model.SupplierReplacementSerialNumber.Status</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <form asp-action="ReceiveReplacement" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2">
+                                @Html.AntiForgeryToken()
+                                <div class="col-12">
+                                    <label class="quotation-info-label" for="replacementSerialNo">Replacement Serial No.</label>
+                                    <input id="replacementSerialNo" name="replacementSerialNo" class="form-control" disabled="@(!canReceiveResult)" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="quotation-info-label" for="replacementReceivedDate">Received Date</label>
+                                    <input id="replacementReceivedDate" name="receivedDate" type="date" value="@dateValue" class="form-control" disabled="@(!canReceiveResult)" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="quotation-info-label" for="supplierWarrantyStartDate">Supplier Warranty Start</label>
+                                    <input id="supplierWarrantyStartDate" name="supplierWarrantyStartDate" type="date" class="form-control" disabled="@(!canReceiveResult)" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="quotation-info-label" for="supplierWarrantyEndDate">Supplier Warranty End</label>
+                                    <input id="supplierWarrantyEndDate" name="supplierWarrantyEndDate" type="date" class="form-control" disabled="@(!canReceiveResult)" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="quotation-info-label" for="replacementRemark">Remark</label>
+                                    <textarea id="replacementRemark" name="remark" class="form-control" rows="2" disabled="@(!canReceiveResult)"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-outline-primary" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Receive replacement serial from supplier into stock?');">Receive Replacement</button>
+                                </div>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="quotation-info-card mt-3">
+                <div class="quotation-info-card-title">Supplier Rejected</div>
+                <form asp-action="SupplierRejected" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-auto">
+                        <label class="quotation-info-label" for="rejectedDate">Rejected Date</label>
+                        <input id="rejectedDate" name="rejectedDate" type="date" value="@dateValue" class="form-control" disabled="@(!canReceiveResult)" />
+                    </div>
+                    <div class="col">
+                        <label class="quotation-info-label" for="rejectRemark">Reject Remark</label>
+                        <input id="rejectRemark" name="remark" class="form-control" disabled="@(!canReceiveResult)" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-danger" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Mark supplier claim as rejected and original serial as Defective?');">Supplier Rejected</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>

@@ -16,4 +16,6 @@ public class SerialInquiryRowViewModel
     public DateTime? SupplierWarrantyEndDate { get; set; }
     public DateTime? CustomerWarrantyStartDate { get; set; }
     public DateTime? CustomerWarrantyEndDate { get; set; }
+    public bool CanCustomerClaim { get; set; }
+    public string CustomerClaimBlockedReason { get; set; } = string.Empty;
 }

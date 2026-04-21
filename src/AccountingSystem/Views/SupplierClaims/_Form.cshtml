@@ -5,61 +5,72 @@
 
 @if (Model.IsClaimBlocked)
 {
-    <div class="danger-banner">@Model.ClaimBlockMessage</div>
+    <div class="workflow-info mb-3">@Model.ClaimBlockMessage</div>
 }
 
 <div class="form-shell">
     <div class="form-section">
-        <div class="form-section-title">Selected Serial</div>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Serial No.</label>
-                <input type="text" class="form-control" value="@Model.SerialNo" readonly />
+        <div class="form-section-title">Claim Information</div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label asp-for="ClaimDate" class="detail-label"></label>
+                <input asp-for="ClaimDate" type="date" class="form-control" />
+                <span asp-validation-for="ClaimDate" class="text-danger"></span>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Item Code</label>
-                <input type="text" class="form-control" value="@Model.ItemCode" readonly />
+            <div class="detail-item">
+                <label asp-for="ClaimStatus" class="detail-label"></label>
+                <select asp-for="ClaimStatus" asp-items="Model.StatusOptions" class="form-select"></select>
+                <span asp-validation-for="ClaimStatus" class="text-danger"></span>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Item Name</label>
-                <input type="text" class="form-control" value="@Model.ItemName" readonly />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Part Number</label>
-                <input type="text" class="form-control" value="@Model.PartNumber" readonly />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Supplier</label>
-                <input type="text" class="form-control" value="@Model.SupplierName" readonly />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Current Serial Status</label>
-                <input type="text" class="form-control" value="@Model.CurrentSerialStatus" readonly />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Supplier Warranty Start</label>
-                <input type="text" class="form-control" value="@(Model.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-")" readonly />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Supplier Warranty End</label>
-                <input type="text" class="form-control" value="@(Model.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")" readonly />
+            <div class="detail-item"><span class="detail-label">Current Serial Status</span><p class="detail-value">@Model.CurrentSerialStatus</p></div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-title">Supplier</div>
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">Supplier Information</div>
+            <div class="quotation-info-field">
+                <span class="quotation-info-label">Supplier Name</span>
+                <span class="quotation-info-value">@Model.SupplierName</span>
             </div>
         </div>
     </div>
 
     <div class="form-section">
-        <div class="form-section-title">Claim Information</div>
+        <div class="form-section-title">Serial / Item</div>
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">Serial / Item Information</div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Serial No.</span>
+                    <span class="quotation-info-value">@Model.SerialNo</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Serial Status</span>
+                    <span class="quotation-info-value">@Model.CurrentSerialStatus</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Item</span>
+                    <span class="quotation-info-value">@Model.ItemCode - @Model.ItemName</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Part Number</span>
+                    <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</span>
+                </div>
+            </div>
+            <div class="quotation-info-field">
+                <span class="quotation-info-label">Supplier Warranty</span>
+                <span class="quotation-info-value">@(Model.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(Model.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-title">Problem / Remark</div>
         <div class="row g-3">
-            <div class="col-md-4">
-                <label asp-for="ClaimDate" class="form-label"></label>
-                <input asp-for="ClaimDate" class="form-control" />
-                <span asp-validation-for="ClaimDate" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="ClaimStatus" class="form-label"></label>
-                <select asp-for="ClaimStatus" asp-items="Model.StatusOptions" class="form-select"></select>
-                <span asp-validation-for="ClaimStatus" class="text-danger"></span>
-            </div>
             <div class="col-12">
                 <label asp-for="ProblemDescription" class="form-label"></label>
                 <textarea asp-for="ProblemDescription" class="form-control" rows="4"></textarea>

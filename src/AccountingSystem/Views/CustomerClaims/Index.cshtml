@@ -1,26 +1,31 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SerialClaimLog>
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.CustomerClaimHeader>
 
 @{
-    ViewData["Title"] = "Supplier Claims";
+    ViewData["Title"] = "Customer Claims";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
 }
 
+@if (TempData["CustomerClaimNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Supplier Claim Module</div>
-        <h1 class="page-title">Supplier Claims</h1>
-        <p class="page-subtitle">Track simple serial-based supplier claim logs. Start a new claim from Serial Inquiry or Stock Inquiry.</p>
+        <div class="page-eyebrow">Warranty Module</div>
+        <h1 class="page-title">Customer Claims</h1>
+        <p class="page-subtitle">Track customer warranty claims for sold serial-controlled items.</p>
     </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Claim Register</h2>
-            <p class="section-subtitle">Each record is a direct claim log from one selected serial.</p>
+            <h2 class="section-title">Customer Claim Register</h2>
+            <p class="section-subtitle">Create claims from eligible sold serials in Serial Inquiry or Stock Inquiry.</p>
         </div>
         <div class="table-meta">@Model.TotalCount record(s)</div>
     </div>
@@ -28,18 +33,14 @@
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
                 <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Serial no., item, part number, supplier, problem, or remark" />
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Claim no., customer, serial, item, invoice, or problem" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Claim Status</label>
+                <label class="form-label" for="status">Status</label>
                 <select id="status" name="status" class="form-select">
                     <option value="">All</option>
                     <option value="Open" selected="@(status == "Open")">Open</option>
-                    <option value="Sent" selected="@(status == "Sent")">Sent</option>
-                    <option value="Returned" selected="@(status == "Returned")">Returned</option>
-                    <option value="Replaced" selected="@(status == "Replaced")">Replaced</option>
-                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
-                    <option value="Closed" selected="@(status == "Closed")">Closed</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
                 </select>
             </div>
             <div class="list-filter-field">
@@ -55,16 +56,18 @@
                 <button type="submit" class="btn btn-primary">Search</button>
             </div>
         </form>
+
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
+                        <th>Claim No.</th>
                         <th>Claim Date</th>
+                        <th>Customer</th>
                         <th>Serial No.</th>
                         <th>Item</th>
-                        <th>Supplier</th>
-                        <th>Claim Status</th>
-                        <th>Serial Status</th>
+                        <th>Invoice</th>
+                        <th>Status</th>
                         <th class="text-end">Action</th>
                     </tr>
                 </thead>
@@ -73,22 +76,24 @@
                 {
                     @foreach (var claim in Model)
                     {
+                        var line = claim.CustomerClaimDetails.FirstOrDefault();
                         <tr>
-                            <td>@claim.ClaimDate.ToString("dd MMM yyyy")</td>
-                            <td><span class="code-chip">@claim.SerialNumber?.SerialNo</span></td>
-                            <td class="fw-semibold">@claim.SerialNumber?.Item?.ItemName</td>
-                            <td class="fw-semibold">@claim.Supplier?.SupplierName</td>
-                            <td><span class="status-pill active">@claim.ClaimStatus</span></td>
-                            <td>@claim.SerialNumber?.Status</td>
+                            <td><span class="code-chip">@claim.CustomerClaimNo</span></td>
+                            <td>@claim.CustomerClaimDate.ToString("dd MMM yyyy")</td>
+                            <td class="fw-semibold">@claim.Customer?.CustomerName</td>
+                            <td>@line?.SerialNumber?.SerialNo</td>
+                            <td>@line?.Item?.ItemName</td>
+                            <td>@(claim.InvoiceHeader?.InvoiceNo ?? "-")</td>
+                            <td><span class="status-pill @(claim.Status == "Open" ? "active" : "inactive")">@claim.Status</span></td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@claim.SerialClaimLogId" class="btn btn-sm btn-outline-secondary">View</a>
+                                <a asp-action="Details" asp-route-id="@claim.CustomerClaimId" class="btn btn-sm btn-outline-secondary">View</a>
                             </td>
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="7" class="table-empty">No supplier claims yet. Start from an eligible serial under supplier warranty.</td></tr>
+                    <tr><td colspan="8" class="table-empty">No customer claims yet. Start from an eligible sold serial.</td></tr>
                 }
                 </tbody>
             </table>

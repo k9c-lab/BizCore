@@ -30,6 +30,8 @@ public class AccountingDbContext : DbContext
     public DbSet<ReceivingDetail> ReceivingDetails => Set<ReceivingDetail>();
     public DbSet<ReceivingSerial> ReceivingSerials => Set<ReceivingSerial>();
     public DbSet<SerialClaimLog> SerialClaimLogs => Set<SerialClaimLog>();
+    public DbSet<CustomerClaimHeader> CustomerClaimHeaders => Set<CustomerClaimHeader>();
+    public DbSet<CustomerClaimDetail> CustomerClaimDetails => Set<CustomerClaimDetail>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -412,14 +414,103 @@ public class AccountingDbContext : DbContext
             entity.HasKey(x => x.SerialClaimLogId);
             entity.HasIndex(x => x.SerialId);
             entity.HasIndex(x => x.SupplierId);
+            entity.HasIndex(x => x.CustomerClaimId);
+            entity.HasIndex(x => x.SupplierReplacementSerialId);
             entity.Property(x => x.ClaimStatus).HasMaxLength(20);
+            entity.Property(x => x.ResultType).HasMaxLength(30);
             entity.HasOne(x => x.SerialNumber)
                 .WithMany()
                 .HasForeignKey(x => x.SerialId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SupplierReplacementSerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierReplacementSerialId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Supplier)
                 .WithMany()
                 .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CustomerClaimHeader)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerClaimId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CustomerClaimHeader>(entity =>
+        {
+            entity.HasKey(x => x.CustomerClaimId);
+            entity.Property(x => x.CustomerClaimNo).HasMaxLength(30);
+            entity.Property(x => x.Status).HasMaxLength(30);
+            entity.Property(x => x.ProblemDescription).HasMaxLength(1000);
+            entity.Property(x => x.ResolutionRemark).HasMaxLength(1000);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.CustomerClaimNo).IsUnique();
+            entity.HasOne(x => x.Customer)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.InvoiceHeader)
+                .WithMany()
+                .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReceivedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ReceivedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SentToSupplierByUser)
+                .WithMany()
+                .HasForeignKey(x => x.SentToSupplierByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReturnedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ReturnedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ClosedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ClosedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CustomerClaimDetail>(entity =>
+        {
+            entity.HasKey(x => x.CustomerClaimDetailId);
+            entity.Property(x => x.LineRemark).HasMaxLength(500);
+            entity.HasIndex(x => x.SerialId);
+            entity.HasOne(x => x.CustomerClaimHeader)
+                .WithMany(x => x.CustomerClaimDetails)
+                .HasForeignKey(x => x.CustomerClaimId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.OriginalInvoice)
+                .WithMany()
+                .HasForeignKey(x => x.OriginalInvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReplacementSerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.ReplacementSerialId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

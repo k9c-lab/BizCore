@@ -56,8 +56,9 @@
                         <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index" aria-current="@AriaCurrent("SerialInquiry")">Serial Inquiry</a>
                     </div>
 
-                    <div class="sidebar-section@(ActiveSection("SupplierClaims"))">
+                    <div class="sidebar-section@(ActiveSection("SupplierClaims", "CustomerClaims"))">
                         <div class="sidebar-section-title">Warranty</div>
+                        <a class="sidebar-link@(ActiveLink("CustomerClaims"))" asp-controller="CustomerClaims" asp-action="Index" aria-current="@AriaCurrent("CustomerClaims")">Customer Claims</a>
                         <a class="sidebar-link@(ActiveLink("SupplierClaims"))" asp-controller="SupplierClaims" asp-action="Index" aria-current="@AriaCurrent("SupplierClaims")">Supplier Claims</a>
                     </div>
                 }

@@ -12,6 +12,9 @@ public class SerialClaimLog
     [Required]
     public int SupplierId { get; set; }
 
+    public int? CustomerClaimId { get; set; }
+    public int? SupplierReplacementSerialId { get; set; }
+
     [Required]
     [DataType(DataType.Date)]
     [Display(Name = "Claim Date")]
@@ -29,12 +32,21 @@ public class SerialClaimLog
     [StringLength(500)]
     public string? Remark { get; set; }
 
+    [StringLength(30)]
+    public string? ResultType { get; set; }
+
     [Display(Name = "Created Date")]
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     [Display(Name = "Updated Date")]
     public DateTime? UpdatedDate { get; set; }
 
+    public DateTime? SentDate { get; set; }
+    public DateTime? ReceivedDate { get; set; }
+    public DateTime? ClosedDate { get; set; }
+
     public SerialNumber? SerialNumber { get; set; }
+    public SerialNumber? SupplierReplacementSerialNumber { get; set; }
     public Supplier? Supplier { get; set; }
+    public CustomerClaimHeader? CustomerClaimHeader { get; set; }
 }

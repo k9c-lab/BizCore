@@ -73,7 +73,41 @@ public class SerialInquiryController : Controller
                 SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
                 SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
                 CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
-                CustomerWarrantyEndDate = x.CustomerWarrantyEndDate
+                CustomerWarrantyEndDate = x.CustomerWarrantyEndDate,
+                CanCustomerClaim = x.Status == "Sold" &&
+                    x.CurrentCustomerId.HasValue &&
+                    x.InvoiceId.HasValue &&
+                    x.CustomerWarrantyStartDate.HasValue &&
+                    x.CustomerWarrantyEndDate.HasValue &&
+                    x.CustomerWarrantyEndDate.Value.Date >= DateTime.Today &&
+                    !_context.CustomerClaimDetails.Any(d => d.SerialId == x.SerialId &&
+                        d.CustomerClaimHeader != null &&
+                        (d.CustomerClaimHeader.Status == "Open" ||
+                         d.CustomerClaimHeader.Status == "Received" ||
+                         d.CustomerClaimHeader.Status == "SentToSupplier" ||
+                         d.CustomerClaimHeader.Status == "Repairing" ||
+                         d.CustomerClaimHeader.Status == "ReadyToReturn" ||
+                         d.CustomerClaimHeader.Status == "ReturnedToCustomer")),
+                CustomerClaimBlockedReason = x.Status != "Sold"
+                    ? "Customer claim is available only for Sold serials."
+                    : !x.CurrentCustomerId.HasValue
+                        ? "Customer claim is blocked because this serial is not linked to a customer."
+                        : !x.InvoiceId.HasValue
+                            ? "Customer claim is blocked because this serial is not linked to an invoice."
+                            : !x.CustomerWarrantyStartDate.HasValue || !x.CustomerWarrantyEndDate.HasValue
+                                ? "Customer warranty is missing."
+                                : x.CustomerWarrantyEndDate.Value.Date < DateTime.Today
+                                    ? "Customer warranty has expired."
+                                    : _context.CustomerClaimDetails.Any(d => d.SerialId == x.SerialId &&
+                                        d.CustomerClaimHeader != null &&
+                                        (d.CustomerClaimHeader.Status == "Open" ||
+                                         d.CustomerClaimHeader.Status == "Received" ||
+                                         d.CustomerClaimHeader.Status == "SentToSupplier" ||
+                                         d.CustomerClaimHeader.Status == "Repairing" ||
+                                         d.CustomerClaimHeader.Status == "ReadyToReturn" ||
+                                         d.CustomerClaimHeader.Status == "ReturnedToCustomer"))
+                                        ? "This serial already has an open customer claim."
+                                        : string.Empty
             }), page, pageSize);
 
         var model = new SerialInquiryPageViewModel

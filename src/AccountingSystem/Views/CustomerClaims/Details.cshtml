@@ -1,0 +1,374 @@
+@model BizCore.Models.Entities.CustomerClaimHeader
+
+@{
+    ViewData["Title"] = "Customer Claim Details";
+    var line = Model.CustomerClaimDetails.FirstOrDefault();
+    var serial = line?.SerialNumber;
+    var replacementSerial = line?.ReplacementSerialNumber;
+    var linkedSupplierClaimId = ViewData["LinkedSupplierClaimId"] is int supplierClaimId ? supplierClaimId : (int?)null;
+    var linkedSupplierClaimStatus = ViewData["LinkedSupplierClaimStatus"] as string;
+    var replacementSerialOptions = ViewData["ReplacementSerialOptions"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var today = DateTime.Today;
+    var dateValue = today.ToString("yyyy-MM-dd");
+    var sendStatusAllowed = Model.Status == "Open" || Model.Status == "Repairing";
+    var sendSupplierBlockedReason = string.Empty;
+    if (!sendStatusAllowed)
+    {
+        sendSupplierBlockedReason = "Send to supplier is available only for open customer claims.";
+    }
+    else if (linkedSupplierClaimId.HasValue)
+    {
+        sendSupplierBlockedReason = "Supplier claim is already linked to this customer claim.";
+    }
+    else if (serial?.SupplierId == null)
+    {
+        sendSupplierBlockedReason = "Send to supplier is blocked because this serial is not linked to a supplier.";
+    }
+    else if (!serial.SupplierWarrantyStartDate.HasValue || !serial.SupplierWarrantyEndDate.HasValue)
+    {
+        sendSupplierBlockedReason = "Send to supplier is blocked because supplier warranty is missing.";
+    }
+    else if (today < serial.SupplierWarrantyStartDate.Value.Date)
+    {
+        sendSupplierBlockedReason = "Send to supplier is blocked because supplier warranty has not started.";
+    }
+    else if (today > serial.SupplierWarrantyEndDate.Value.Date)
+    {
+        sendSupplierBlockedReason = "Send to supplier is blocked because supplier warranty has expired.";
+    }
+    var canSendToSupplier = string.IsNullOrWhiteSpace(sendSupplierBlockedReason);
+    var hasReplacement = line?.ReplacementSerialId.HasValue == true;
+    var canReject = !hasReplacement && (Model.Status == "Open" || Model.Status == "SentToSupplier");
+    var rejectBlockedReason = canReject ? string.Empty : hasReplacement ? "Reject claim is blocked because a replacement serial has already been assigned." : "Reject claim is available only before the claim is returned, closed, or cancelled.";
+    var canReturn = Model.Status == "Open" || Model.Status == "ReadyToReturn";
+    var returnBlockedReason = canReturn ? string.Empty : "Return to customer is available only for open customer claims or claims ready to return.";
+    var canClose = Model.Status == "ReturnedToCustomer" || Model.Status == "Rejected";
+    var closeBlockedReason = canClose ? string.Empty : "Close claim is available only after return to customer or rejection.";
+    var canCancel = !hasReplacement && Model.Status == "Open";
+    var cancelBlockedReason = canCancel ? string.Empty : hasReplacement ? "Cancel claim is blocked because a replacement serial has already been assigned." : "Cancel claim is available only for Open claims.";
+    var canAssignReplacement = !hasReplacement &&
+        (Model.Status == "Open" || Model.Status == "SentToSupplier" || Model.Status == "ReadyToReturn") &&
+        replacementSerialOptions.Any();
+    var replacementBlockedReason = hasReplacement
+        ? "Replacement serial is already assigned."
+        : !(Model.Status == "Open" || Model.Status == "SentToSupplier" || Model.Status == "ReadyToReturn")
+            ? "Replacement can be assigned only while the claim is active and before return to customer."
+            : !replacementSerialOptions.Any()
+                ? "No InStock replacement serial is available for this item."
+                : string.Empty;
+    var workflowReasons = new[]
+    {
+        sendSupplierBlockedReason,
+        replacementBlockedReason,
+        rejectBlockedReason,
+        returnBlockedReason,
+        closeBlockedReason,
+        cancelBlockedReason
+    }
+    .Where(x => !string.IsNullOrWhiteSpace(x))
+    .Distinct()
+    .ToList();
+}
+
+@if (TempData["CustomerClaimNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Warranty Module</div>
+        <h1 class="page-title">@Model.CustomerClaimNo</h1>
+        <p class="page-subtitle">Customer claim for sold serial-controlled item.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        @if (canSendToSupplier)
+        {
+            <form asp-action="SendToSupplier" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <input type="date" name="sentToSupplierDate" value="@dateValue" class="form-control form-control-sm" title="Send date" />
+                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Send to supplier and create supplier claim?');">Send To Supplier</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@sendSupplierBlockedReason">Send To Supplier</button>
+        }
+        @if (linkedSupplierClaimId.HasValue)
+        {
+            <a asp-controller="SupplierClaims" asp-action="Details" asp-route-id="@linkedSupplierClaimId.Value" class="btn btn-outline-primary">Supplier Claim</a>
+        }
+        @if (canReturn)
+        {
+            <form asp-action="ReturnToCustomer" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <input type="date" name="returnedDate" value="@dateValue" class="form-control form-control-sm" title="Return date" />
+                <input type="hidden" name="resolutionRemark" />
+                <button type="submit" class="btn btn-outline-success" onclick="const remark = prompt('Resolution remark (optional):'); if (remark === null) return false; this.form.resolutionRemark.value = remark; return confirm('Return this item to customer?');">Return To Customer</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@returnBlockedReason">Return To Customer</button>
+        }
+        @if (canClose)
+        {
+            <form asp-action="CloseClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2">
+                @Html.AntiForgeryToken()
+                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Close this customer claim?');">Close Claim</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">Close Claim</button>
+        }
+        @if (canReject)
+        {
+            <form asp-action="RejectClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="resolutionRemark" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const remark = prompt('Reason for rejecting this customer claim (optional):'); if (remark === null) return false; this.form.resolutionRemark.value = remark; return confirm('Reject this customer claim and restore serial status to Sold?');">Reject Claim</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@rejectBlockedReason">Reject Claim</button>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this customer claim (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this customer claim and restore serial status to Sold?');">Cancel Claim</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Claim</button>
+        }
+    </div>
+</div>
+
+@if (workflowReasons.Any())
+{
+    <div class="workflow-info mb-3">
+        @foreach (var reason in workflowReasons)
+        {
+            <div>@reason</div>
+        }
+    </div>
+}
+
+<div class="card content-card">
+    <div class="card-body form-shell">
+        <div class="form-section">
+            <div class="form-section-title">Claim Information</div>
+            <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">Claim No.</span><p class="detail-value">@Model.CustomerClaimNo</p></div>
+                <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.CustomerClaimDate.ToString("dd MMM yyyy")</p></div>
+                <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value"><span class="status-pill @(Model.Status == "Open" ? "active" : "inactive")">@Model.Status</span></p></div>
+                <div class="detail-item"><span class="detail-label">Invoice No.</span><p class="detail-value">@(Model.InvoiceHeader?.InvoiceNo ?? "-")</p></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Customer</div>
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Customer Information</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Customer Name</span>
+                        <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Customer Code</span>
+                        <span class="quotation-info-value">@(Model.Customer?.CustomerCode ?? "-")</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Email) ? "-" : Model.Customer!.Email)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Serial / Item</div>
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Serial / Item Information</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Serial No.</span>
+                        <span class="quotation-info-value">@line?.SerialNumber?.SerialNo</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Serial Status</span>
+                        <span class="quotation-info-value">@line?.SerialNumber?.Status</span>
+                    </div>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Item</span>
+                        <span class="quotation-info-value">@line?.Item?.ItemCode - @line?.Item?.ItemName</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Part Number</span>
+                        <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(line?.Item?.PartNumber) ? "-" : line.Item.PartNumber)</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Customer Warranty</span>
+                    <span class="quotation-info-value">@(line?.SerialNumber?.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(line?.SerialNumber?.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Supplier Claim / Replacement</div>
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Supplier Claim Link</div>
+                        @if (linkedSupplierClaimId.HasValue)
+                        {
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Supplier Claim</span>
+                                    <span class="quotation-info-value">
+                                        <a asp-controller="SupplierClaims" asp-action="Details" asp-route-id="@linkedSupplierClaimId.Value">#@linkedSupplierClaimId.Value</a>
+                                    </span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Status</span>
+                                    <span class="quotation-info-value">@(linkedSupplierClaimStatus ?? "-")</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">Supplier Claim</span>
+                                <span class="quotation-info-value">Not created</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="quotation-party-column">
+                    <div class="quotation-info-card">
+                        <div class="quotation-info-card-title">Replacement Serial</div>
+                        @if (replacementSerial is not null)
+                        {
+                            <div class="quotation-info-grid">
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Serial No.</span>
+                                    <span class="quotation-info-value">@replacementSerial.SerialNo</span>
+                                </div>
+                                <div class="quotation-info-field">
+                                    <span class="quotation-info-label">Status</span>
+                                    <span class="quotation-info-value">@replacementSerial.Status</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <form asp-action="AssignReplacement" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end">
+                                @Html.AntiForgeryToken()
+                                <div class="col">
+                                    <label class="quotation-info-label" for="replacementSerialId">Replacement Serial</label>
+                                    <select id="replacementSerialId" name="replacementSerialId" class="form-select" disabled="@(!canAssignReplacement)">
+                                        <option value="">Select replacement serial</option>
+                                        @foreach (var option in replacementSerialOptions)
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-outline-primary" disabled="@(!canAssignReplacement)" title="@replacementBlockedReason" onclick="return confirm('Assign this replacement serial to the customer claim?');">Assign</button>
+                                </div>
+                            </form>
+                            @if (!string.IsNullOrWhiteSpace(replacementBlockedReason))
+                            {
+                                <div class="form-text">@replacementBlockedReason</div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">Problem / Result</div>
+            <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">Problem Description</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
+                <div class="detail-item"><span class="detail-label">Line Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(line?.LineRemark) ? "-" : line.LineRemark)</p></div>
+                <div class="detail-item"><span class="detail-label">Resolution Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ResolutionRemark) ? "-" : Model.ResolutionRemark)</p></div>
+            </div>
+        </div>
+
+        <div class="form-section document-history-section">
+            <div class="form-section-title">Document History</div>
+            <div class="document-history-list">
+                <div class="document-history-row">
+                    <span class="document-history-label">Created</span>
+                    <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Updated</span>
+                    <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Received</span>
+                    <span class="document-history-value">@(Model.ReceivedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.ReceivedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Sent To Supplier</span>
+                    <span class="document-history-value">@(Model.SentToSupplierByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.SentToSupplierDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Resolved</span>
+                    <span class="document-history-value">@(Model.ResolvedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.ResolvedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Returned</span>
+                    <span class="document-history-value">@(Model.ReturnedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.ReturnedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Closed</span>
+                    <span class="document-history-value">@(Model.ClosedByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.ClosedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="document-history-row">
+                    <span class="document-history-label">Cancelled</span>
+                    <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                    <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                </div>
+                @if (Model.Status == "Cancelled")
+                {
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
