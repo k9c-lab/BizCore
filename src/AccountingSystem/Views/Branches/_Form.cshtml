@@ -1,0 +1,57 @@
+@model BizCore.Models.Entities.Branch
+@{
+    var codeReadOnly = (bool?)ViewData["CodeReadOnly"] == true;
+}
+
+<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<input asp-for="BranchId" type="hidden" />
+
+<div class="form-shell">
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">Branch Information</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="BranchCode" class="form-label"></label>
+                <input asp-for="BranchCode" class="form-control" readonly="@codeReadOnly" />
+                @if (codeReadOnly)
+                {
+                    <div class="form-text">Auto-generated code in BR-0001 format.</div>
+                }
+                <span asp-validation-for="BranchCode" class="text-danger"></span>
+            </div>
+            <div class="col-lg-5 col-md-6">
+                <label asp-for="BranchName" class="form-label"></label>
+                <input asp-for="BranchName" class="form-control" />
+                <span asp-validation-for="BranchName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label">Status</label>
+                <label class="quotation-inline-check d-flex align-items-center gap-2 mt-2" asp-for="IsActive">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <span>Active</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-title">Contact Information</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Address" class="form-label"></label>
+                <textarea asp-for="Address" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>

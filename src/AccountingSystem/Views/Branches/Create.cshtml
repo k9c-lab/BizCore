@@ -1,0 +1,36 @@
+@model BizCore.Models.Entities.Branch
+
+@{
+    ViewData["Title"] = "Create Branch";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">Create Branch</h1>
+        <p class="page-subtitle">Create a branch for user scope and future stock separation.</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="branchForm" class="btn btn-primary px-4">Save Branch</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" id="branchForm">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">Branch will be used as stock location in the next inventory phase.</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Branch</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

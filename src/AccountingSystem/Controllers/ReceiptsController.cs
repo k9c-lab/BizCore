@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Sales")]
+[Authorize(Roles = "Admin,BranchAdmin,Sales")]
 public class ReceiptsController : CrudControllerBase
 {
     private const string PrintCompanyName = "BizCore Co., Ltd.";
@@ -27,8 +27,15 @@ public class ReceiptsController : CrudControllerBase
         var query = _context.ReceiptHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.Branch)
             .Include(x => x.PaymentHeader)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -82,6 +89,7 @@ public class ReceiptsController : CrudControllerBase
         var receipt = await _context.ReceiptHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -89,9 +97,11 @@ public class ReceiptsController : CrudControllerBase
             .Include(x => x.PaymentHeader)
                 .ThenInclude(x => x!.PaymentAllocations)
                     .ThenInclude(x => x.InvoiceHeader)
+                        .ThenInclude(x => x!.InvoiceDetails)
+                            .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.ReceiptId == id.Value);
 
-        return receipt is null ? NotFound() : View(receipt);
+        return receipt is null || !CanAccessBranch(receipt.BranchId) ? NotFound() : View(receipt);
     }
 
     public async Task<IActionResult> Print(int? id)
@@ -104,6 +114,7 @@ public class ReceiptsController : CrudControllerBase
         var receipt = await _context.ReceiptHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -111,9 +122,11 @@ public class ReceiptsController : CrudControllerBase
             .Include(x => x.PaymentHeader)
                 .ThenInclude(x => x!.PaymentAllocations)
                     .ThenInclude(x => x.InvoiceHeader)
+                        .ThenInclude(x => x!.InvoiceDetails)
+                            .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.ReceiptId == id.Value);
 
-        if (receipt is null)
+        if (receipt is null || !CanAccessBranch(receipt.BranchId))
         {
             return NotFound();
         }
@@ -132,7 +145,7 @@ public class ReceiptsController : CrudControllerBase
     {
         var receipt = await _context.ReceiptHeaders.FirstOrDefaultAsync(x => x.ReceiptId == id);
 
-        if (receipt is null)
+        if (receipt is null || !CanAccessBranch(receipt.BranchId))
         {
             return NotFound();
         }
@@ -155,5 +168,10 @@ public class ReceiptsController : CrudControllerBase
 
         TempData["ReceiptNotice"] = "Receipt was cancelled. Payment and invoice balances were not changed.";
         return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
     }
 }

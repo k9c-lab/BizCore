@@ -10,12 +10,21 @@ public class AccountingDbContext : DbContext
     {
     }
 
+    public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Salesperson> Salespersons => Set<Salesperson>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<SerialNumber> SerialNumbers => Set<SerialNumber>();
+    public DbSet<StockBalance> StockBalances => Set<StockBalance>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<StockTransferHeader> StockTransferHeaders => Set<StockTransferHeader>();
+    public DbSet<StockTransferDetail> StockTransferDetails => Set<StockTransferDetail>();
+    public DbSet<StockTransferSerial> StockTransferSerials => Set<StockTransferSerial>();
+    public DbSet<StockIssueHeader> StockIssueHeaders => Set<StockIssueHeader>();
+    public DbSet<StockIssueDetail> StockIssueDetails => Set<StockIssueDetail>();
+    public DbSet<StockIssueSerial> StockIssueSerials => Set<StockIssueSerial>();
     public DbSet<QuotationHeader> QuotationHeaders => Set<QuotationHeader>();
     public DbSet<QuotationDetail> QuotationDetails => Set<QuotationDetail>();
     public DbSet<InvoiceHeader> InvoiceHeaders => Set<InvoiceHeader>();
@@ -24,8 +33,12 @@ public class AccountingDbContext : DbContext
     public DbSet<PaymentHeader> PaymentHeaders => Set<PaymentHeader>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<ReceiptHeader> ReceiptHeaders => Set<ReceiptHeader>();
+    public DbSet<PurchaseRequestHeader> PurchaseRequestHeaders => Set<PurchaseRequestHeader>();
+    public DbSet<PurchaseRequestDetail> PurchaseRequestDetails => Set<PurchaseRequestDetail>();
     public DbSet<PurchaseOrderHeader> PurchaseOrderHeaders => Set<PurchaseOrderHeader>();
     public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
+    public DbSet<PurchaseOrderAllocation> PurchaseOrderAllocations => Set<PurchaseOrderAllocation>();
+    public DbSet<PurchaseOrderAllocationSource> PurchaseOrderAllocationSources => Set<PurchaseOrderAllocationSource>();
     public DbSet<ReceivingHeader> ReceivingHeaders => Set<ReceivingHeader>();
     public DbSet<ReceivingDetail> ReceivingDetails => Set<ReceivingDetail>();
     public DbSet<ReceivingSerial> ReceivingSerials => Set<ReceivingSerial>();
@@ -43,6 +56,21 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.Role).HasMaxLength(30);
             entity.HasIndex(x => x.Username).IsUnique();
             entity.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.HasKey(x => x.BranchId);
+            entity.Property(x => x.BranchCode).HasMaxLength(30);
+            entity.Property(x => x.BranchName).HasMaxLength(150);
+            entity.Property(x => x.Address).HasMaxLength(500);
+            entity.Property(x => x.PhoneNumber).HasMaxLength(50);
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.HasIndex(x => x.BranchCode).IsUnique();
         });
 
         modelBuilder.Entity<Customer>(entity =>
@@ -90,9 +118,184 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.CurrentCustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.InvoiceHeader)
                 .WithMany()
                 .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockBalance>(entity =>
+        {
+            entity.HasKey(x => x.StockBalanceId);
+            entity.Property(x => x.QtyOnHand).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.ItemId, x.BranchId }).IsUnique();
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockMovement>(entity =>
+        {
+            entity.HasKey(x => x.StockMovementId);
+            entity.Property(x => x.MovementType).HasMaxLength(30);
+            entity.Property(x => x.ReferenceType).HasMaxLength(30);
+            entity.Property(x => x.Qty).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasIndex(x => x.MovementDate);
+            entity.HasIndex(x => x.ItemId);
+            entity.HasIndex(x => x.SerialId);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.FromBranch)
+                .WithMany()
+                .HasForeignKey(x => x.FromBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ToBranch)
+                .WithMany()
+                .HasForeignKey(x => x.ToBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockTransferHeader>(entity =>
+        {
+            entity.HasKey(x => x.StockTransferId);
+            entity.Property(x => x.TransferNo).HasMaxLength(30);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.TransferNo).IsUnique();
+            entity.HasOne(x => x.FromBranch)
+                .WithMany()
+                .HasForeignKey(x => x.FromBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ToBranch)
+                .WithMany()
+                .HasForeignKey(x => x.ToBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PostedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.PostedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockTransferDetail>(entity =>
+        {
+            entity.HasKey(x => x.StockTransferDetailId);
+            entity.Property(x => x.Qty).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasOne(x => x.StockTransferHeader)
+                .WithMany(x => x.StockTransferDetails)
+                .HasForeignKey(x => x.StockTransferId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockTransferSerial>(entity =>
+        {
+            entity.HasKey(x => x.StockTransferSerialId);
+            entity.HasIndex(x => new { x.StockTransferDetailId, x.SerialId }).IsUnique();
+            entity.HasOne(x => x.StockTransferDetail)
+                .WithMany(x => x.StockTransferSerials)
+                .HasForeignKey(x => x.StockTransferDetailId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockIssueHeader>(entity =>
+        {
+            entity.HasKey(x => x.StockIssueId);
+            entity.Property(x => x.IssueNo).HasMaxLength(30);
+            entity.Property(x => x.IssueType).HasMaxLength(30);
+            entity.Property(x => x.Purpose).HasMaxLength(500);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.IssueNo).IsUnique();
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PostedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.PostedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockIssueDetail>(entity =>
+        {
+            entity.HasKey(x => x.StockIssueDetailId);
+            entity.Property(x => x.Qty).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasOne(x => x.StockIssueHeader)
+                .WithMany(x => x.StockIssueDetails)
+                .HasForeignKey(x => x.StockIssueId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockIssueSerial>(entity =>
+        {
+            entity.HasKey(x => x.StockIssueSerialId);
+            entity.HasIndex(x => new { x.StockIssueDetailId, x.SerialId }).IsUnique();
+            entity.HasOne(x => x.StockIssueDetail)
+                .WithMany(x => x.StockIssueSerials)
+                .HasForeignKey(x => x.StockIssueDetailId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SerialId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -114,6 +317,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Salesperson)
                 .WithMany()
                 .HasForeignKey(x => x.SalespersonId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
@@ -169,6 +376,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Salesperson)
                 .WithMany()
                 .HasForeignKey(x => x.SalespersonId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Quotation)
                 .WithMany()
@@ -233,6 +444,10 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.CreatedByUserId)
@@ -281,6 +496,10 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.CreatedByUserId)
@@ -299,6 +518,56 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<PurchaseRequestHeader>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseRequestId);
+            entity.Property(x => x.PRNo).HasMaxLength(30);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Purpose).HasMaxLength(1000);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.PRNo).IsUnique();
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SubmittedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PurchaseRequestDetail>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseRequestDetailId);
+            entity.Property(x => x.RequestedQty).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasOne(x => x.PurchaseRequestHeader)
+                .WithMany(x => x.PurchaseRequestDetails)
+                .HasForeignKey(x => x.PurchaseRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<PurchaseOrderHeader>(entity =>
         {
             entity.HasKey(x => x.PurchaseOrderId);
@@ -312,6 +581,14 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Supplier)
                 .WithMany()
                 .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PurchaseRequestHeader)
+                .WithMany(x => x.PurchaseOrderHeaders)
+                .HasForeignKey(x => x.PurchaseRequestId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
@@ -348,6 +625,37 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<PurchaseOrderAllocation>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseOrderAllocationId);
+            entity.Property(x => x.AllocatedQty).HasPrecision(18, 2);
+            entity.Property(x => x.ReceivedQty).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.PurchaseOrderDetailId, x.BranchId }).IsUnique();
+            entity.HasOne(x => x.PurchaseOrderDetail)
+                .WithMany(x => x.PurchaseOrderAllocations)
+                .HasForeignKey(x => x.PurchaseOrderDetailId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PurchaseOrderAllocationSource>(entity =>
+        {
+            entity.HasKey(x => x.PurchaseOrderAllocationSourceId);
+            entity.Property(x => x.SourceQty).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.PurchaseOrderAllocationId, x.PurchaseRequestDetailId }).IsUnique();
+            entity.HasOne(x => x.PurchaseOrderAllocation)
+                .WithMany(x => x.PurchaseOrderAllocationSources)
+                .HasForeignKey(x => x.PurchaseOrderAllocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.PurchaseRequestDetail)
+                .WithMany(x => x.PurchaseOrderAllocationSources)
+                .HasForeignKey(x => x.PurchaseRequestDetailId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ReceivingHeader>(entity =>
         {
             entity.HasKey(x => x.ReceivingId);
@@ -360,6 +668,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.PurchaseOrderHeader)
                 .WithMany(x => x.Receivings)
                 .HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
@@ -389,6 +701,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.PurchaseOrderDetail)
                 .WithMany(x => x.ReceivingDetails)
                 .HasForeignKey(x => x.PurchaseOrderDetailId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PurchaseOrderAllocation)
+                .WithMany(x => x.ReceivingDetails)
+                .HasForeignKey(x => x.PurchaseOrderAllocationId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Item)
                 .WithMany()
@@ -430,6 +746,10 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.SupplierId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CustomerClaimHeader)
                 .WithMany()
                 .HasForeignKey(x => x.CustomerClaimId)
@@ -452,6 +772,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.InvoiceHeader)
                 .WithMany()
                 .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()

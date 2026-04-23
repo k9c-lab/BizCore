@@ -7,6 +7,7 @@ public class ReceivingDetail
     public int ReceivingDetailId { get; set; }
     public int ReceivingId { get; set; }
     public int PurchaseOrderDetailId { get; set; }
+    public int? PurchaseOrderAllocationId { get; set; }
     public int ItemId { get; set; }
     public int LineNumber { get; set; }
 
@@ -27,6 +28,7 @@ public class ReceivingDetail
 
     public ReceivingHeader? ReceivingHeader { get; set; }
     public PurchaseOrderDetail? PurchaseOrderDetail { get; set; }
+    public PurchaseOrderAllocation? PurchaseOrderAllocation { get; set; }
     public Item? Item { get; set; }
     public ICollection<ReceivingSerial> ReceivingSerials { get; set; } = new List<ReceivingSerial>();
 }

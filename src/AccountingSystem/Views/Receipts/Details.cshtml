@@ -2,7 +2,13 @@
 
 @{
     ViewData["Title"] = "Receipt Details";
-    var appliedAmount = Model.PaymentHeader?.PaymentAllocations.Sum(x => x.AppliedAmount) ?? 0m;
+    var allocations = Model.PaymentHeader?.PaymentAllocations
+        .OrderBy(x => x.InvoiceHeader!.InvoiceDate)
+        .ThenBy(x => x.InvoiceHeader!.InvoiceNo)
+        .ToList() ?? new List<BizCore.Models.Entities.PaymentAllocation>();
+    var appliedAmount = allocations.Sum(x => x.AppliedAmount);
+    var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
+    var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
     var canCancel = Model.Status == "Issued";
     var cancelBlockedReason = canCancel
         ? string.Empty
@@ -126,7 +132,7 @@
                             </div>
                             <div class="quotation-info-field">
                                 <span class="quotation-info-label">Allocations</span>
-                                <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentAllocations.Count ?? 0) invoice(s)</span>
+                                <span class="quotation-info-value">@allocations.Count invoice(s)</span>
                             </div>
                         </div>
                     </div>
@@ -136,49 +142,99 @@
             <div class="form-section">
                 <div class="table-card-header px-0 pt-0">
                     <div>
-                        <h2 class="section-title">Allocated Invoices</h2>
-                        <p class="section-subtitle">Receipt total follows the posted payment amount for this phase.</p>
+                        <h2 class="section-title">Receipt Items</h2>
+                        <p class="section-subtitle">Full item details from the referenced invoice(s), with payment summary below.</p>
                     </div>
-                    <div class="table-meta">@(Model.PaymentHeader?.PaymentAllocations.Count ?? 0) allocation(s)</div>
+                    <div class="table-meta">@allocations.Count invoice(s)</div>
                 </div>
                 <div class="table-responsive">
                     <table class="table entity-table align-middle">
                         <thead>
                             <tr>
-                                <th>Invoice No.</th>
-                                <th>Invoice Date</th>
-                                <th>Status</th>
-                                <th class="text-end">Applied Amount</th>
+                                <th>Description</th>
+                                <th class="text-end">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
-                        @foreach (var allocation in Model.PaymentHeader?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo) ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>())
+                        @foreach (var allocation in allocations)
                         {
+                            var invoice = allocation.InvoiceHeader;
+                            if (invoice is null)
+                            {
+                                continue;
+                            }
+
                             <tr>
-                                <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
-                                <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
-                                <td><span class="status-pill active">@allocation.InvoiceHeader?.Status</span></td>
-                                <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
+                                <td colspan="4">
+                                    <span class="code-chip">@invoice.InvoiceNo</span>
+                                    <span class="text-muted ms-2">@invoice.InvoiceDate.ToString("dd MMM yyyy")</span>
+                                </td>
                             </tr>
+                            foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@line.Item?.ItemName</div>
+                                        <div class="text-muted small">@line.Item?.ItemCode</div>
+                                        @if (!string.IsNullOrWhiteSpace(line.Remark))
+                                        {
+                                            <div class="text-muted small">@line.Remark</div>
+                                        }
+                                    </td>
+                                    <td class="text-end">@line.Qty.ToString("N2")</td>
+                                    <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                                    <td class="text-end">@line.LineTotal.ToString("N2")</td>
+                                </tr>
+                            }
                         }
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="quotation-summary-wrap">
-                <div class="quotation-summary-stack">
-                    <div class="quotation-summary-row total">
-                        <span class="quotation-summary-name">Receipt Amount</span>
-                        <span class="quotation-summary-amount">@Model.TotalReceivedAmount.ToString("N2")</span>
+            <div class="quotation-party-grid">
+                <div class="quotation-party-column">
+                    <div class="quotation-summary-stack">
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Invoice Total</span>
+                            <span class="quotation-summary-amount">@invoiceTotal.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Paid To Date</span>
+                            <span class="quotation-summary-amount">@((invoiceTotal - remainingBalance).ToString("N2"))</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">Remaining Balance</span>
+                            <span class="quotation-summary-amount">@remainingBalance.ToString("N2")</span>
+                        </div>
                     </div>
-                    <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">Payment Amount</span>
-                        <span class="quotation-summary-amount">@((Model.PaymentHeader?.Amount ?? 0m).ToString("N2"))</span>
-                    </div>
-                    <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">Applied</span>
-                        <span class="quotation-summary-amount">@appliedAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-party-column">
+                    <div class="quotation-summary-wrap">
+                        <div class="quotation-summary-stack">
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Payment Method</span>
+                                <span class="quotation-summary-amount">@(Model.PaymentHeader?.PaymentMethod ?? "-")</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Payment Reference</span>
+                                <span class="quotation-summary-amount">@(string.IsNullOrWhiteSpace(Model.PaymentHeader?.ReferenceNo) ? "-" : Model.PaymentHeader!.ReferenceNo)</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Receipt Date</span>
+                                <span class="quotation-summary-amount">@Model.ReceiptDate.ToString("dd MMM yyyy")</span>
+                            </div>
+                            <div class="quotation-summary-row total">
+                                <span class="quotation-summary-name">This Receipt Paid</span>
+                                <span class="quotation-summary-amount">@appliedAmount.ToString("N2")</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Receipt Amount</span>
+                                <span class="quotation-summary-amount">@Model.TotalReceivedAmount.ToString("N2")</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

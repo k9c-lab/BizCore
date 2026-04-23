@@ -15,6 +15,11 @@
     </div>
 </div>
 
+@if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
 <div class="card content-card">
     <div class="card-body">
         <form asp-action="Create" method="post">

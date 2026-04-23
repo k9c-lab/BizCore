@@ -35,5 +35,6 @@ public class PurchaseOrderDetail
 
     public PurchaseOrderHeader? PurchaseOrderHeader { get; set; }
     public Item? Item { get; set; }
+    public ICollection<PurchaseOrderAllocation> PurchaseOrderAllocations { get; set; } = new List<PurchaseOrderAllocation>();
     public ICollection<ReceivingDetail> ReceivingDetails { get; set; } = new List<ReceivingDetail>();
 }

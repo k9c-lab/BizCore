@@ -12,7 +12,7 @@ namespace BizCore.Controllers;
 [Authorize(Roles = "Admin")]
 public class UsersController : CrudControllerBase
 {
-    private static readonly string[] Roles = { "Admin", "Sales", "Warehouse", "Viewer" };
+    private static readonly string[] Roles = { "Admin", "BranchAdmin", "Sales", "Warehouse", "Viewer" };
     private readonly AccountingDbContext _context;
     private readonly PasswordHashService _passwordHashService;
 
@@ -28,7 +28,9 @@ public class UsersController : CrudControllerBase
         ViewData["Role"] = role;
         ViewData["Status"] = status;
 
-        var query = _context.Users.AsNoTracking();
+        IQueryable<User> query = _context.Users
+            .AsNoTracking()
+            .Include(x => x.Branch);
         var keyword = search?.Trim();
         if (!string.IsNullOrWhiteSpace(keyword))
         {
@@ -66,16 +68,18 @@ public class UsersController : CrudControllerBase
 
         var user = await _context.Users
             .AsNoTracking()
+            .Include(x => x.Branch)
             .FirstOrDefaultAsync(x => x.UserId == id.Value);
 
         return user is null ? NotFound() : View(user);
     }
 
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         var model = new UserFormViewModel
         {
-            RoleOptions = BuildRoleOptions("Viewer")
+            RoleOptions = BuildRoleOptions("Viewer"),
+            BranchOptions = await BuildBranchOptionsAsync(null)
         };
 
         return View(model);
@@ -96,6 +100,7 @@ public class UsersController : CrudControllerBase
         if (!ModelState.IsValid)
         {
             model.RoleOptions = BuildRoleOptions(model.Role);
+            model.BranchOptions = await BuildBranchOptionsAsync(model.BranchId);
             return View(model);
         }
 
@@ -105,6 +110,8 @@ public class UsersController : CrudControllerBase
             DisplayName = model.DisplayName.Trim(),
             Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim(),
             Role = model.Role,
+            BranchId = model.BranchId,
+            CanAccessAllBranches = model.CanAccessAllBranches,
             IsActive = model.IsActive,
             PasswordHash = _passwordHashService.HashPassword(model.Password!),
             CreatedAt = DateTime.UtcNow
@@ -124,6 +131,7 @@ public class UsersController : CrudControllerBase
         }
 
         model.RoleOptions = BuildRoleOptions(model.Role);
+        model.BranchOptions = await BuildBranchOptionsAsync(model.BranchId);
         return View(model);
     }
 
@@ -147,8 +155,11 @@ public class UsersController : CrudControllerBase
             DisplayName = user.DisplayName,
             Email = user.Email,
             Role = user.Role,
+            BranchId = user.BranchId,
+            CanAccessAllBranches = user.CanAccessAllBranches,
             IsActive = user.IsActive,
-            RoleOptions = BuildRoleOptions(user.Role)
+            RoleOptions = BuildRoleOptions(user.Role),
+            BranchOptions = await BuildBranchOptionsAsync(user.BranchId)
         };
 
         return View(model);
@@ -179,6 +190,7 @@ public class UsersController : CrudControllerBase
         if (!ModelState.IsValid)
         {
             model.RoleOptions = BuildRoleOptions(model.Role);
+            model.BranchOptions = await BuildBranchOptionsAsync(model.BranchId);
             return View(model);
         }
 
@@ -186,6 +198,8 @@ public class UsersController : CrudControllerBase
         user.DisplayName = model.DisplayName.Trim();
         user.Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
         user.Role = model.Role;
+        user.BranchId = model.BranchId;
+        user.CanAccessAllBranches = model.CanAccessAllBranches;
         user.IsActive = model.IsActive;
 
         try
@@ -200,6 +214,7 @@ public class UsersController : CrudControllerBase
         }
 
         model.RoleOptions = BuildRoleOptions(model.Role);
+        model.BranchOptions = await BuildBranchOptionsAsync(model.BranchId);
         return View(model);
     }
 
@@ -287,6 +302,30 @@ public class UsersController : CrudControllerBase
             ModelState.AddModelError(nameof(model.Role), "Please select a valid role.");
         }
 
+        if (model.Role == "BranchAdmin")
+        {
+            model.CanAccessAllBranches = false;
+        }
+
+        if (!model.BranchId.HasValue && !model.CanAccessAllBranches)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch or allow access to all branches.");
+        }
+
+        if (model.Role == "BranchAdmin" && !model.BranchId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Branch Admin must be assigned to a branch.");
+        }
+
+        if (model.BranchId.HasValue)
+        {
+            var branchExists = await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive);
+            if (!branchExists)
+            {
+                ModelState.AddModelError(nameof(model.BranchId), "Please select an active branch.");
+            }
+        }
+
         var duplicateUsername = await _context.Users.AnyAsync(x =>
             x.Username == model.Username &&
             (!model.UserId.HasValue || x.UserId != model.UserId.Value));
@@ -315,5 +354,23 @@ public class UsersController : CrudControllerBase
             Text = role,
             Selected = role == selectedRole
         });
+    }
+
+    private async Task<IEnumerable<SelectListItem>> BuildBranchOptionsAsync(int? selectedBranchId)
+    {
+        var branches = await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.BranchId == selectedBranchId)
+            .OrderBy(x => x.BranchCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.BranchId.ToString(),
+                Text = x.BranchCode + " - " + x.BranchName,
+                Selected = selectedBranchId.HasValue && x.BranchId == selectedBranchId.Value
+            })
+            .ToListAsync();
+
+        branches.Insert(0, new SelectListItem("Select branch", string.Empty, !selectedBranchId.HasValue));
+        return branches;
     }
 }

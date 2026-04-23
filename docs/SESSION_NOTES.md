@@ -197,6 +197,51 @@
 - For Supplier Claim result receiving, also run:
   - `database/025_supplier_claim_resolution.sql`
 
+## Latest Session Update - Branch Foundation - 2026-04-21
+- Multi-branch stock requirement was captured:
+  - stock must be separated by branch
+  - serial belongs to one branch at a time
+  - invoice should deduct stock from document branch
+  - PO/Receiving should receive into selected branch
+  - normal user sees only own branch data
+  - stock transfer between branches is required
+  - stock issue/internal use is required
+- Design decision:
+  - use Branch only for now
+  - do not add Warehouse yet
+  - assumption: `1 Branch = 1 Stock Location`
+- Added planning docs:
+  - `docs/TASK_BRANCH_STOCK.md`
+  - `docs/IMPLEMENTATION_SPEC_BRANCH_STOCK.md`
+- Implemented Phase 1 Branch Foundation:
+  - Added `Branches` entity/table support
+  - Added SQL script `database/026_branch_foundation.sql`
+  - Added Branch master pages
+    - list
+    - create
+    - edit
+    - details
+  - Added Branch menu under Master Data
+  - Added `Users.BranchId`
+  - Added `Users.CanAccessAllBranches`
+  - Added branch fields to User Management create/edit/details/list
+  - Added login claims:
+    - `BranchId`
+    - `BranchCode`
+    - `BranchName`
+    - `CanAccessAllBranches`
+  - Sidebar now shows current branch or `All Branches`
+- Important scope:
+  - stock movement is not branch-based yet
+  - document filtering by branch is not enabled yet
+  - next phase should add `SerialNumbers.BranchId`, `StockBalances`, and `StockMovements`
+- Build verification:
+  - `BizCoreBranchFoundationBuild` passed with 0 warnings and 0 errors.
+
+## Latest SQL Scripts To Run For Branch Foundation
+- Run after existing scripts:
+  - `database/026_branch_foundation.sql`
+
 ## Latest Session Update - 2026-04-20
 - User login MVP is implemented and tested by user.
   - Cookie authentication is enabled globally.
@@ -431,3 +476,709 @@
 ```text
 Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue from the latest unfinished work.
 ```
+
+## 2026-04-21 Branch Stock Work
+- Added branch foundation for multi-branch operation:
+  - `database/026_branch_foundation.sql`
+  - `Branches` table
+  - `Users.BranchId`
+  - `Users.CanAccessAllBranches`
+  - Branch CRUD pages and branch display in the sidebar/user management
+- Added branch stock foundation:
+  - `database/027_branch_stock_foundation.sql`
+  - `SerialNumbers.BranchId`
+  - `StockBalances`
+  - `StockMovements`
+  - migration of existing serials/stock/PO/receiving documents to `MAIN`
+- Updated Stock Inquiry and Serial Inquiry:
+  - normal users see their own branch
+  - Admin / all-branch users can view all branches or select a branch
+  - serial cards show branch
+- Updated Purchase Order:
+  - PO now has `BranchId`
+  - normal users create PO for their own branch
+  - all-branch users can select branch
+  - PO index/details show branch
+  - normal users only see their branch POs
+- Updated Receiving:
+  - receiving inherits branch from selected PO
+  - receiving index/details/create show branch
+  - posted receiving updates `StockBalances`
+  - posted receiving creates `StockMovements`
+  - created serial numbers are assigned to receiving branch
+  - cancelled posted receiving reverses branch stock balance and writes a reversal movement
+- Updated Invoice branch stock:
+  - `database/028_invoice_branch_stock.sql`
+  - `InvoiceHeaders.BranchId`
+  - invoice create/edit requires branch
+  - normal users create and see invoices only for their branch
+  - invoice issue deducts `StockBalances` for the invoice branch
+  - invoice cancel restores `StockBalances` for the invoice branch
+  - invoice issue/cancel writes `StockMovements`
+  - invoice serial selection validates that selected serials belong to the invoice branch
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreBranchStockBuild`
+  - result: 0 warnings, 0 errors
+
+## Scripts To Run Next
+- Run in order on the target database:
+  - `database/026_branch_foundation.sql`
+  - `database/027_branch_stock_foundation.sql`
+  - `database/028_invoice_branch_stock.sql`
+
+## Remaining Multi-Branch Work
+- Add Stock Transfer module.
+- Add Stock Issue/Internal Use module.
+- Review Customer Claim and Supplier Claim replacement serial selection by branch.
+
+## 2026-04-21 BranchAdmin Role
+- Added `BranchAdmin` as a separate operational role.
+- `BranchAdmin` can access operational modules:
+  - Quotations
+  - Invoices
+  - Payments
+  - Receipts
+  - Purchase Orders
+  - Receivings
+  - Stock Inquiry
+  - Serial Inquiry
+  - Customer Claims
+  - Supplier Claims
+- `BranchAdmin` cannot access master/system modules:
+  - Branches
+  - Users
+  - Customers
+  - Suppliers
+  - Salespersons
+  - Items
+- `BranchAdmin` is forced to single-branch access:
+  - backend disables `CanAccessAllBranches` for BranchAdmin
+  - sidebar does not show all-branch mode for BranchAdmin
+  - user form disables the all-branch checkbox when BranchAdmin is selected
+- Added script:
+  - `database/029_branch_admin_role.sql`
+  - normalizes existing BranchAdmin users so `CanAccessAllBranches = 0`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreBranchAdminBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 Remaining Branch Isolation
+- Added branch isolation for remaining operational documents:
+  - `QuotationHeaders.BranchId`
+  - `PaymentHeaders.BranchId`
+  - `ReceiptHeaders.BranchId`
+  - `CustomerClaimHeaders.BranchId`
+  - `SerialClaimLogs.BranchId`
+- Added script:
+  - `database/031_branch_isolation_remaining_docs.sql`
+- Updated Quotations:
+  - normal users / BranchAdmin see only their own branch
+  - all-branch users can select branch
+  - converted invoice inherits quotation branch
+- Updated Payments:
+  - payment branch is derived from allocated invoices
+  - allocations must belong to one branch
+  - payment list/details/cancel/receipt generation respect branch access
+- Updated Receipts:
+  - receipt inherits payment branch
+  - receipt list/details/print/cancel respect branch access
+- Updated Claims:
+  - customer claims inherit serial branch
+  - supplier claims inherit serial/customer-claim branch
+  - claim lists/details/actions respect branch access
+  - replacement serial must belong to the same branch as the claimed serial
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreBranchIsolationBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 Purchase Request Before PO
+- Added Purchase Request module so each branch can request items before central Admin creates a PO.
+- Added script:
+  - `database/032_purchase_request_module.sql`
+- Added entities/view models:
+  - `PurchaseRequestHeader`
+  - `PurchaseRequestDetail`
+  - `PurchaseRequestFormViewModel`
+  - `PurchaseRequestLineEditorViewModel`
+- Added `PurchaseRequestsController` and views:
+  - list/search/paging
+  - create/edit draft PR
+  - details with workflow actions
+  - Submit, Approve, Cancel
+- Workflow:
+  - branch user creates Draft PR for own branch
+  - branch user submits PR
+  - Admin approves PR
+  - Admin creates PO from Approved PR
+  - PO preloads PR branch, requested items, quantities, required date, and PR number reference
+  - PR becomes `ConvertedToPO` after PO draft is created
+- Updated Purchase Orders:
+  - added optional `PurchaseRequestId`
+  - PO details links back to PR
+  - PO create/edit/approve/cancel are Admin-only
+  - branch users still view own branch POs and receive goods
+- Updated sidebar:
+  - added Purchase Requests under Purchasing
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCorePurchaseRequestBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 Optional Serial Warranty
+- Changed serial warranty behavior so supplier/customer warranty dates are optional.
+- Receiving:
+  - serial-controlled items still require serial count to match received quantity
+  - supplier warranty start/end are no longer required
+  - if both dates are entered, end date must be on or after start date
+- Invoices:
+  - serial-controlled items still require selected serial count to match quantity before issue
+  - customer warranty start/end are no longer required
+  - if both dates are entered, end date must be on or after start date
+- Claims:
+  - customer claims are no longer blocked when customer warranty dates are blank
+  - supplier claims / send-to-supplier are no longer blocked when supplier warranty dates are blank
+  - if warranty dates exist, date-range checks still apply
+- Stock/Serial inquiry:
+  - claim availability no longer treats missing warranty as blocked
+- No database migration required because warranty date columns are already nullable.
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreOptionalWarrantyBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 PO Delivery Allocation
+- Changed purchasing design to support one central PO delivered to multiple branches.
+- Added script:
+  - `database/034_po_delivery_allocation.sql`
+- Added entity/model:
+  - `PurchaseOrderAllocation`
+  - `PurchaseOrderAllocationEditorViewModel`
+- Updated PO:
+  - each PO line now has delivery allocations by branch
+  - allocation total per PO line must equal PO line quantity
+  - duplicate branch allocations in the same PO line are blocked
+  - PO details show delivery allocation and received quantity by branch
+  - branch users can see a PO if their branch appears in any delivery allocation, even if PO owner branch is MAIN
+- Updated Receiving:
+  - receiving lines are generated from PO delivery allocations
+  - branch users see and receive only their own branch allocation
+  - receiving stock goes into the receiving/allocation branch
+  - posting updates both PO detail received qty and allocation received qty
+  - cancellation reverses both PO detail received qty and allocation received qty
+- Existing PO data:
+  - script creates default allocation for old PO lines using the existing PO branch
+  - script links existing receiving details to matching allocations where possible
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCorePoAllocationBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 Receiving Details Post Action
+- Clarified workflow:
+  - Draft Receiving should be postable from `Receivings/Details`.
+  - `Receivings/Edit` should not feel like a dead end.
+- Updated Receiving:
+  - added `Post Receiving` action to `Receivings/Details` for Draft documents
+  - added server-side `Post(int id)` in `ReceivingsController`
+  - the action reuses existing `ValidateReceivingAsync` and `ApplyPostedReceivingAsync`
+  - if validation fails, user is returned to Details with a clear notice
+  - added `Post Receiving` to the top of `Receivings/Edit`
+  - added normal Back navigation to `Receivings/Edit`:
+    - Edit mode: `Back to Details`
+    - Create mode: `Back to Receivings`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreReceivingEditActionsBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-21 PO From Multiple PR Sources
+- Added traceability from PO delivery allocation back to PR lines.
+- Added script:
+  - `database/035_po_pr_allocation_sources.sql`
+- Added entity/view model:
+  - `PurchaseOrderAllocationSource`
+  - `PurchaseOrderAllocationSourceEditorViewModel`
+- Updated data model:
+  - `PurchaseOrderAllocation` now has many `PurchaseOrderAllocationSources`
+  - `PurchaseRequestDetail` now has many `PurchaseOrderAllocationSources`
+  - `AccountingDbContext` maps `PurchaseOrderAllocationSources`
+- Updated Purchase Requests:
+  - `PurchaseRequests/Index` now has checkbox selection for Approved PRs
+  - Admin can select multiple Approved PRs and click `Create PO from Selected PRs`
+  - PR is considered converted if it has direct PO header link or allocation source link
+- Updated Purchase Orders:
+  - `PurchaseOrders/Create` accepts multiple `purchaseRequestIds`
+  - selected PRs are converted into one PO draft
+  - item lines are grouped by item and unit price
+  - delivery allocations are generated automatically from each PR branch
+  - allocation source rows preserve which PR detail contributed which quantity
+  - `PurchaseOrders/Create/Edit` shows compact `Source PR` text under each allocation
+  - `PurchaseOrders/Details` shows Source PR per delivery allocation
+  - after saving PO, selected PRs become `ConvertedToPO`
+  - duplicate PO creation from already sourced PR lines is blocked
+- Updated cleanup:
+  - `database/100_clear_transaction_data_keep_master.sql` now deletes and reseeds `PurchaseOrderAllocationSources` before allocations/details.
+- Required next DB script:
+  - run `database/035_po_pr_allocation_sources.sql`
+- Suggested test flow:
+  - create PR from Branch A and Branch B
+  - submit and approve both PRs
+  - go to `PurchaseRequests/Index`
+  - select both Approved PRs
+  - click `Create PO from Selected PRs`
+  - choose Supplier and save draft
+  - open `PurchaseOrders/Details`
+  - verify each PO line shows delivery allocation by branch and Source PR quantities
+  - approve PO
+  - branch users receive only their own allocation
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCorePoPrSourcesBuild3`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Stock Transfer Module
+- Added branch-to-branch Stock Transfer module.
+- Added script:
+  - `database/036_stock_transfer_module.sql`
+- Added entities/view models:
+  - `StockTransferHeader`
+  - `StockTransferDetail`
+  - `StockTransferSerial`
+  - `StockTransferFormViewModel`
+  - `StockTransferLineEditorViewModel`
+- Added `StockTransfersController` and views:
+  - list/search/paging
+  - create/edit draft transfer
+  - details with workflow actions
+  - Post Transfer
+  - Cancel Transfer
+- Workflow:
+  - transfer starts as `Draft`
+  - user can `Save Draft` or `Post Transfer`
+  - post deducts `StockBalances` from source branch
+  - post adds `StockBalances` to destination branch
+  - post writes `StockMovements` with `MovementType = Transfer`
+  - serial-controlled item transfer requires exact serial count
+  - transferred serials must be `InStock` in the source branch
+  - post moves selected serials to destination branch
+  - cancelling a posted transfer reverses branch balances, moves serials back, and writes `TransferCancel` movements
+  - cancellation is blocked if destination branch no longer has enough stock or a transferred serial is no longer available in destination branch
+- Branch access:
+  - Admin/all-branch users can choose source and destination branches
+  - BranchAdmin/Warehouse users can transfer out only from their own branch
+  - non-all-branch users can see transfers where their branch is source or destination
+- Updated sidebar:
+  - added Stock Transfers under Inventory
+- Updated cleanup:
+  - `database/100_clear_transaction_data_keep_master.sql` now deletes/reseeds Stock Transfer tables
+- Required next DB script:
+  - run `database/036_stock_transfer_module.sql`
+- Suggested test flow:
+  - receive stock into Branch A
+  - create Stock Transfer from Branch A to Branch B
+  - transfer one non-serial item and one serial-controlled item
+  - post transfer
+  - verify Branch A stock decreases and Branch B stock increases
+  - verify selected serials now show Branch B
+  - cancel transfer while destination stock/serials are still available
+  - verify balances and serial branch return to Branch A
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockTransferBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up UX update:
+  - Stock Transfer form now has an available serial picker for serial-controlled items.
+  - User selects item and source branch, clicks `Load Serials`, then checks serials to transfer.
+  - Picker loads only `InStock` serials from the source branch that are not assigned to invoice/customer.
+  - Selected serials sync into the existing transfer serial field, so existing validation/posting logic is reused.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockTransferSerialPickerBuild`
+    - result: 0 warnings, 0 errors
+- Stock Transfer validation fix:
+  - Save Draft and Post now both validate transfer qty against source branch `StockBalances`.
+  - Selected serials must be `InStock` even when saving draft.
+  - Direct Post from the create/edit form loads item metadata before applying transfer, so serial-controlled lines are handled correctly without requiring a prior draft save.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockTransferValidationBuild`
+    - result: 0 warnings, 0 errors
+- Stock Transfer feedback update:
+  - form validation summary now shows all field/model errors, so blocked validation is visible on screen.
+  - item lines now show source branch stock after item/source branch selection.
+  - added `AvailableStock` endpoint for branch/item stock hint.
+  - serial-controlled lines now always require selected serial count to match transfer qty.
+  - stock shortage validation now also attaches an error to the specific qty line.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockTransferFeedbackBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 Stock Issue / Internal Use Module
+- Added Stock Issue module for non-sales stock deductions.
+- Added script:
+  - `database/037_stock_issue_module.sql`
+- Added entities/view models:
+  - `StockIssueHeader`
+  - `StockIssueDetail`
+  - `StockIssueSerial`
+  - `StockIssueFormViewModel`
+  - `StockIssueLineEditorViewModel`
+- Added `StockIssuesController` and views:
+  - list/search/paging
+  - create/edit draft issue
+  - details with workflow actions
+  - Post Issue
+  - Cancel Issue
+- Workflow:
+  - issue starts as `Draft`
+  - user can `Save Draft` or `Post Issue`
+  - direct post from create/edit is supported
+  - post deducts `StockBalances` from selected branch
+  - post writes `StockMovements` with `MovementType = Issue`
+  - serial-controlled item issue requires exact serial count
+  - selected serials must be `InStock` in selected branch
+  - post changes selected serial status to `Issued`
+  - cancelling a posted issue restores branch balances, changes serials back to `InStock`, and writes `IssueCancel` movements
+  - cancellation is blocked if issued serials are no longer in `Issued` state for this document
+- Issue types:
+  - `InternalUse`
+  - `Damaged`
+  - `Demo`
+  - `Adjustment`
+  - `Other`
+- Branch access:
+  - Admin/all-branch users can choose branch
+  - BranchAdmin/Warehouse users issue only from their own branch
+- UX:
+  - item lines show selected branch stock
+  - serial picker loads available `InStock` serials from selected branch
+  - validation summary shows all field/model errors
+- Updated sidebar:
+  - added Stock Issues under Inventory
+- Updated cleanup:
+  - `database/100_clear_transaction_data_keep_master.sql` now deletes/reseeds Stock Issue tables
+- Required next DB script:
+  - run `database/037_stock_issue_module.sql`
+- Suggested test flow:
+  - receive stock into Branch A
+  - create Stock Issue for Branch A
+  - issue one non-serial item and one serial-controlled item
+  - post issue
+  - verify Branch A stock decreases
+  - verify selected serials change to `Issued`
+  - cancel issue
+  - verify balances return and serials change back to `InStock`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockIssueBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 PO Details Receive Goods Branch Route Fix
+- Fixed PO Details `Receive Goods` behavior after PO delivery allocation changes.
+- Problem:
+  - button was visible on `PurchaseOrders/Details/{id}`
+  - clicking could return to the same area / not open Receiving because `Receivings/Create` lookup defaulted all-branch users to their own branch claim instead of the selected PO allocation branch
+- Updated Receiving:
+  - `Receivings/Create` now accepts optional `branchId`
+  - all-branch users no longer default receiving lookup to their current user branch unless `branchId` is supplied
+- Updated PO Details:
+  - Receive buttons are now based on open delivery allocations the current user can access
+  - if multiple branch allocations remain, PO Details shows one Receive button per branch
+  - link passes both `purchaseOrderId` and `branchId`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCorePoReceiveBranchRouteBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up fix:
+  - Saving a receiving draft opened from PO Details could show `Selected PO is not available for receiving` for Admin/all-branch users.
+  - Cause: POST rebuild of receiving lookup could lose the selected allocation branch and filter out the PO.
+  - Fix: before rebuilding receiving lookups on Create/Edit POST, derive `BranchId` from posted `AllocationBranchId` when the submitted lines belong to one branch allocation.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreReceivingPostBranchBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 PO Validation Summary UX
+- Updated Purchase Order form validation summary.
+- `Views/PurchaseOrders/_Form.cshtml` now uses `asp-validation-summary="All"` instead of `ModelOnly`.
+- Supplier required errors and other field-level validation messages now appear at the top of PO Create/Edit as well as under the specific field.
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCorePoValidationSummaryBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Stock Ledger Inquiry
+- Added read-only Stock Ledger inquiry for item movement history.
+- No database script is required; the page reads existing `StockMovements`.
+- Added files:
+  - `Controllers/StockLedgerController.cs`
+  - `Models/ViewModels/StockLedgerPageViewModel.cs`
+  - `Models/ViewModels/StockLedgerRowViewModel.cs`
+  - `Views/StockLedger/Index.cshtml`
+- Added Inventory sidebar link:
+  - `Stock Ledger`
+- Capabilities:
+  - filter by item, branch, movement type, reference type, date range, and keyword
+  - show movement date, movement type, source document link, item, serial, from/to branch, qty, in/out qty, created by, and remark
+  - summarize `StockIssue` usage:
+    - Issued Qty
+    - Issue Cancel Qty
+    - Net Issued Qty
+- Intended answer for "item นี้มีการเบิกใช้งานไปเท่าไร":
+  - open `Inventory > Stock Ledger`
+  - choose the item
+  - optionally choose branch/date range
+  - read `Net Issued Qty`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockLedgerBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up quick links:
+  - added `View Ledger` on Item Details for stock-tracked items
+  - added `Ledger` action on Items list for stock-tracked items
+  - added `Ledger` action on Stock Inquiry rows
+  - added `View Ledger` on Stock Inquiry serial detail/list page
+  - links pass `itemId`, and branch context where available
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockLedgerLinksBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 Customer Claim Flow Clarification
+- Clarified Customer Claim workflow so user actions follow a stricter sequence:
+  - `Open`
+  - `Receive Item`
+  - `Received`
+  - then choose repair complete, replacement, reject, or send to supplier
+  - `ReadyToReturn`
+  - `ReturnToCustomer`
+  - `Closed`
+- Updated Customer Claim details:
+  - added visible `Receive Item` action
+  - added visible `Repair Complete` action
+  - `Send To Supplier` is now available only after the customer item has been received
+  - `Return To Customer` is now available only when status is `ReadyToReturn`
+  - replacement assignment now moves the claim to `ReadyToReturn`
+- Updated Supplier Claim integration:
+  - receiving repaired original from supplier now sets linked customer claim to `ReadyToReturn` instead of returning it to `Open`
+- Updated Customer Claim list:
+  - status filter now includes the full workflow statuses
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreCustomerClaimFlowBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Quotation Branch Stock Hint
+- Fixed Quotation item stock display after branch stock rollout.
+- Problem:
+  - Quotation line item picker showed total/master item stock.
+  - Users could quote an item that existed only in another branch.
+  - Converted invoice then could not find usable stock/serials in the quotation branch.
+- Updated Quotation:
+  - item lookup stock now uses `StockBalances` for the quotation branch
+  - line hint text changed to `Branch stock`
+  - Admin/all-branch users changing branch on the form now refreshes item stock hints from `Quotations/BranchStock`
+  - non-branch-selected forms show stock as unavailable until a branch is selected
+  - Convert to Invoice now checks tracked item quantities against the quotation branch stock and blocks conversion with a clear message if stock is short
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreQuotationBranchStockBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Stock Ledger IN/OUT Direction Fix
+- Fixed Stock Ledger IN/OUT display when a branch filter is selected.
+- Problem:
+  - some transfer-style movements could show both IN and OUT on the same row for one selected branch.
+- Updated logic:
+  - branch-filtered rows now resolve one direction per movement first
+  - `ToBranchId == selectedBranch` maps to IN for transfers
+  - `FromBranchId == selectedBranch` maps to OUT for transfers
+  - special cases remain explicit:
+    - `IssueCancel` maps to IN for the issue branch
+    - `ReceivingCancel` maps to OUT for the receiving branch
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockLedgerDirectionBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up sale/current stock fix:
+  - Item list/details now display stock totals from `StockBalances` instead of legacy `Items.CurrentStock`
+  - Invoice Create/Issue now validates available stock from the invoice branch `StockBalances`
+  - Invoice Create/Issue no longer depends on `Items.CurrentStock` before deducting branch stock
+  - Stock Ledger row mapping now computes IN/OUT from one resolved direction tuple, so one row cannot be assigned both directions by split calculations
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockCurrentLedgerFixBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 Customer Claim Handling UI
+- Simplified Customer Claim detail actions after user feedback that the top action buttons were confusing.
+- Updated `CustomerClaims/Details`:
+  - top action bar now focuses on navigation and lifecycle actions: receive item, return to customer, close, cancel
+  - supplier repair, replacement, reject, and repair-complete actions are grouped inside a `Claim Handling` section
+  - handling choices now appear as explicit form cards:
+    - send to supplier repair with sent date
+    - replace for customer with replacement serial selection
+    - reject claim with remark
+    - mark repair complete / ready to return with remark
+  - disabled handling actions show the workflow reason close to the relevant form instead of only as hidden backend validation
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreCustomerClaimHandlingUiBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Supplier Claim Flow / Stock Effects
+- Continued claim work on the supplier side after Customer Claim testing.
+- Updated Supplier Claim details:
+  - changed result area to `Supplier Handling`
+  - clarified result cards:
+    - receive repaired original
+    - receive replacement from supplier
+    - supplier rejects claim
+  - disabled supplier-result actions now show the relevant workflow reason near the form
+- Updated stock effects:
+  - customer replacement assignment now deducts branch `StockBalances`
+  - customer replacement assignment now writes a `CustomerClaimReplacement` stock movement
+  - supplier replacement receipt now adds branch `StockBalances`
+  - supplier replacement receipt now writes a `SupplierReplacement` stock movement
+  - supplier repaired original returning to stock after the customer already received a replacement now adds branch `StockBalances`
+  - supplier repaired original returning to stock now writes a `SupplierRepairReturn` stock movement
+- Updated Stock Ledger:
+  - added claim movement types to IN/OUT direction mapping
+  - added Customer Claim / Supplier Claim reference filters
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreSupplierClaimFlowBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up warranty validation fix:
+  - Customer Claim `SendToSupplier` now validates supplier warranty against the actual send date.
+  - Creating a supplier claim from customer claim now validates supplier warranty against the claim creation date.
+  - Expired supplier warranty is blocked server-side with `Send to supplier is blocked because supplier warranty has expired.`
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreSupplierWarrantyBlockBuild`
+    - result: 0 warnings, 0 errors
+- Supplier warranty required follow-up:
+  - Sending a customer-claimed item to supplier now requires `SupplierWarrantyEndDate`.
+  - Blank supplier warranty end date is blocked with `Send to supplier is blocked because supplier warranty end date is missing.`
+  - Warranty dates remain optional for receiving/selling; the required rule applies only to sending supplier claims.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreSupplierWarrantyRequiredBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 Receipt Item Lines
+- Updated Receipt Details/Print after discussion that receipts should show what the customer paid for, not only invoice references.
+- Updated Receipt data loading:
+  - receipt details/print now include allocated invoice details and item master data
+- Updated Receipt Details:
+  - replaced the allocation-only invoice table with full item lines grouped by invoice
+  - item columns are intentionally compact:
+    - Description
+    - Qty
+    - Unit Price
+    - Amount
+  - serial numbers and VAT are not shown in the item table to keep the receipt readable
+  - payment summary now shows:
+    - Invoice Total
+    - This Receipt Paid
+    - Remaining Balance
+    - Receipt Amount
+- Updated Receipt Print:
+  - print layout now shows the same grouped invoice item lines
+  - summary uses the same receipt payment totals
+- Note:
+  - `ReceiptHeader.Remark` already copies from `PaymentHeader.Remark`, so installment text such as `ชำระงวดที่ 1/3` can be entered in Payment Remark and will print on the receipt.
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreReceiptItemsBuild`
+  - result: 0 warnings, 0 errors
+- Follow-up receipt summary layout:
+  - restored invoice-style totals under receipt items:
+    - Subtotal
+    - Discount
+    - VAT
+    - Total
+    - Balance
+  - moved payment information into a separate left-side summary column:
+    - This Receipt Paid
+    - Receipt Amount
+    - Payment Method
+  - applied to both Receipt Details and Receipt Print.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreReceiptSummaryBuild`
+    - result: 0 warnings, 0 errors
+- Follow-up payment/balance summary layout:
+  - changed receipt summary meaning after user feedback:
+    - right-side total summary now describes this payment/receipt transaction
+    - left-side summary now describes invoice total, paid-to-date, and remaining balance
+  - applied to both Receipt Details and Receipt Print.
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreReceiptPaymentBalanceSummaryBuild`
+    - result: 0 warnings, 0 errors
+
+## 2026-04-22 Quotation Validation / Stock Inquiry Current Stock
+- Fixed Quotation form validation summary:
+  - `Quotations/_Form` now uses `asp-validation-summary="All"`
+  - Customer required/field-level errors now appear at the top of Quotation Create/Edit as well as under the field
+- Reviewed Stock Inquiry current stock calculation:
+  - non-serial-controlled items still read current stock from branch `StockBalances`
+  - serial-controlled items now calculate current stock from actual `SerialNumbers` with `Status = InStock`
+  - branch filter is applied to both item list and serial detail current stock
+  - this avoids Stock Inquiry showing stale/drifted balance values for serial-controlled items
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreQuotationStockInquiryFixBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Stock Audit / Reconciliation
+- Added read-only Stock Audit page for checking stock consistency after multi-branch and claim/transfer/issue changes.
+- Added files:
+  - `Controllers/StockAuditController.cs`
+  - `Models/ViewModels/StockAuditPageViewModel.cs`
+  - `Models/ViewModels/StockAuditRowViewModel.cs`
+  - `Views/StockAudit/Index.cshtml`
+- Added Inventory sidebar link:
+  - `Stock Audit`
+- Capabilities:
+  - filter by item keyword, branch, and audit status
+  - compares per Branch + Item:
+    - `StockBalances` quantity
+    - serial `InStock` count for serial-controlled items
+    - net stock quantity from `StockMovements`
+  - marks rows as `OK` or `Mismatch`
+  - shows difference columns:
+    - Balance vs Ledger
+    - Balance vs Serial
+  - includes quick links to Stock Ledger and Serials for investigation
+- Safety:
+  - page is read-only and does not auto-fix stock
+  - branch access follows the same Admin/all-branch vs branch-user rules as stock inquiry
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreStockAuditBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-22 Dashboard / Reports MVP
+- Added presentation-ready dashboard and reports for tomorrow's demo.
+- Updated Dashboard:
+  - `Home/Index` is now an authenticated executive overview instead of the old placeholder page
+  - KPI cards:
+    - Sales Today
+    - Sales This Month
+    - Payments This Month
+    - Outstanding AR
+    - Stock On Hand Qty
+    - Low Stock Items
+    - Open PO
+    - Open Claims
+  - added attention section for pending receivings, customer/supplier claims, and low stock items
+  - added recent activity table for invoices and payments
+- Added Reports module:
+  - `ReportsController`
+  - `Views/Reports/Index.cshtml`
+  - date range and branch filters
+  - summary KPI cards for sales, payments, AR, and stock qty
+  - Sales Report by date/branch
+  - Stock Balance top items
+  - Stock Movement summary
+  - Customer/Supplier Claim summary
+- Added view models:
+  - `DashboardViewModel`
+  - `DashboardActivityViewModel`
+  - `DashboardAttentionViewModel`
+  - `ReportsPageViewModel`
+  - `SalesReportRowViewModel`
+  - `StockReportRowViewModel`
+  - `MovementReportRowViewModel`
+  - `ClaimReportRowViewModel`
+- Updated sidebar:
+  - added `Reports` under Dashboard
+- No database script required; all pages read existing tables.
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreDashboardReportsBuild2`
+  - result: 0 warnings, 0 errors
+- Follow-up charts:
+  - Dashboard now includes lightweight chart visuals without adding external packages:
+    - 7-day sales trend bar chart
+    - open claim mix horizontal bars
+  - Reports now includes:
+    - sales chart from displayed daily report rows
+    - movement mix horizontal bars
+  - Build verification:
+    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreChartsBuild`
+    - result: 0 warnings, 0 errors

@@ -34,8 +34,40 @@
             </div>
             <span asp-validation-for="Role" class="text-danger"></span>
         </div>
+        <div class="user-form-field">
+            <label asp-for="BranchId" class="form-label"></label>
+            <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select"></select>
+            <span asp-validation-for="BranchId" class="text-danger"></span>
+        </div>
+        <div class="user-form-field">
+            <label class="form-label">Branch Access</label>
+            <label class="quotation-inline-check d-flex align-items-center gap-2 mt-2" asp-for="CanAccessAllBranches">
+                <input asp-for="CanAccessAllBranches" class="form-check-input" id="CanAccessAllBranches" />
+                <span>Access all branches</span>
+            </label>
+            <div class="form-text">Use for admin or cross-branch supervisors.</div>
+        </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const role = document.getElementById("Role");
+        const allBranches = document.getElementById("CanAccessAllBranches");
+        const syncBranchAdminAccess = () => {
+            if (!role || !allBranches) return;
+            if (role.value === "BranchAdmin") {
+                allBranches.checked = false;
+                allBranches.disabled = true;
+            } else {
+                allBranches.disabled = false;
+            }
+        };
+
+        role?.addEventListener("change", syncBranchAdminAccess);
+        syncBranchAdminAccess();
+    })();
+</script>
 
 @if (!Model.IsEdit)
 {

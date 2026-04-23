@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BizCore Feature Summary</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color: #172033;
+      background: #f3f6fb;
+      line-height: 1.45;
+      font-size: 12px;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 18px;
+      background: #ffffff;
+      padding: 16mm;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(140deg, rgba(18, 44, 92, 0.96), rgba(24, 91, 112, 0.92)),
+        linear-gradient(90deg, #10264f, #237b75);
+      color: #ffffff;
+    }
+
+    .cover-mark {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .cover h1 {
+      font-size: 48px;
+      line-height: 1.05;
+      margin: 28px 0 10px;
+      letter-spacing: 0;
+    }
+
+    .cover .subtitle {
+      font-size: 20px;
+      max-width: 620px;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .cover .tagline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 44px;
+    }
+
+    .tag {
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px;
+      border-radius: 8px;
+      min-height: 64px;
+    }
+
+    .tag strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 3px;
+    }
+
+    .tag span {
+      display: block;
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 11px;
+    }
+
+    .cover-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      color: #10264f;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 7px;
+      font-size: 15px;
+      color: #172033;
+    }
+
+    p {
+      margin: 0 0 10px;
+    }
+
+    .section-note {
+      color: #5b687a;
+      font-size: 12px;
+      max-width: 720px;
+      margin-bottom: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid #dfe6ef;
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+      break-inside: avoid;
+    }
+
+    .accent {
+      border-top: 4px solid #237b75;
+    }
+
+    .accent-blue {
+      border-top-color: #275aa8;
+    }
+
+    .accent-gold {
+      border-top-color: #b8872f;
+    }
+
+    .accent-red {
+      border-top-color: #b85d4d;
+    }
+
+    ul {
+      margin: 7px 0 0 18px;
+      padding: 0;
+    }
+
+    li {
+      margin: 3px 0;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #eef4f7;
+      color: #28505d;
+      border: 1px solid #d5e3e8;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .flow {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .flow-line {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .step-no {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #10264f;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .step-copy {
+      border-bottom: 1px solid #edf1f5;
+      padding-bottom: 7px;
+    }
+
+    .step-copy strong {
+      display: block;
+      font-size: 13px;
+      color: #172033;
+    }
+
+    .step-copy span {
+      color: #5b687a;
+      font-size: 11px;
+    }
+
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+
+    .kpi {
+      padding: 10px;
+      border-radius: 8px;
+      background: #f6f8fb;
+      border: 1px solid #e1e7ef;
+    }
+
+    .kpi strong {
+      display: block;
+      color: #10264f;
+      font-size: 15px;
+    }
+
+    .kpi span {
+      display: block;
+      color: #647084;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+
+    .table th,
+    .table td {
+      text-align: left;
+      border-bottom: 1px solid #e5ebf2;
+      padding: 7px 6px;
+      vertical-align: top;
+    }
+
+    .table th {
+      background: #f2f6fa;
+      color: #344054;
+      font-weight: 700;
+    }
+
+    .footer {
+      position: absolute;
+      left: 16mm;
+      right: 16mm;
+      bottom: 9mm;
+      display: flex;
+      justify-content: space-between;
+      color: #8a96a8;
+      border-top: 1px solid #e4eaf1;
+      padding-top: 6px;
+      font-size: 10px;
+    }
+
+    .compact {
+      font-size: 11px;
+    }
+
+    .demo-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .demo-item {
+      border-left: 4px solid #237b75;
+      background: #f7fafb;
+      padding: 9px 10px;
+      border-radius: 6px;
+      min-height: 60px;
+    }
+
+    .demo-item strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .page {
+        margin: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="page cover">
+    <div>
+      <div class="cover-mark">BC</div>
+      <h1>BizCore</h1>
+      <div class="subtitle">Feature Summary สำหรับนำเสนอระบบบัญชี ขาย จัดซื้อ คลังสินค้า และงานบริการหลังการขาย</div>
+      <div class="tagline">
+        <div class="tag"><strong>Sales</strong><span>Quotation, Invoice, Payment, Receipt</span></div>
+        <div class="tag"><strong>Purchasing</strong><span>PR, PO, Receiving, Allocation</span></div>
+        <div class="tag"><strong>Inventory</strong><span>Branch stock, transfer, issue, ledger</span></div>
+        <div class="tag"><strong>Service</strong><span>Customer claim, supplier claim, warranty</span></div>
+      </div>
+    </div>
+    <div class="cover-footer">
+      <div>Prepared for customer presentation</div>
+      <div>Updated: 23 Apr 2026</div>
+    </div>
+  </section>
+
+  <section class="page">
+    <h2>ภาพรวมระบบ</h2>
+    <p class="section-note">BizCore เป็นระบบงานธุรกิจครบวงจรสำหรับควบคุมเอกสารขาย จัดซื้อ สต็อก แยกสาขา และงานเคลมสินค้า โดยเน้น workflow ที่ตรวจสอบย้อนหลังได้ และลดความผิดพลาดจากการทำงานด้วยมือ</p>
+
+    <div class="kpi-strip">
+      <div class="kpi"><strong>Multi-Branch</strong><span>แยกสิทธิ์และสต็อกตามสาขา</span></div>
+      <div class="kpi"><strong>Serial Control</strong><span>ติดตามสินค้ารายเครื่อง</span></div>
+      <div class="kpi"><strong>Audit Trail</strong><span>ดูประวัติเอกสารและผู้ทำรายการ</span></div>
+      <div class="kpi"><strong>Dashboard</strong><span>สรุป KPI สำหรับผู้บริหาร</span></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card accent">
+        <h3>จุดเด่นที่ลูกค้าจะเห็นทันที</h3>
+        <ul>
+          <li>เอกสารสำคัญเชื่อมกันตั้งแต่เสนอราคา ขาย รับเงิน ออกใบเสร็จ</li>
+          <li>จัดซื้อและรับสินค้าเข้าสต็อก พร้อมรองรับการรับเข้าตามสาขา</li>
+          <li>ตรวจสอบสต็อกได้ทั้งระดับสินค้า สาขา และ serial number</li>
+          <li>รองรับการโอนสินค้า เบิกใช้ภายใน และตรวจสอบ stock ledger</li>
+          <li>มีระบบเคลมลูกค้าและเคลม supplier พร้อมการเปลี่ยนสินค้า</li>
+          <li>มี dashboard/reports สำหรับติดตามยอดขาย สต็อก และงานค้าง</li>
+        </ul>
+      </div>
+      <div class="card accent-blue">
+        <h3>กลุ่มผู้ใช้งานหลัก</h3>
+        <ul>
+          <li>Admin: ตั้งค่าระบบ master data ผู้ใช้ สาขา และสิทธิ์</li>
+          <li>Sales: ทำ quotation, invoice, payment และ receipt</li>
+          <li>Warehouse: รับสินค้า ดูสต็อก โอนสินค้า เบิกสินค้า และงานเคลม</li>
+          <li>BranchAdmin: ทำงานเฉพาะสาขาของตนเองโดยไม่เห็นข้อมูลสาขาอื่น</li>
+          <li>Management: ดู dashboard และ reports สำหรับตัดสินใจ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:12px;">
+      <div class="card accent-gold">
+        <h3>Master Data</h3>
+        <ul>
+          <li>Customers</li>
+          <li>Suppliers</li>
+          <li>Items / Services</li>
+          <li>Salespersons</li>
+          <li>Branches</li>
+          <li>Users & Roles</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Document Control</h3>
+        <ul>
+          <li>Draft / Approve / Issue / Cancel</li>
+          <li>เลขที่เอกสารอัตโนมัติ</li>
+          <li>VAT / No VAT</li>
+          <li>พิมพ์เอกสารขายและจัดซื้อ</li>
+          <li>ประวัติการทำรายการ</li>
+        </ul>
+      </div>
+      <div class="card accent-red">
+        <h3>Stock Reliability</h3>
+        <ul>
+          <li>Stock balance แยกสาขา</li>
+          <li>Serial status lifecycle</li>
+          <li>Stock movement ledger</li>
+          <li>Stock audit mismatch check</li>
+          <li>Claim stock effect tracking</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>1</span></div>
+  </section>
+
+  <section class="page">
+    <h2>Sales & Finance</h2>
+    <p class="section-note">ระบบขายครอบคลุมตั้งแต่ใบเสนอราคา ไปจนถึงใบกำกับ/ใบแจ้งหนี้ การรับชำระเงิน และใบเสร็จ พร้อมควบคุมสถานะเอกสารและยอดคงเหลือลูกหนี้</p>
+
+    <div class="grid-2">
+      <div class="card accent-blue">
+        <h3>Quotation</h3>
+        <ul>
+          <li>สร้างใบเสนอราคาพร้อมเลขที่รายเดือน เช่น QT-YYYYMM-XXXX</li>
+          <li>ค้นหาลูกค้าและสินค้าแบบ searchable dropdown</li>
+          <li>รองรับสินค้าและบริการ พร้อมส่วนลดระดับบรรทัดหรือหัวเอกสาร</li>
+          <li>แสดง branch stock เพื่อกันการเสนอขายสินค้าที่ไม่มีในสาขา</li>
+          <li>อนุมัติ quotation ก่อน convert เป็น invoice</li>
+          <li>พิมพ์ใบเสนอราคาได้</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Invoice</h3>
+        <ul>
+          <li>สร้าง invoice โดยตรง หรือสร้างจาก quotation ที่อนุมัติแล้ว</li>
+          <li>รองรับสินค้า serial-controlled และ service item</li>
+          <li>Draft invoice สามารถแก้ไขก่อน issue</li>
+          <li>Issue invoice ตรวจสอบ serial/stock/warranty ก่อนตัดสต็อก</li>
+          <li>Cancel invoice คืนสต็อกและ serial เมื่อยังไม่มี payment</li>
+          <li>พิมพ์ invoice ได้</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent-gold">
+        <h3>Payment</h3>
+        <ul>
+          <li>รับชำระเงินและ allocate เข้าหลาย invoice ได้</li>
+          <li>บังคับยอด allocation ให้ตรงกับยอดรับชำระ</li>
+          <li>คำนวณ invoice balance และสถานะการชำระเงิน</li>
+          <li>Cancel payment ได้เมื่อยังไม่มี receipt ที่ออกแล้ว</li>
+          <li>รองรับ remark สำหรับข้อความงวดชำระหรือหมายเหตุ</li>
+        </ul>
+      </div>
+      <div class="card accent-red">
+        <h3>Receipt</h3>
+        <ul>
+          <li>สร้าง receipt จาก posted payment</li>
+          <li>กันการออกใบเสร็จซ้ำของ payment เดียวกัน</li>
+          <li>หน้า detail/print แสดงรายการสินค้าที่ชำระ ไม่ใช่เฉพาะเลข invoice</li>
+          <li>สรุปยอด invoice, paid-to-date, remaining balance และยอด receipt</li>
+          <li>Cancel receipt โดยไม่กระทบยอด invoice/payment เดิม</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3>Sales Workflow ตัวอย่างสำหรับเดโม</h3>
+      <div class="flow">
+        <div class="flow-line"><div class="step-no">1</div><div class="step-copy"><strong>สร้าง Quotation</strong><span>เลือกลูกค้า เลือกสินค้า ตรวจ branch stock และพิมพ์เอกสารเสนอราคา</span></div></div>
+        <div class="flow-line"><div class="step-no">2</div><div class="step-copy"><strong>Approve และ Convert</strong><span>อนุมัติ quotation แล้วแปลงเป็น draft invoice พร้อม reference กลับไปยัง quotation</span></div></div>
+        <div class="flow-line"><div class="step-no">3</div><div class="step-copy"><strong>Issue Invoice</strong><span>เลือก serial ที่ขายจริง ระบบตัด stock balance และผูก serial กับ customer</span></div></div>
+        <div class="flow-line"><div class="step-no">4</div><div class="step-copy"><strong>รับเงินและออก Receipt</strong><span>บันทึก payment, allocate invoice, generate receipt และพิมพ์ใบเสร็จ</span></div></div>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>2</span></div>
+  </section>
+
+  <section class="page">
+    <h2>Purchasing & Receiving</h2>
+    <p class="section-note">ระบบจัดซื้อรองรับการขอซื้อจากสาขา การสร้าง PO กลาง การจัดสรรปลายทางสาขา และการรับสินค้าเข้าคลังตาม allocation ที่กำหนด</p>
+
+    <div class="grid-2">
+      <div class="card accent-blue">
+        <h3>Purchase Request</h3>
+        <ul>
+          <li>แต่ละสาขาสร้างคำขอซื้อสินค้าได้</li>
+          <li>มี workflow draft, submit, approve, reject, cancel</li>
+          <li>PO สามารถอ้างอิง source จาก PR หลายรายการ</li>
+          <li>ติดตามว่า PR line ถูกนำไปจัดซื้อแล้วหรือยัง</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Purchase Order</h3>
+        <ul>
+          <li>สร้าง PO จาก supplier พร้อม searchable item picker</li>
+          <li>รองรับ VAT 7% หรือ No VAT</li>
+          <li>Approve, cancel, print และ audit history</li>
+          <li>จัดสรรสินค้าปลายทางให้หลายสาขาได้ใน PO เดียว</li>
+          <li>ปุ่ม Receive Goods แยกตาม allocation branch ที่ยังรับไม่ครบ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent-gold">
+        <h3>Receiving</h3>
+        <ul>
+          <li>รับสินค้าจาก PO ตามสาขาที่จัดสรร</li>
+          <li>บันทึก draft ก่อน post ได้</li>
+          <li>กรอก serial แยกช่องสำหรับสินค้าที่ต้องคุม serial</li>
+          <li>กำหนด supplier/customer warranty dates ตอนรับสินค้า</li>
+          <li>Post receiving เพิ่ม stock balance และสร้าง serial number</li>
+          <li>Cancel receiving คืนผลกระทบ stock และ serial อย่างมีเงื่อนไข</li>
+        </ul>
+      </div>
+      <div class="card accent-red">
+        <h3>Traceability</h3>
+        <ul>
+          <li>รู้ว่าสินค้ามาจาก supplier/PO/receiving ใด</li>
+          <li>รู้ว่าสินค้าถูกส่งเข้าหรือจัดสรรให้สาขาใด</li>
+          <li>ประวัติเอกสารแสดง created, updated, approved, posted, cancelled</li>
+          <li>รองรับการสอบกลับจาก stock ledger และ serial inquiry</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3>Purchasing Workflow ตัวอย่างสำหรับเดโม</h3>
+      <div class="flow">
+        <div class="flow-line"><div class="step-no">1</div><div class="step-copy"><strong>Branch ทำ Purchase Request</strong><span>สาขาขอซื้อสินค้า โดยมี branch context ชัดเจน</span></div></div>
+        <div class="flow-line"><div class="step-no">2</div><div class="step-copy"><strong>Admin รวมคำขอเป็น PO</strong><span>เลือก supplier และจัดสรรจำนวนสินค้าเข้าหลายสาขา</span></div></div>
+        <div class="flow-line"><div class="step-no">3</div><div class="step-copy"><strong>Warehouse รับสินค้า</strong><span>รับเข้าตาม allocation branch พร้อมกรอก serial/warranty</span></div></div>
+        <div class="flow-line"><div class="step-no">4</div><div class="step-copy"><strong>Post Receiving</strong><span>ระบบเพิ่ม stock balance, serial number และ stock movement</span></div></div>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>3</span></div>
+  </section>
+
+  <section class="page">
+    <h2>Inventory & Branch Stock</h2>
+    <p class="section-note">หัวใจของระบบ inventory คือการแยก stock ตามสาขา ติดตาม serial รายเครื่อง และมี ledger สำหรับดูประวัติความเคลื่อนไหวของสินค้าแบบตรวจสอบได้</p>
+
+    <div class="grid-3">
+      <div class="card accent">
+        <h3>Branch Stock</h3>
+        <ul>
+          <li>Stock balance แยกตาม Branch + Item</li>
+          <li>Serial number มี BranchId ของตำแหน่งปัจจุบัน</li>
+          <li>Invoice ตัด stock จาก branch ของเอกสาร</li>
+          <li>Receiving รับ stock เข้าสาขาที่เลือก</li>
+        </ul>
+      </div>
+      <div class="card accent-blue">
+        <h3>Stock Inquiry</h3>
+        <ul>
+          <li>ค้นหาตาม item code, item name, part number</li>
+          <li>ดู stock ตาม branch</li>
+          <li>สินค้าที่คุม serial คำนวณจาก serial ที่ InStock จริง</li>
+          <li>ดู serial detail ของสินค้ารายการหนึ่งได้</li>
+        </ul>
+      </div>
+      <div class="card accent-gold">
+        <h3>Serial Inquiry</h3>
+        <ul>
+          <li>ค้นหาด้วย serial no, item code, part number</li>
+          <li>ดูสถานะ serial เช่น InStock, Sold, CustomerClaim</li>
+          <li>เห็นลูกค้า invoice และ warranty ที่เกี่ยวข้อง</li>
+          <li>เริ่ม claim จาก serial ที่ขายแล้วได้</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent-red">
+        <h3>Stock Transfer</h3>
+        <ul>
+          <li>โอนสินค้าจากสาขาหนึ่งไปอีกสาขาหนึ่ง</li>
+          <li>รองรับสินค้า serial-controlled พร้อม serial picker</li>
+          <li>Post transfer ลด stock สาขาต้นทาง เพิ่ม stock สาขาปลายทาง</li>
+          <li>Cancel transfer คืน balance และ serial branch กลับต้นทาง</li>
+          <li>Branch user โอนได้เฉพาะ stock จากสาขาของตน</li>
+        </ul>
+      </div>
+      <div class="card accent">
+        <h3>Stock Issue / Internal Use</h3>
+        <ul>
+          <li>เบิกสินค้าออกจากคลังโดยไม่ใช่การขาย</li>
+          <li>ประเภทการเบิก: Internal Use, Damaged, Demo, Adjustment, Other</li>
+          <li>Post issue ลด stock และเปลี่ยน serial status เป็น Issued</li>
+          <li>Cancel issue คืน stock และ serial เป็น InStock เมื่อยังถูกต้อง</li>
+          <li>ใช้ดูปริมาณเบิกใช้งานจริงผ่าน Stock Ledger ได้</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent-blue">
+        <h3>Stock Ledger</h3>
+        <ul>
+          <li>ดูประวัติ movement รายสินค้า รายสาขา รายวันที่</li>
+          <li>แสดง IN/OUT, movement type, reference document และผู้ทำรายการ</li>
+          <li>มี filter สำหรับ receiving, invoice, transfer, issue, claim</li>
+          <li>สรุป Net Issued Qty สำหรับตอบคำถามว่าสินค้าถูกเบิกใช้ไปเท่าไร</li>
+        </ul>
+      </div>
+      <div class="card accent-gold">
+        <h3>Stock Audit</h3>
+        <ul>
+          <li>ตรวจ consistency ระหว่าง StockBalances, SerialNumbers และ StockMovements</li>
+          <li>แสดงสถานะ OK หรือ Mismatch ต่อ Branch + Item</li>
+          <li>มี difference columns สำหรับ balance vs ledger และ balance vs serial</li>
+          <li>เป็นหน้าอ่านอย่างเดียว ไม่มี auto-fix เพื่อความปลอดภัย</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>4</span></div>
+  </section>
+
+  <section class="page">
+    <h2>Claims, Warranty & After-Sales Service</h2>
+    <p class="section-note">BizCore รองรับงานเคลมสินค้าแบบผูกกับ serial number ทำให้รู้ว่าสินค้าชิ้นไหนขายให้ลูกค้าคนใด อยู่ใน warranty หรือไม่ และส่งต่อ supplier claim อย่างไร</p>
+
+    <div class="grid-2">
+      <div class="card accent-red">
+        <h3>Customer Claim / RMA</h3>
+        <ul>
+          <li>สร้าง claim จาก serial ที่ขายแล้วเท่านั้น</li>
+          <li>ตรวจ customer warranty และกัน duplicate open claim</li>
+          <li>Workflow: Open, Receive Item, Received, ReadyToReturn, ReturnedToCustomer, Closed</li>
+          <li>รองรับ repair complete, reject, replacement และ send to supplier</li>
+          <li>ถ้าเปลี่ยนสินค้าให้ลูกค้า ระบบตัด stock serial ใหม่และ mark serial เดิมเป็น Replaced</li>
+        </ul>
+      </div>
+      <div class="card accent-blue">
+        <h3>Supplier Claim</h3>
+        <ul>
+          <li>สร้างจาก customer claim ได้โดยอัตโนมัติเมื่อ Send To Supplier</li>
+          <li>ตรวจ supplier warranty ตามวันที่ส่งเคลม</li>
+          <li>รองรับ Mark Sent, Receive Repaired Original, Receive Replacement, Supplier Rejected, Close Claim</li>
+          <li>ผลลัพธ์ supplier claim กระทบ serial status และ stock movement อย่างชัดเจน</li>
+          <li>มี link กลับไปยัง customer claim ที่เกี่ยวข้อง</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3>Claim Handling ที่รองรับ</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>กรณี</th>
+            <th>สิ่งที่ระบบทำ</th>
+            <th>ผลลัพธ์ด้าน Stock / Serial</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ซ่อมสินค้าตัวเดิมแล้วคืนลูกค้า</td>
+            <td>รับ item, mark repair complete, return, close</td>
+            <td>serial เดิมกลับสถานะ Sold เมื่อคืนลูกค้าแล้ว</td>
+          </tr>
+          <tr>
+            <td>เปลี่ยนตัวใหม่ให้ลูกค้า</td>
+            <td>เลือก replacement serial ที่อยู่ใน stock สาขาเดียวกัน</td>
+            <td>serial ใหม่เป็น Sold, serial เดิมเป็น Replaced, stock ลดลง</td>
+          </tr>
+          <tr>
+            <td>ส่งซ่อม supplier</td>
+            <td>สร้าง supplier claim link และติดตามผล supplier</td>
+            <td>serial เดิมเปลี่ยนตามสถานะ claim และผลรับกลับ</td>
+          </tr>
+          <tr>
+            <td>supplier เปลี่ยนสินค้าตัวใหม่</td>
+            <td>รับ replacement จาก supplier เป็น serial ใหม่</td>
+            <td>เพิ่ม stock และบันทึก SupplierReplacement movement</td>
+          </tr>
+          <tr>
+            <td>supplier reject claim</td>
+            <td>บันทึกผล reject พร้อมวันที่และ remark</td>
+            <td>serial เดิมเป็น Defective เพื่อไม่ให้ขายต่อผิดพลาด</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent">
+        <h3>Customer Claim UX</h3>
+        <ul>
+          <li>หน้ารายละเอียดแยกส่วน lifecycle action และ claim handling</li>
+          <li>มี form card สำหรับ send to supplier, replace, reject, repair complete</li>
+          <li>action ที่ยังทำไม่ได้แสดงเหตุผลใกล้ action นั้น</li>
+          <li>รองรับวันที่ย้อนหลังสำหรับ operation สำคัญ</li>
+        </ul>
+      </div>
+      <div class="card accent-gold">
+        <h3>Warranty Control</h3>
+        <ul>
+          <li>Customer claim ตรวจ warranty ลูกค้าก่อนรับเคลม</li>
+          <li>Send to supplier ต้องมี SupplierWarrantyEndDate</li>
+          <li>Supplier warranty หมดอายุจะถูก block ที่ server-side</li>
+          <li>warranty dates ยังคง optional ตอนรับ/ขาย แต่จำเป็นเมื่อส่งเคลม supplier</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>5</span></div>
+  </section>
+
+  <section class="page">
+    <h2>Dashboard, Reports & Security</h2>
+    <p class="section-note">สำหรับผู้บริหารและหัวหน้างาน ระบบมีหน้า dashboard และ reports เพื่อดูภาพรวมการขาย การรับเงิน ลูกหนี้ สต็อก งานจัดซื้อ และงานเคลมที่ต้องติดตาม</p>
+
+    <div class="grid-2">
+      <div class="card accent-blue">
+        <h3>Executive Dashboard</h3>
+        <ul>
+          <li>Sales Today</li>
+          <li>Sales This Month</li>
+          <li>Payments This Month</li>
+          <li>Outstanding AR</li>
+          <li>Stock On Hand Qty</li>
+          <li>Low Stock Items</li>
+          <li>Open PO</li>
+          <li>Open Claims</li>
+        </ul>
+        <div class="pill-row">
+          <span class="pill">7-day sales trend</span>
+          <span class="pill">Open claim mix</span>
+          <span class="pill">Recent activity</span>
+          <span class="pill">Attention list</span>
+        </div>
+      </div>
+      <div class="card accent">
+        <h3>Reports</h3>
+        <ul>
+          <li>Filter ตาม date range และ branch</li>
+          <li>Sales report by date/branch</li>
+          <li>Stock balance top items</li>
+          <li>Stock movement summary</li>
+          <li>Customer/Supplier claim summary</li>
+          <li>กราฟ sales และ movement mix โดยไม่พึ่ง external package</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:12px;">
+      <div class="card accent-gold">
+        <h3>User Login & Roles</h3>
+        <ul>
+          <li>Cookie authentication</li>
+          <li>Role-based sidebar และ module access</li>
+          <li>Admin เห็นทุก module</li>
+          <li>Sales เห็นงานขายและการเงิน</li>
+          <li>Warehouse เห็นจัดซื้อ คลัง และ claim</li>
+          <li>Viewer เห็น dashboard/basic authenticated access</li>
+        </ul>
+      </div>
+      <div class="card accent-red">
+        <h3>Branch Access Control</h3>
+        <ul>
+          <li>User ผูกกับ BranchId</li>
+          <li>CanAccessAllBranches สำหรับ admin หรือผู้มีสิทธิ์รวม</li>
+          <li>BranchAdmin ถูกจำกัดให้เห็นเฉพาะสาขาตนเอง</li>
+          <li>ข้อมูล operation เช่น quotation, invoice, receiving, claim ถูก filter ตาม branch</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <h3>Demo Script แนะนำ</h3>
+      <div class="demo-list compact">
+        <div class="demo-item"><strong>1. Dashboard</strong>เริ่มจากภาพรวม KPI, attention list และกราฟ เพื่อให้ลูกค้าเห็น value ทันที</div>
+        <div class="demo-item"><strong>2. Quotation to Receipt</strong>สร้าง quotation, approve, convert, issue invoice, รับเงิน และดู receipt item lines</div>
+        <div class="demo-item"><strong>3. Purchasing to Stock</strong>แสดง PR, PO allocation, receiving และ stock balance ที่เพิ่มใน branch</div>
+        <div class="demo-item"><strong>4. Inventory Control</strong>เปิด stock inquiry, serial inquiry, stock ledger และ stock audit</div>
+        <div class="demo-item"><strong>5. Branch Operation</strong>แสดง user สาขาเห็นข้อมูลเฉพาะ branch และ admin เห็น all branches</div>
+        <div class="demo-item"><strong>6. Claim Workflow</strong>เริ่ม customer claim จาก serial, ส่ง supplier, รับผล หรือเปลี่ยนสินค้าให้ลูกค้า</div>
+      </div>
+    </div>
+
+    <div class="footer"><span>BizCore Feature Summary</span><span>6</span></div>
+  </section>
+</body>
+</html>

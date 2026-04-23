@@ -1,0 +1,135 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockIssueHeader>
+
+@{
+    ViewData["Title"] = "Stock Issues";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var issueType = ViewData["IssueType"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Module</div>
+        <h1 class="page-title">Stock Issues</h1>
+        <p class="page-subtitle">Issue stock from a branch for internal use, damage, demo, adjustment, or other reasons.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Issue</a>
+    </div>
+</div>
+
+@if (TempData["StockIssueNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Issue Register</h2>
+            <p class="section-subtitle">Track non-sales stock deductions by branch.</p>
+        </div>
+        <div class="table-meta">@Model.TotalCount records</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Issue no., branch, item, purpose, or remark" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
+                    <option value="Posted" selected="@(status == "Posted")">Posted</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="issueType">Type</label>
+                <select id="issueType" name="issueType" class="form-select">
+                    <option value="">All</option>
+                    <option value="InternalUse" selected="@(issueType == "InternalUse")">Internal Use</option>
+                    <option value="Damaged" selected="@(issueType == "Damaged")">Damaged</option>
+                    <option value="Demo" selected="@(issueType == "Demo")">Demo</option>
+                    <option value="Adjustment" selected="@(issueType == "Adjustment")">Adjustment</option>
+                    <option value="Other" selected="@(issueType == "Other")">Other</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Issue No.</th>
+                        <th>Date</th>
+                        <th>Branch</th>
+                        <th>Type</th>
+                        <th>Lines</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var issue in Model)
+                    {
+                        var canPost = issue.Status == "Draft" && issue.StockIssueDetails.Any();
+                        var postBlockedReason = issue.Status == "Draft"
+                            ? "Post is blocked because no issue lines exist."
+                            : $"Post is available only for Draft stock issues. Current status is {issue.Status}.";
+                        <tr>
+                            <td><span class="code-chip">@issue.IssueNo</span></td>
+                            <td>@issue.IssueDate.ToString("dd MMM yyyy")</td>
+                            <td>@(issue.Branch?.BranchName ?? "-")</td>
+                            <td>@issue.IssueType</td>
+                            <td>@issue.StockIssueDetails.Count</td>
+                            <td>@issue.StockIssueDetails.Sum(x => x.Qty).ToString("N2")</td>
+                            <td><span class="status-pill active">@issue.Status</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@issue.StockIssueId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @if (canPost)
+                                    {
+                                        <form asp-action="Post" asp-route-id="@issue.StockIssueId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Post</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@postBlockedReason">Post</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="table-empty">No stock issues yet.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

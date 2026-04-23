@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Warehouse")]
+[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
 public class SupplierClaimsController : CrudControllerBase
 {
     private static readonly string[] ActiveCustomerClaimStatuses =
@@ -31,11 +31,18 @@ public class SupplierClaimsController : CrudControllerBase
     {
         var query = _context.SerialClaimLogs
             .AsNoTracking()
+            .Include(x => x.Branch)
             .Include(x => x.CustomerClaimHeader)
             .Include(x => x.Supplier)
             .Include(x => x.SerialNumber)
                 .ThenInclude(x => x!.Item)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -131,6 +138,7 @@ public class SupplierClaimsController : CrudControllerBase
         {
             SerialId = serial.SerialId,
             SupplierId = serial.SupplierId!.Value,
+            BranchId = serial.BranchId,
             ClaimDate = model.ClaimDate.Date,
             ProblemDescription = string.IsNullOrWhiteSpace(model.ProblemDescription) ? null : model.ProblemDescription.Trim(),
             ClaimStatus = model.ClaimStatus,
@@ -154,6 +162,7 @@ public class SupplierClaimsController : CrudControllerBase
 
         var claim = await _context.SerialClaimLogs
             .AsNoTracking()
+            .Include(x => x.Branch)
             .Include(x => x.CustomerClaimHeader)
                 .ThenInclude(x => x!.CustomerClaimDetails)
             .Include(x => x.Supplier)
@@ -162,7 +171,7 @@ public class SupplierClaimsController : CrudControllerBase
             .Include(x => x.SupplierReplacementSerialNumber)
             .FirstOrDefaultAsync(x => x.SerialClaimLogId == id.Value);
 
-        return claim is null ? NotFound() : View(claim);
+        return claim is null || !CanAccessBranch(claim.BranchId) ? NotFound() : View(claim);
     }
 
     [HttpPost]
@@ -219,13 +228,27 @@ public class SupplierClaimsController : CrudControllerBase
 
             if (claim.CustomerClaimHeader is not null && ActiveCustomerClaimStatuses.Contains(claim.CustomerClaimHeader.Status))
             {
-                    claim.SerialNumber.Status = HasCustomerReplacement(claim.CustomerClaimHeader) ? "InStock" : "CustomerClaim";
-                    if (!HasCustomerReplacement(claim.CustomerClaimHeader))
-                    {
-                    claim.CustomerClaimHeader.Status = "Open";
+                var customerAlreadyReceivedReplacement = HasCustomerReplacement(claim.CustomerClaimHeader);
+                claim.SerialNumber.Status = customerAlreadyReceivedReplacement ? "InStock" : "CustomerClaim";
+                if (!customerAlreadyReceivedReplacement)
+                {
+                    claim.CustomerClaimHeader.Status = "ReadyToReturn";
                     claim.CustomerClaimHeader.ResolvedDate ??= actionDate;
                     claim.CustomerClaimHeader.UpdatedDate = now;
                     claim.CustomerClaimHeader.ResolutionRemark ??= "Original serial repaired by supplier and ready to return.";
+                }
+                else if (claim.SerialNumber.Item?.TrackStock == true)
+                {
+                    claim.SerialNumber.Item.CurrentStock += 1;
+                    await AdjustStockBalanceAsync(claim.SerialNumber.BranchId ?? claim.BranchId, claim.SerialNumber.ItemId, 1m);
+                    AddStockMovement(
+                        claim,
+                        claim.SerialNumber.ItemId,
+                        claim.SerialNumber.SerialId,
+                        claim.SerialNumber.BranchId ?? claim.BranchId,
+                        1m,
+                        "SupplierRepairReturn",
+                        "Supplier repaired original returned to stock after customer replacement.");
                 }
             }
             else
@@ -298,7 +321,8 @@ public class SupplierClaimsController : CrudControllerBase
                 SerialNo = serialNo,
                 Status = "InStock",
                 SupplierId = claim.SupplierId,
-                SupplierWarrantyStartDate = supplierWarrantyStartDate?.Date ?? DateTime.Today,
+                BranchId = claim.BranchId ?? claim.SerialNumber.BranchId,
+                SupplierWarrantyStartDate = supplierWarrantyStartDate?.Date,
                 SupplierWarrantyEndDate = supplierWarrantyEndDate?.Date,
                 CreatedDate = now
             };
@@ -315,6 +339,16 @@ public class SupplierClaimsController : CrudControllerBase
             if (claim.SerialNumber.Item is not null && claim.SerialNumber.Item.TrackStock)
             {
                 claim.SerialNumber.Item.CurrentStock += 1;
+                await AdjustStockBalanceAsync(replacement.BranchId, replacement.ItemId, 1m);
+                AddStockMovement(
+                    claim,
+                    replacement.ItemId,
+                    null,
+                    replacement.BranchId,
+                    1m,
+                    "SupplierReplacement",
+                    $"Supplier replacement serial {replacement.SerialNo} received into stock.",
+                    replacement);
             }
 
             await _context.SaveChangesAsync();
@@ -375,6 +409,12 @@ public class SupplierClaimsController : CrudControllerBase
             .Include(x => x.Supplier)
             .Where(x => x.SerialId == serialId);
 
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
+
         if (!trackChanges)
         {
             query = query.AsNoTracking();
@@ -385,12 +425,15 @@ public class SupplierClaimsController : CrudControllerBase
 
     private Task<SerialClaimLog?> GetTrackedClaimAsync(int id)
     {
+        var canAccessAllBranches = CurrentUserCanAccessAllBranches();
+        var branchId = CurrentBranchId();
         return _context.SerialClaimLogs
             .Include(x => x.CustomerClaimHeader)
                 .ThenInclude(x => x!.CustomerClaimDetails)
             .Include(x => x.SerialNumber)
                 .ThenInclude(x => x!.Item)
-            .FirstOrDefaultAsync(x => x.SerialClaimLogId == id);
+            .FirstOrDefaultAsync(x => x.SerialClaimLogId == id &&
+                (canAccessAllBranches || x.BranchId == branchId));
     }
 
     private async Task<IActionResult> ApplySimpleWorkflowAsync(
@@ -448,6 +491,57 @@ public class SupplierClaimsController : CrudControllerBase
             : $"{claim.Remark}{Environment.NewLine}{trimmed}";
     }
 
+    private async Task AdjustStockBalanceAsync(int? branchId, int itemId, decimal qtyDelta)
+    {
+        if (!branchId.HasValue || qtyDelta == 0)
+        {
+            return;
+        }
+
+        var balance = await _context.StockBalances
+            .FirstOrDefaultAsync(x => x.BranchId == branchId.Value && x.ItemId == itemId);
+
+        if (balance is null)
+        {
+            balance = new StockBalance
+            {
+                BranchId = branchId.Value,
+                ItemId = itemId,
+                QtyOnHand = 0
+            };
+            _context.StockBalances.Add(balance);
+        }
+
+        balance.QtyOnHand += qtyDelta;
+    }
+
+    private void AddStockMovement(
+        SerialClaimLog claim,
+        int itemId,
+        int? serialId,
+        int? toBranchId,
+        decimal qty,
+        string movementType,
+        string remark,
+        SerialNumber? serialNumber = null)
+    {
+        _context.StockMovements.Add(new StockMovement
+        {
+            MovementDate = claim.ReceivedDate?.Date ?? DateTime.Today,
+            MovementType = movementType,
+            ReferenceType = "SupplierClaim",
+            ReferenceId = claim.SerialClaimLogId,
+            ItemId = itemId,
+            SerialId = serialId,
+            SerialNumber = serialNumber,
+            ToBranchId = toBranchId,
+            Qty = qty,
+            Remark = remark,
+            CreatedByUserId = CurrentUserId(),
+            CreatedDate = DateTime.UtcNow
+        });
+    }
+
     private static SupplierClaimFormViewModel BuildFormModel(SerialNumber serial)
     {
         var model = new SupplierClaimFormViewModel();
@@ -471,14 +565,7 @@ public class SupplierClaimsController : CrudControllerBase
 
     private static void ApplyClaimBlockState(SupplierClaimFormViewModel model, SerialNumber serial)
     {
-        if (!serial.SupplierWarrantyEndDate.HasValue)
-        {
-            model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "Supplier warranty is missing. Claim creation is not allowed for this serial.";
-            return;
-        }
-
-        if (serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
+        if (serial.SupplierWarrantyEndDate.HasValue && serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
         {
             model.IsClaimBlocked = true;
             model.ClaimBlockMessage = "Supplier warranty has expired. Claim creation is not allowed for this serial.";
@@ -499,20 +586,17 @@ public class SupplierClaimsController : CrudControllerBase
 
     private void ValidateClaim(SupplierClaimFormViewModel model, SerialNumber serial)
     {
+        if (!CanAccessBranch(serial.BranchId))
+        {
+            ModelState.AddModelError(string.Empty, "You cannot create a supplier claim for another branch.");
+        }
+
         if (!serial.SupplierId.HasValue)
         {
             ModelState.AddModelError(string.Empty, "Selected serial does not have a supplier.");
         }
 
-        if (!serial.SupplierWarrantyEndDate.HasValue)
-        {
-            model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "Supplier warranty is missing. Claim creation is not allowed for this serial.";
-            ModelState.AddModelError(string.Empty, model.ClaimBlockMessage);
-            return;
-        }
-
-        if (serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
+        if (serial.SupplierWarrantyEndDate.HasValue && serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
         {
             model.IsClaimBlocked = true;
             model.ClaimBlockMessage = "Supplier warranty has expired. Claim creation is not allowed for this serial.";
@@ -524,9 +608,14 @@ public class SupplierClaimsController : CrudControllerBase
             ModelState.AddModelError(nameof(model.ClaimDate), "Claim date cannot be earlier than the supplier warranty start date.");
         }
 
-        if (model.ClaimDate.Date > serial.SupplierWarrantyEndDate.Value.Date)
+        if (serial.SupplierWarrantyEndDate.HasValue && model.ClaimDate.Date > serial.SupplierWarrantyEndDate.Value.Date)
         {
             ModelState.AddModelError(nameof(model.ClaimDate), "Claim date must be within the supplier warranty period.");
         }
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
     }
 }

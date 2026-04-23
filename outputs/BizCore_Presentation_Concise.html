@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BizCore Presentation</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color: #162033;
+      background: #0f172a;
+    }
+
+    .slide {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 7vh 8vw;
+      background: #f7f9fc;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide:nth-child(even) {
+      background: #ffffff;
+    }
+
+    .cover,
+    .demo {
+      color: #ffffff;
+      background:
+        linear-gradient(135deg, rgba(13, 38, 78, 0.96), rgba(30, 112, 105, 0.92)),
+        #10264f;
+    }
+
+    .eyebrow {
+      color: #2c7a7b;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .cover .eyebrow,
+    .demo .eyebrow {
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(54px, 8vw, 108px);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 24px;
+      color: #10264f;
+      font-size: clamp(34px, 4.5vw, 62px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .cover h2,
+    .demo h2 {
+      color: #ffffff;
+    }
+
+    .cover h2 {
+      font-size: clamp(28px, 4vw, 52px);
+      max-width: 980px;
+      margin-top: 24px;
+    }
+
+    p {
+      margin: 0;
+      color: #536174;
+      font-size: clamp(18px, 2vw, 25px);
+      max-width: 980px;
+      line-height: 1.45;
+    }
+
+    .cover p,
+    .demo p {
+      color: rgba(255, 255, 255, 0.78);
+      margin-top: 22px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 30px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #dfe7f0;
+      border-radius: 8px;
+      padding: 24px;
+      min-height: 170px;
+      box-shadow: 0 18px 50px rgba(16, 38, 79, 0.08);
+    }
+
+    .card strong {
+      display: block;
+      color: #10264f;
+      font-size: clamp(22px, 2.2vw, 32px);
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+
+    .card span {
+      color: #536174;
+      font-size: clamp(16px, 1.45vw, 20px);
+      line-height: 1.45;
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 34px;
+      margin: 20px 0 0;
+      padding: 0;
+      list-style: none;
+      max-width: 1100px;
+    }
+
+    .feature-list li {
+      font-size: clamp(20px, 2vw, 28px);
+      line-height: 1.25;
+      color: #26364c;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .feature-list li::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2c7a7b;
+      position: absolute;
+      left: 0;
+      top: 0.48em;
+    }
+
+    .demo .feature-list li {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .demo .feature-list li::before {
+      background: #f3c96b;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 32px;
+      max-width: 1200px;
+    }
+
+    .step {
+      border-top: 5px solid #2c7a7b;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 145px;
+      box-shadow: 0 14px 35px rgba(16, 38, 79, 0.08);
+      position: relative;
+    }
+
+    .step::after {
+      content: "→";
+      position: absolute;
+      right: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #2c7a7b;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .step b {
+      color: #10264f;
+      display: block;
+      font-size: clamp(20px, 1.9vw, 26px);
+      margin-bottom: 8px;
+    }
+
+    .step small {
+      color: #5a687a;
+      font-size: clamp(15px, 1.4vw, 18px);
+      line-height: 1.4;
+    }
+
+    .workflow-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 24px;
+      max-width: 1180px;
+    }
+
+    .lane {
+      background: #ffffff;
+      border: 1px solid #dfe7f0;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(16, 38, 79, 0.08);
+    }
+
+    .lane-title {
+      color: #10264f;
+      font-size: clamp(22px, 2vw, 30px);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .lane-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .node {
+      background: #edf6f6;
+      border: 1px solid #cde4e2;
+      color: #1d5555;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: clamp(14px, 1.35vw, 18px);
+      white-space: nowrap;
+    }
+
+    .arrow {
+      color: #7c8a9c;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .branch-note {
+      margin-top: 28px;
+      padding: 18px 22px;
+      border-left: 6px solid #b8872f;
+      background: #fff8e8;
+      color: #5c4a21;
+      font-size: clamp(18px, 1.8vw, 24px);
+      max-width: 1120px;
+      border-radius: 8px;
+    }
+
+    .slide-no {
+      position: absolute;
+      right: 36px;
+      bottom: 28px;
+      color: #8b98aa;
+      font-size: 14px;
+    }
+
+    .demo .slide-no,
+    .cover .slide-no {
+      color: rgba(255, 255, 255, 0.52);
+    }
+
+    @media (max-width: 900px) {
+      .slide {
+        padding: 56px 24px;
+      }
+
+      .grid,
+      .grid.two,
+      .flow,
+      .feature-list,
+      .workflow-map {
+        grid-template-columns: 1fr;
+      }
+
+      .card,
+      .step {
+        min-height: auto;
+      }
+
+      .step::after {
+        content: "↓";
+        right: 22px;
+        top: auto;
+        bottom: -24px;
+        transform: none;
+      }
+    }
+
+    @media print {
+      html {
+        scroll-snap-type: none;
+      }
+
+      .slide {
+        height: 100vh;
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="slide cover">
+    <div class="eyebrow">Feature Summary</div>
+    <h1>BizCore</h1>
+    <h2>ระบบขาย จัดซื้อ คลังสินค้า และงานเคลม สำหรับธุรกิจหลายสาขา</h2>
+    <p>เอกสารเชื่อมกัน ตรวจสอบย้อนหลังได้ และควบคุม stock / serial number ได้ตั้งแต่รับเข้า ขาย โอน เบิกใช้ จนถึงงานเคลม</p>
+    <div class="slide-no">1 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Big Picture</div>
+    <h2>ระบบเดียว เห็นภาพทั้งธุรกิจ</h2>
+    <div class="grid">
+      <div class="card"><strong>Sales</strong><span>Quotation, Invoice, Payment, Receipt พร้อมสถานะเอกสารและยอดคงเหลือ</span></div>
+      <div class="card"><strong>Purchasing</strong><span>Purchase Request, PO, Receiving และการจัดสรรรับสินค้าเข้าตามสาขา</span></div>
+      <div class="card"><strong>Inventory</strong><span>Branch stock, serial control, transfer, issue, ledger และ audit</span></div>
+    </div>
+    <div class="slide-no">2 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Workflow Map</div>
+    <h2>ภาพรวม workflow หลัก</h2>
+    <div class="workflow-map">
+      <div class="lane">
+        <div class="lane-title">Sales to Cash</div>
+        <div class="lane-flow">
+          <span class="node">Quotation</span><span class="arrow">→</span>
+          <span class="node">Approve</span><span class="arrow">→</span>
+          <span class="node">Invoice</span><span class="arrow">→</span>
+          <span class="node">Payment</span><span class="arrow">→</span>
+          <span class="node">Receipt</span>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Procure to Stock</div>
+        <div class="lane-flow">
+          <span class="node">PR</span><span class="arrow">→</span>
+          <span class="node">PO</span><span class="arrow">→</span>
+          <span class="node">Allocation</span><span class="arrow">→</span>
+          <span class="node">Receiving</span><span class="arrow">→</span>
+          <span class="node">Stock</span>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Inventory Control</div>
+        <div class="lane-flow">
+          <span class="node">Receive</span><span class="arrow">→</span>
+          <span class="node">Transfer</span><span class="arrow">→</span>
+          <span class="node">Issue</span><span class="arrow">→</span>
+          <span class="node">Ledger</span><span class="arrow">→</span>
+          <span class="node">Audit</span>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">After-Sales Claim</div>
+        <div class="lane-flow">
+          <span class="node">Customer Claim</span><span class="arrow">→</span>
+          <span class="node">Receive Item</span><span class="arrow">→</span>
+          <span class="node">Repair / Replace</span><span class="arrow">→</span>
+          <span class="node">Return</span><span class="arrow">→</span>
+          <span class="node">Close</span>
+        </div>
+      </div>
+    </div>
+    <div class="branch-note">ทุก workflow ผูกกับ Branch, Stock Movement และ Serial Status เพื่อให้ตรวจสอบย้อนหลังได้</div>
+    <div class="slide-no">3 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Sales Workflow</div>
+    <h2>ตั้งแต่เสนอราคา ถึงรับเงิน</h2>
+    <div class="flow">
+      <div class="step"><b>Quotation</b><small>เลือกลูกค้า เลือกสินค้า ตรวจ branch stock และพิมพ์ใบเสนอราคา</small></div>
+      <div class="step"><b>Approve / Convert</b><small>อนุมัติ quotation แล้วแปลงเป็น draft invoice พร้อม reference กลับ</small></div>
+      <div class="step"><b>Issue Invoice</b><small>เลือก serial จริงก่อนตัด stock และผูกสินค้าเข้ากับลูกค้า</small></div>
+      <div class="step"><b>Payment / Receipt</b><small>รับชำระ allocate invoice และออกใบเสร็จพร้อม item lines</small></div>
+    </div>
+    <div class="slide-no">4 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Purchasing Workflow</div>
+    <h2>จัดซื้อแบบเห็นต้นทางและปลายทาง</h2>
+    <div class="flow">
+      <div class="step"><b>Purchase Request</b><small>สาขาขอซื้อสินค้า และส่งให้ผู้มีสิทธิ์พิจารณา</small></div>
+      <div class="step"><b>Purchase Order</b><small>Admin รวมคำขอ เลือก supplier และออก PO</small></div>
+      <div class="step"><b>Delivery Allocation</b><small>กำหนดว่าสินค้าจำนวนใดต้องรับเข้าสาขาใด</small></div>
+      <div class="step"><b>Receiving</b><small>รับของ สร้าง serial/warranty และเพิ่ม stock ตาม branch</small></div>
+    </div>
+    <div class="slide-no">5 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Inventory Workflow</div>
+    <h2>ควบคุม stock รายสาขาและราย serial</h2>
+    <div class="flow">
+      <div class="step"><b>Stock In</b><small>Receiving หรือ supplier replacement เพิ่ม stock เข้า branch</small></div>
+      <div class="step"><b>Move / Use</b><small>Transfer ระหว่างสาขา หรือ Issue เพื่อใช้งานภายใน</small></div>
+      <div class="step"><b>Stock Out</b><small>Invoice issue, stock issue หรือ replacement ลด stock</small></div>
+      <div class="step"><b>Trace</b><small>Stock Inquiry, Serial Inquiry, Ledger และ Audit ใช้ตรวจสอบ</small></div>
+    </div>
+    <div class="slide-no">6 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Claim Workflow</div>
+    <h2>งานเคลมผูกกับ serial จริง</h2>
+    <div class="flow">
+      <div class="step"><b>Customer Claim</b><small>เริ่มจาก serial ที่ขายแล้ว และตรวจ customer warranty</small></div>
+      <div class="step"><b>Receive Item</b><small>รับสินค้ากลับจากลูกค้า แล้วเลือกวิธีจัดการ claim</small></div>
+      <div class="step"><b>Handle Claim</b><small>ซ่อมเอง เปลี่ยนสินค้า reject หรือส่ง supplier claim</small></div>
+      <div class="step"><b>Return / Close</b><small>คืนลูกค้า ปิดเคลม และบันทึกผลต่อ stock/serial/ledger</small></div>
+    </div>
+    <div class="slide-no">7 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Core Features</div>
+    <h2>Feature สำคัญที่ควรโชว์</h2>
+    <ul class="feature-list">
+      <li>Role-based menu และสิทธิ์ตามสาขา</li>
+      <li>เลขที่เอกสารอัตโนมัติและสถานะ workflow</li>
+      <li>Stock balance แยก Branch + Item</li>
+      <li>Serial number lifecycle ตั้งแต่รับเข้า ขาย เคลม ถึงปิดงาน</li>
+      <li>Document history และ stock movement ตรวจสอบย้อนหลัง</li>
+      <li>Print pages สำหรับเอกสารขาย จัดซื้อ และการเงิน</li>
+    </ul>
+    <div class="slide-no">8 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Management View</div>
+    <h2>Dashboard และ Reports พร้อมใช้งาน</h2>
+    <div class="grid two">
+      <div class="card"><strong>Dashboard</strong><span>Sales Today, Sales This Month, Payments, Outstanding AR, Stock, Low Stock, Open PO, Open Claims</span></div>
+      <div class="card"><strong>Reports</strong><span>Sales, Stock Balance, Stock Movement, Customer/Supplier Claim พร้อม filter วันที่และสาขา</span></div>
+    </div>
+    <ul class="feature-list">
+      <li>ผู้บริหารเห็นงานค้างและสถานะสำคัญทันที</li>
+      <li>มีกราฟยอดขายและ movement mix สำหรับนำเสนอ</li>
+    </ul>
+    <div class="slide-no">9 / 11</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Branch Control</div>
+    <h2>เหมาะกับธุรกิจหลายสาขา</h2>
+    <div class="grid two">
+      <div class="card"><strong>Admin / All Branches</strong><span>ดูภาพรวมทุกสาขา สร้าง master data จัดสรร PO และดู reports รวม</span></div>
+      <div class="card"><strong>Branch User</strong><span>เห็นเอกสารและ stock เฉพาะสาขาตนเอง ลดความสับสนและลดความเสี่ยงในการตัด stock ผิดสาขา</span></div>
+    </div>
+    <div class="branch-note">แนวคิดหลัก: 1 Branch = 1 Stock Location ทำให้ระบบเข้าใจง่ายและตรวจสอบง่าย</div>
+    <div class="slide-no">10 / 11</div>
+  </section>
+
+  <section class="slide demo">
+    <div class="eyebrow">Recommended Demo Flow</div>
+    <h2>ลำดับนำเสนอที่กระชับ</h2>
+    <ul class="feature-list">
+      <li>เปิด Dashboard ให้เห็น KPI ภาพรวม</li>
+      <li>ทำ Quotation → Invoice → Payment → Receipt</li>
+      <li>แสดง PR → PO → Receiving → Stock เพิ่ม</li>
+      <li>เปิด Stock Inquiry, Serial Inquiry, Ledger, Audit</li>
+      <li>โชว์ Customer Claim และ Supplier Claim</li>
+      <li>ปิดด้วย Reports ตามสาขาและช่วงวันที่</li>
+    </ul>
+    <div class="slide-no">11 / 11</div>
+  </section>
+</body>
+</html>

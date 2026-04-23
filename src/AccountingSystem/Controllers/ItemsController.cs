@@ -47,7 +47,9 @@ public class ItemsController : CrudControllerBase
             _ => query
         };
 
-        return View(await PaginatedList<Item>.CreateAsync(query.OrderBy(x => x.ItemCode), page, pageSize));
+        var items = await PaginatedList<Item>.CreateAsync(query.OrderBy(x => x.ItemCode), page, pageSize);
+        await PopulateStockBalanceTotalsAsync(items.Items);
+        return View(items);
     }
 
     public async Task<IActionResult> Create()
@@ -138,6 +140,11 @@ public class ItemsController : CrudControllerBase
         }
 
         var item = await _context.Items.FirstOrDefaultAsync(x => x.ItemId == id.Value);
+        if (item is not null)
+        {
+            item.CurrentStock = await GetStockBalanceTotalAsync(item.ItemId);
+        }
+
         return item is null ? NotFound() : View(item);
     }
 
@@ -178,6 +185,40 @@ public class ItemsController : CrudControllerBase
             ModelState.AddModelError(string.Empty, duplicateMessage);
             return false;
         }
+    }
+
+    private async Task PopulateStockBalanceTotalsAsync(IEnumerable<Item> items)
+    {
+        var itemList = items.ToList();
+        var itemIds = itemList.Select(x => x.ItemId).ToList();
+        if (itemIds.Count == 0)
+        {
+            return;
+        }
+
+        var balanceMap = await _context.StockBalances
+            .AsNoTracking()
+            .Where(x => itemIds.Contains(x.ItemId))
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                ItemId = x.Key,
+                Qty = x.Sum(b => b.QtyOnHand)
+            })
+            .ToDictionaryAsync(x => x.ItemId, x => x.Qty);
+
+        foreach (var item in itemList)
+        {
+            item.CurrentStock = balanceMap.TryGetValue(item.ItemId, out var qty) ? qty : 0m;
+        }
+    }
+
+    private async Task<decimal> GetStockBalanceTotalAsync(int itemId)
+    {
+        return await _context.StockBalances
+            .AsNoTracking()
+            .Where(x => x.ItemId == itemId)
+            .SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m;
     }
 
     private void PopulateItemTypeOptions(string? selectedType)

@@ -44,6 +44,7 @@ public class AccountController : Controller
         var username = model.Username.Trim();
         var user = await _context.Users
             .AsNoTracking()
+            .Include(x => x.Branch)
             .FirstOrDefaultAsync(x => x.Username == username && x.IsActive);
 
         if (user is null || !_passwordHashService.VerifyPassword(model.Password, user.PasswordHash))
@@ -57,7 +58,11 @@ public class AccountController : Controller
             new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.GivenName, user.DisplayName),
-            new(ClaimTypes.Role, user.Role)
+            new(ClaimTypes.Role, user.Role),
+            new("BranchId", user.BranchId?.ToString() ?? string.Empty),
+            new("BranchCode", user.Branch?.BranchCode ?? string.Empty),
+            new("BranchName", user.Branch?.BranchName ?? string.Empty),
+            new("CanAccessAllBranches", user.CanAccessAllBranches ? "true" : "false")
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

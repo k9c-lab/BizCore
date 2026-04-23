@@ -1,0 +1,332 @@
+@model BizCore.Models.ViewModels.StockTransferFormViewModel
+
+@{
+    ViewData["Title"] = Model.StockTransferId.HasValue ? "Edit Stock Transfer" : "New Stock Transfer";
+    var formAction = Model.StockTransferId.HasValue ? "Edit" : "Create";
+    var itemOptions = Model.ItemLookup
+        .Select(x => new { x.ItemId, x.DisplayText, x.ItemCode, x.ItemName, x.PartNumber, x.IsSerialControlled })
+        .ToList();
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Module</div>
+        <h1 class="page-title">@ViewData["Title"]</h1>
+        <p class="page-subtitle">Prepare a branch-to-branch stock movement and post when quantities are ready.</p>
+    </div>
+    <div class="page-actions">
+        @if (Model.StockTransferId.HasValue)
+        {
+            <form asp-action="Post" asp-route-id="@Model.StockTransferId.Value" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success">Post Transfer</button>
+            </form>
+            <a asp-action="Details" asp-route-id="@Model.StockTransferId.Value" class="btn btn-outline-secondary">Back to Details</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to Transfers</a>
+        }
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form action="@Url.Action(formAction, Model.StockTransferId.HasValue ? new { id = Model.StockTransferId.Value } : null)" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="StockTransferId" type="hidden" />
+            <input asp-for="Status" type="hidden" />
+
+            <div asp-validation-summary="All" class="text-danger validation-summary-visible mb-3"></div>
+
+            <div class="form-shell">
+                <div class="form-section quotation-header-section">
+                    <div class="form-section-title">Transfer Header</div>
+                    <div class="row g-3 quotation-header-grid">
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="TransferNo" class="form-label"></label>
+                            <input asp-for="TransferNo" class="form-control" readonly />
+                            <span asp-validation-for="TransferNo" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="TransferDate" class="form-label"></label>
+                            <input asp-for="TransferDate" type="date" class="form-control" />
+                            <span asp-validation-for="TransferDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="FromBranchId" class="form-label"></label>
+                            @if (Model.CanAccessAllBranches)
+                            {
+                                <select asp-for="FromBranchId" asp-items="Model.FromBranchOptions" class="form-select">
+                                    <option value="">Select source branch</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="hidden" asp-for="FromBranchId" />
+                                <div class="form-control readonly-detail">@Model.FromBranchName</div>
+                            }
+                            <span asp-validation-for="FromBranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="ToBranchId" class="form-label"></label>
+                            <select asp-for="ToBranchId" asp-items="Model.ToBranchOptions" class="form-select">
+                                <option value="">Select destination branch</option>
+                            </select>
+                            <span asp-validation-for="ToBranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Remark" class="form-label"></label>
+                            <textarea asp-for="Remark" class="form-control" rows="2" maxlength="500"></textarea>
+                            <span asp-validation-for="Remark" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                        <div>
+                            <div class="form-section-title mb-1">Transfer Lines</div>
+                            <div class="table-meta">For serial-controlled items, choose available serials from the source branch.</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addTransferLine">Add Line</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table entity-table quote-editor-table align-middle" id="transferLinesTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 31%;">Item</th>
+                                    <th style="width: 13%;">Qty</th>
+                                    <th style="width: 31%;">Serial Numbers</th>
+                                    <th style="width: 20%;">Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @for (var i = 0; i < Model.Details.Count; i++)
+                            {
+                                <tr>
+                                    <td class="line-number">@(i + 1)</td>
+                                    <td>
+                                        <input type="hidden" asp-for="Details[i].StockTransferDetailId" />
+                                        <input type="hidden" asp-for="Details[i].LineNumber" value="@(i + 1)" />
+                                        <select asp-for="Details[i].ItemId" class="form-select transfer-item-select">
+                                            <option value="">Select item</option>
+                                            @foreach (var item in Model.ItemLookup)
+                                            {
+                                                <option value="@item.ItemId" selected="@(Model.Details[i].ItemId == item.ItemId)">@item.DisplayText</option>
+                                            }
+                                        </select>
+                                        <div class="table-meta transfer-stock-hint">Select item to view source stock.</div>
+                                        <span asp-validation-for="Details[i].ItemId" class="text-danger"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Details[i].Qty" class="form-control text-end" type="number" step="0.01" min="0" />
+                                        <span asp-validation-for="Details[i].Qty" class="text-danger"></span>
+                                    </td>
+                                    <td>
+                                        <textarea asp-for="Details[i].SerialEntryText" class="form-control serial-entry d-none" rows="2"></textarea>
+                                        <div class="serial-picker-panel">
+                                            <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary load-serials-btn">Load Serials</button>
+                                                <span class="table-meta serial-picker-status">Select item and source branch.</span>
+                                            </div>
+                                            <div class="serial-picker-list"></div>
+                                        </div>
+                                        <span asp-validation-for="Details[i].SerialEntryText" class="text-danger"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Details[i].Remark" class="form-control" maxlength="500" />
+                                        <span asp-validation-for="Details[i].Remark" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" name="command" value="SaveDraft" class="btn btn-outline-primary">Save Draft</button>
+                    <button type="submit" name="command" value="Post" class="btn btn-success">Post Transfer</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const stockTransferItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(itemOptions));
+        const buildItemOptions = () => {
+            return ['<option value="">Select item</option>']
+                .concat(stockTransferItems.map(item => `<option value="${item.ItemId}">${item.DisplayText}</option>`))
+                .join('');
+        };
+        const renumberTransferLines = () => {
+            document.querySelectorAll('#transferLinesTable tbody tr').forEach((row, index) => {
+                row.querySelector('.line-number').textContent = index + 1;
+                row.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.name = field.name.replace(/Details\[\d+\]/, `Details[${index}]`);
+                    field.id = field.id.replace(/Details_\d+__/, `Details_${index}__`);
+                });
+                const lineInput = row.querySelector(`input[name="Details[${index}].LineNumber"]`);
+                if (lineInput) {
+                    lineInput.value = index + 1;
+                }
+            });
+        };
+        document.getElementById('addTransferLine')?.addEventListener('click', () => {
+            const tbody = document.querySelector('#transferLinesTable tbody');
+            const index = tbody.querySelectorAll('tr').length;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="line-number">${index + 1}</td>
+                <td>
+                    <input type="hidden" name="Details[${index}].StockTransferDetailId" />
+                    <input type="hidden" name="Details[${index}].LineNumber" value="${index + 1}" />
+                    <select name="Details[${index}].ItemId" class="form-select transfer-item-select">${buildItemOptions()}</select>
+                    <div class="table-meta transfer-stock-hint">Select item to view source stock.</div>
+                </td>
+                <td><input name="Details[${index}].Qty" class="form-control text-end" type="number" step="0.01" min="0" value="0" /></td>
+                <td>
+                    <textarea name="Details[${index}].SerialEntryText" class="form-control serial-entry d-none" rows="2"></textarea>
+                    <div class="serial-picker-panel">
+                        <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary load-serials-btn">Load Serials</button>
+                            <span class="table-meta serial-picker-status">Select item and source branch.</span>
+                        </div>
+                        <div class="serial-picker-list"></div>
+                    </div>
+                </td>
+                <td><input name="Details[${index}].Remark" class="form-control" maxlength="500" /></td>`;
+            tbody.appendChild(row);
+            renumberTransferLines();
+        });
+
+        const getSelectedItem = (row) => {
+            const itemId = Number(row.querySelector('.transfer-item-select')?.value || 0);
+            return stockTransferItems.find(item => Number(item.ItemId) === itemId);
+        };
+        const getSourceBranchId = () => document.getElementById('FromBranchId')?.value || document.querySelector('input[name="FromBranchId"]')?.value || '';
+        const loadStockForRow = async (row) => {
+            const item = getSelectedItem(row);
+            const branchId = getSourceBranchId();
+            const hint = row.querySelector('.transfer-stock-hint');
+            if (!hint) {
+                return;
+            }
+            if (!item) {
+                hint.textContent = 'Select item to view source stock.';
+                return;
+            }
+            if (!branchId) {
+                hint.textContent = 'Select source branch to view stock.';
+                return;
+            }
+            hint.textContent = 'Loading source stock...';
+            const response = await fetch(`@Url.Action("AvailableStock", "StockTransfers")?itemId=${item.ItemId}&fromBranchId=${branchId}`);
+            if (!response.ok) {
+                hint.textContent = 'Cannot load source stock.';
+                return;
+            }
+            const data = await response.json();
+            const qty = Number(data.qtyOnHand ?? data.QtyOnHand ?? 0);
+            hint.textContent = `Source stock: ${qty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        };
+        const loadStockForAllRows = () => {
+            document.querySelectorAll('#transferLinesTable tbody tr').forEach(row => loadStockForRow(row));
+        };
+        const getSelectedSerials = (textarea) => {
+            return (textarea.value || '')
+                .split(/\r?\n|,/)
+                .map(value => value.trim())
+                .filter(value => value.length > 0);
+        };
+        const syncSerialTextarea = (row) => {
+            const textarea = row.querySelector('.serial-entry');
+            const selected = Array.from(row.querySelectorAll('.serial-picker-check:checked'))
+                .map(input => input.value);
+            textarea.value = selected.join('\n');
+            const qtyInput = row.querySelector('input[name$=".Qty"]');
+            const item = getSelectedItem(row);
+            if (item?.IsSerialControlled && selected.length > 0 && qtyInput) {
+                qtyInput.value = selected.length;
+            }
+        };
+        const renderSerialList = (row, serials) => {
+            const list = row.querySelector('.serial-picker-list');
+            const status = row.querySelector('.serial-picker-status');
+            const textarea = row.querySelector('.serial-entry');
+            const selected = new Set(getSelectedSerials(textarea));
+            if (!serials.length) {
+                list.innerHTML = '<div class="table-meta">No available serials in source branch.</div>';
+                status.textContent = '0 serials available.';
+                return;
+            }
+            list.innerHTML = serials.map(serial => {
+                const isChecked = selected.has(serial.serialNo || serial.SerialNo);
+                const serialNo = serial.serialNo || serial.SerialNo;
+                return `<label class="form-check transfer-serial-choice">
+                    <input class="form-check-input serial-picker-check" type="checkbox" value="${serialNo}" ${isChecked ? 'checked' : ''} />
+                    <span class="form-check-label">${serialNo}</span>
+                </label>`;
+            }).join('');
+            status.textContent = `${serials.length} serials available.`;
+        };
+        const loadSerialsForRow = async (row) => {
+            const item = getSelectedItem(row);
+            const branchId = getSourceBranchId();
+            const status = row.querySelector('.serial-picker-status');
+            const list = row.querySelector('.serial-picker-list');
+            if (!item?.IsSerialControlled) {
+                status.textContent = item ? 'Selected item is not serial-controlled.' : 'Select serial-controlled item.';
+                list.innerHTML = '';
+                row.querySelector('.serial-entry').value = '';
+                return;
+            }
+            if (!branchId) {
+                status.textContent = 'Select source branch first.';
+                list.innerHTML = '';
+                return;
+            }
+            status.textContent = 'Loading serials...';
+            const response = await fetch(`@Url.Action("AvailableSerials", "StockTransfers")?itemId=${item.ItemId}&fromBranchId=${branchId}`);
+            if (!response.ok) {
+                status.textContent = 'Cannot load serials for this branch.';
+                list.innerHTML = '';
+                return;
+            }
+            renderSerialList(row, await response.json());
+        };
+        document.addEventListener('click', (event) => {
+            if (event.target.classList.contains('load-serials-btn')) {
+                loadSerialsForRow(event.target.closest('tr'));
+            }
+        });
+        document.addEventListener('change', (event) => {
+            if (event.target.classList.contains('serial-picker-check')) {
+                syncSerialTextarea(event.target.closest('tr'));
+            }
+            if (event.target.classList.contains('transfer-item-select')) {
+                const row = event.target.closest('tr');
+                loadStockForRow(row);
+                row.querySelector('.serial-picker-list').innerHTML = '';
+                row.querySelector('.serial-picker-status').textContent = 'Load serials after selecting item.';
+                row.querySelector('.serial-entry').value = '';
+            }
+            if (event.target.id === 'FromBranchId') {
+                document.querySelectorAll('#transferLinesTable tbody tr').forEach(row => {
+                    loadStockForRow(row);
+                    row.querySelector('.serial-picker-list').innerHTML = '';
+                    row.querySelector('.serial-picker-status').textContent = 'Load serials after source branch changes.';
+                    row.querySelector('.serial-entry').value = '';
+                });
+            }
+        });
+        loadStockForAllRows();
+    </script>
+}

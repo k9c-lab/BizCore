@@ -21,6 +21,11 @@ public class PaymentFormViewModel
     [Display(Name = "Customer")]
     public int? CustomerId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    public string BranchName { get; set; } = string.Empty;
+
     [Required]
     [Display(Name = "Payment Method")]
     [StringLength(20)]

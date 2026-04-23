@@ -69,6 +69,7 @@
                         <th>Date</th>
                         <th>PO No.</th>
                         <th>Supplier</th>
+                        <th>Branch</th>
                         <th>Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -87,6 +88,7 @@
                             <td>@receiving.ReceiveDate.ToString("dd MMM yyyy")</td>
                             <td>@receiving.PurchaseOrderHeader?.PONo</td>
                             <td class="fw-semibold">@receiving.Supplier?.SupplierName</td>
+                            <td>@(receiving.Branch?.BranchName ?? "-")</td>
                             <td><span class="status-pill @statusClass">@receiving.Status</span></td>
                             <td class="text-end">
                                 <div class="table-actions">
@@ -123,7 +125,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="6" class="table-empty">No receiving transactions yet. Post goods receipt from a PO.</td></tr>
+                    <tr><td colspan="7" class="table-empty">No receiving transactions yet. Post goods receipt from a PO.</td></tr>
                 }
                 </tbody>
             </table>

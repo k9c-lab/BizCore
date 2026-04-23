@@ -3,6 +3,10 @@
 <div asp-validation-summary="ModelOnly" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
 <input asp-for="QuotationId" type="hidden" />
+@if (!Model.CanAccessAllBranches)
+{
+    <input asp-for="BranchId" type="hidden" />
+}
 
 <div class="form-shell">
     <div class="form-section quotation-header-section">
@@ -47,6 +51,20 @@
             <div class="col-md-2">
                 <label class="form-label">Status</label>
                 <input type="text" class="form-control" value="@Model.Status" readonly />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="BranchId" class="form-label"></label>
+                @if (Model.CanAccessAllBranches)
+                {
+                    <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
+                        <option value="">Select branch</option>
+                    </select>
+                }
+                else
+                {
+                    <div class="form-control readonly-detail">@Model.BranchName</div>
+                }
+                <span asp-validation-for="BranchId" class="text-danger"></span>
             </div>
             <div class="col-12">
                 <label asp-for="Remark" class="form-label"></label>

@@ -70,6 +70,7 @@
                         <th>Display Name</th>
                         <th>Email</th>
                         <th>Role</th>
+                        <th>Branch</th>
                         <th>Status</th>
                         <th>Created</th>
                         <th class="text-end">Actions</th>
@@ -83,6 +84,16 @@
                         <td class="fw-semibold">@user.DisplayName</td>
                         <td>@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
                         <td>@user.Role</td>
+                        <td>
+                            @if (user.CanAccessAllBranches)
+                            {
+                                <span>All Branches</span>
+                            }
+                            else
+                            {
+                                <span>@(user.Branch is null ? "-" : $"{user.Branch.BranchCode} - {user.Branch.BranchName}")</span>
+                            }
+                        </td>
                         <td>
                             <span class="status-pill @(user.IsActive ? "active" : "inactive")">@(user.IsActive ? "Active" : "Inactive")</span>
                         </td>

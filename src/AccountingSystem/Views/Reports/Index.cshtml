@@ -1,0 +1,356 @@
+@model BizCore.Models.ViewModels.ReportsPageViewModel
+
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Management Reports</div>
+        <h1 class="page-title">Reports</h1>
+        <p class="page-subtitle">Sales, stock, movement, and claim summaries for @Model.BranchName.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Dashboard</a>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-3">
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@Model.DateFrom.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@Model.DateTo.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label class="form-label" for="branchId">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">This Month</a>
+                <button type="submit" class="btn btn-primary">Run</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Sales</span>
+        <p class="quote-summary-value">@Model.SalesTotal.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Payments</span>
+        <p class="quote-summary-value">@Model.PaymentsTotal.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Outstanding AR</span>
+        <p class="quote-summary-value">@Model.OutstandingAr.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Stock Qty</span>
+        <p class="quote-summary-value">@Model.StockQty.ToString("N2")</p>
+    </div>
+</div>
+
+<div class="quotation-party-grid mb-3">
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Sales Chart</h2>
+                        <p class="section-subtitle">Sales amount from the displayed daily rows.</p>
+                    </div>
+                </div>
+                @{
+                    var chartRows = Model.SalesRows.OrderBy(x => x.Date).TakeLast(10).ToList();
+                    var maxSales = chartRows.Any() ? chartRows.Max(x => x.SalesAmount) : 0m;
+                }
+                <div class="dashboard-bars report-bars" aria-label="Sales report chart">
+                    @foreach (var point in chartRows)
+                    {
+                        var height = maxSales <= 0m ? 4 : Math.Max(4, (int)Math.Round(point.SalesAmount / maxSales * 100));
+                        <div class="dashboard-bar-cell">
+                            <div class="dashboard-bar-value">@point.SalesAmount.ToString("N0")</div>
+                            <div class="dashboard-bar-track">
+                                <div class="dashboard-bar-fill" style="height:@height%"></div>
+                            </div>
+                            <div class="dashboard-bar-label">@point.Date.ToString("dd MMM")</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Movement Mix</h2>
+                        <p class="section-subtitle">Quantity by stock movement type.</p>
+                    </div>
+                </div>
+                @{
+                    var maxMovement = Model.MovementRows.Any() ? Model.MovementRows.Max(x => x.Quantity) : 0m;
+                }
+                <div class="dashboard-meter-list">
+                    @foreach (var row in Model.MovementRows.Take(8))
+                    {
+                        var width = maxMovement <= 0m ? 0 : (int)Math.Round(row.Quantity / maxMovement * 100);
+                        <div class="dashboard-meter-row">
+                            <div class="dashboard-meter-head">
+                                <span>@row.MovementType</span>
+                                <strong>@row.Quantity.ToString("N0")</strong>
+                            </div>
+                            <div class="dashboard-meter-track">
+                                <div class="dashboard-meter-fill" style="width:@width%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Sales Report</h2>
+            <p class="section-subtitle">Daily invoice totals by branch.</p>
+        </div>
+        <div class="table-meta">@Model.SalesRows.Count row(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Branch</th>
+                        <th class="text-end">Invoices</th>
+                        <th class="text-end">Sales</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.SalesRows)
+                {
+                    <tr>
+                        <td>@row.Date.ToString("dd MMM yyyy")</td>
+                        <td>@row.BranchName</td>
+                        <td class="text-end">@row.InvoiceCount</td>
+                        <td class="text-end">@row.SalesAmount.ToString("N2")</td>
+                        <td class="text-end">@row.PaidAmount.ToString("N2")</td>
+                        <td class="text-end">@row.BalanceAmount.ToString("N2")</td>
+                    </tr>
+                }
+                @if (!Model.SalesRows.Any())
+                {
+                    <tr><td colspan="6" class="table-empty">No sales records found.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-bars {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 10px;
+        min-height: 220px;
+        align-items: end;
+    }
+
+    .report-bars {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+    }
+
+    .dashboard-bar-cell {
+        display: grid;
+        grid-template-rows: auto 150px auto;
+        gap: 6px;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .dashboard-bar-value,
+    .dashboard-bar-label {
+        color: #64748b;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .dashboard-bar-track {
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        height: 150px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .dashboard-bar-fill {
+        width: 100%;
+        min-height: 4px;
+        background: #2563eb;
+    }
+
+    .dashboard-meter-list {
+        display: grid;
+        gap: 14px;
+        padding-top: 10px;
+    }
+
+    .dashboard-meter-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .dashboard-meter-track {
+        height: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .dashboard-meter-fill {
+        height: 100%;
+        background: #16a34a;
+    }
+</style>
+
+<div class="quotation-party-grid">
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Stock Balance</h2>
+                    <p class="section-subtitle">Top stock-on-hand items.</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Branch</th>
+                                <th>Item</th>
+                                <th class="text-end">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.StockRows)
+                        {
+                            <tr>
+                                <td>@row.BranchName</td>
+                                <td>
+                                    <div class="fw-semibold">@row.ItemCode</div>
+                                    <div class="table-meta">@row.ItemName</div>
+                                </td>
+                                <td class="text-end">@row.QtyOnHand.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.StockRows.Any())
+                        {
+                            <tr><td colspan="3" class="table-empty">No stock records found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Stock Movement</h2>
+                    <p class="section-subtitle">Movement counts and quantities.</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Movement</th>
+                                <th class="text-end">Count</th>
+                                <th class="text-end">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.MovementRows)
+                        {
+                            <tr>
+                                <td><span class="code-chip">@row.MovementType</span></td>
+                                <td class="text-end">@row.MovementCount</td>
+                                <td class="text-end">@row.Quantity.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.MovementRows.Any())
+                        {
+                            <tr><td colspan="3" class="table-empty">No stock movements found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card mt-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Claim Report</h2>
+            <p class="section-subtitle">Customer and supplier claim counts by status.</p>
+        </div>
+        <div class="table-meta">@Model.ClaimRows.Count row(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th class="text-end">Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.ClaimRows)
+                {
+                    <tr>
+                        <td>@row.ClaimType</td>
+                        <td><span class="status-pill active">@row.Status</span></td>
+                        <td class="text-end">@row.Count</td>
+                    </tr>
+                }
+                @if (!Model.ClaimRows.Any())
+                {
+                    <tr><td colspan="3" class="table-empty">No claim records found.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

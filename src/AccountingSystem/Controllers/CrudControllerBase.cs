@@ -50,4 +50,17 @@ public abstract class CrudControllerBase : Controller
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(value, out var userId) ? userId : null;
     }
+
+    protected int? CurrentBranchId()
+    {
+        var value = User.FindFirstValue("BranchId");
+        return int.TryParse(value, out var branchId) ? branchId : null;
+    }
+
+    protected bool CurrentUserCanAccessAllBranches()
+    {
+        return !User.IsInRole("BranchAdmin")
+            && (string.Equals(User.FindFirstValue("CanAccessAllBranches"), "true", StringComparison.OrdinalIgnoreCase)
+                || User.IsInRole("Admin"));
+    }
 }

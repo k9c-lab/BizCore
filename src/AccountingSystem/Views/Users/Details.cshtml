@@ -54,6 +54,14 @@
                         <div class="detail-label">Email</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</div>
                     </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch is null ? "-" : $"{Model.Branch.BranchCode} - {Model.Branch.BranchName}")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Branch Access</div>
+                        <div class="form-control readonly-detail">@(Model.CanAccessAllBranches ? "All Branches" : "Assigned Branch")</div>
+                    </div>
                     <div class="col-lg-6">
                         <div class="detail-label">Created</div>
                         <div class="form-control readonly-detail">@Model.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
@@ -63,4 +71,3 @@
         </div>
     </div>
 </div>
-

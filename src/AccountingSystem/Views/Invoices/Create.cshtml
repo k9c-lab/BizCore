@@ -481,11 +481,7 @@
                         return { error: "Selected serial count must exactly match quantity." };
                     }
 
-                    if (!entryWarrantyStart.value || !entryWarrantyEnd.value) {
-                        return { error: "Warranty start and end are required for serial-controlled items." };
-                    }
-
-                    if (entryWarrantyEnd.value < entryWarrantyStart.value) {
+                    if (entryWarrantyStart.value && entryWarrantyEnd.value && entryWarrantyEnd.value < entryWarrantyStart.value) {
                         return { error: "Warranty end date must be on or after the start date." };
                     }
                 }
@@ -494,7 +490,7 @@
                 const serialText = isSerial
                     ? [...entrySerials.querySelectorAll(".js-entry-serial-checkbox:checked")].map(input => input.parentElement.textContent.trim()).join(", ")
                     : "-";
-                const warrantyText = isSerial
+                const warrantyText = isSerial && (entryWarrantyStart.value || entryWarrantyEnd.value)
                     ? `${entryWarrantyStart.value} to ${entryWarrantyEnd.value}`
                     : "-";
 

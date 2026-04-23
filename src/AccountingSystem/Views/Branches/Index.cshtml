@@ -1,0 +1,90 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Branch>
+
+@{
+    ViewData["Title"] = "Branches";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">Branches</h1>
+        <p class="page-subtitle">Manage branch locations used for user scope and future branch stock.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Branch</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Branch Register</h2>
+            <p class="section-subtitle">Branch is the first stock location layer. Warehouse is intentionally deferred.</p>
+        </div>
+        <div class="table-meta">@Model.TotalCount record(s)</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Code, name, phone, or email" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Active" selected="@(status == "Active")">Active</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var branch in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@branch.BranchCode</span></td>
+                            <td class="fw-semibold">@branch.BranchName</td>
+                            <td>@(string.IsNullOrWhiteSpace(branch.PhoneNumber) ? "-" : branch.PhoneNumber)</td>
+                            <td>@(string.IsNullOrWhiteSpace(branch.Email) ? "-" : branch.Email)</td>
+                            <td><span class="status-pill @(branch.IsActive ? "active" : "inactive")">@(branch.IsActive ? "Active" : "Inactive")</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                    <a asp-action="Edit" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="table-empty">No branches yet. Add a branch before branch-based stock is enabled.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

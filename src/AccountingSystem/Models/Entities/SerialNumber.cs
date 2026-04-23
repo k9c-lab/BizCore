@@ -24,6 +24,9 @@ public class SerialNumber
     [Display(Name = "Current Customer")]
     public int? CurrentCustomerId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
     public int? InvoiceId { get; set; }
 
     [DataType(DataType.Date)]
@@ -48,5 +51,6 @@ public class SerialNumber
     public Item? Item { get; set; }
     public Supplier? Supplier { get; set; }
     public Customer? CurrentCustomer { get; set; }
+    public Branch? Branch { get; set; }
     public InvoiceHeader? InvoiceHeader { get; set; }
 }

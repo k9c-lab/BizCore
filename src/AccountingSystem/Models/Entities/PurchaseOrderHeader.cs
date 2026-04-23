@@ -19,6 +19,12 @@ public class PurchaseOrderHeader
     [Display(Name = "Supplier")]
     public int SupplierId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    [Display(Name = "Purchase Request")]
+    public int? PurchaseRequestId { get; set; }
+
     [StringLength(50)]
     [Display(Name = "Reference No.")]
     public string? ReferenceNo { get; set; }
@@ -59,6 +65,8 @@ public class PurchaseOrderHeader
     public DateTime? UpdatedDate { get; set; }
 
     public Supplier? Supplier { get; set; }
+    public Branch? Branch { get; set; }
+    public PurchaseRequestHeader? PurchaseRequestHeader { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? ApprovedByUser { get; set; }

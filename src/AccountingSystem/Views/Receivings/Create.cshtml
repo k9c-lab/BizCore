@@ -13,6 +13,7 @@
         : "Post Receiving is blocked because no open purchase orders are available.";
     var hasSelectedPo = Model.PurchaseOrderId.HasValue;
     var startFromPoMessage = "Start receiving from an approved purchase order by using the Receive Goods action.";
+    var backLabel = isEdit ? "Back to Details" : "Back to Receivings";
 }
 
 <div class="page-header">
@@ -22,6 +23,15 @@
         <p class="page-subtitle">Save a draft while receiving details are incomplete, then post when stock and serial records are ready to update.</p>
     </div>
     <div class="page-actions">
+        @if (isEdit)
+        {
+            <button type="submit" form="receivingForm" class="btn btn-primary" name="command" value="Post" id="topPostReceivingButton" disabled="@(!canPost)">Post Receiving</button>
+            <a asp-action="Details" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary">@backLabel</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">@backLabel</a>
+        }
         <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
         <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
     </div>
@@ -46,6 +56,7 @@
         <form asp-action="@formAction" asp-route-id="@Model.ReceivingId" method="post" id="receivingForm">
             <input type="hidden" asp-for="ReceivingId" />
             <input type="hidden" asp-for="Status" />
+            <input type="hidden" asp-for="BranchId" />
             <div asp-validation-summary="All" class="form-alert"></div>
             <div class="form-shell">
                 <div class="form-section quotation-header-section">
@@ -87,6 +98,10 @@
                         <div class="col-md-3">
                             <div class="detail-label">Supplier</div>
                             <div class="form-control readonly-detail" id="receivingSupplierName">@(selectedPo?.SupplierName ?? "-")</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="detail-label">Branch</div>
+                            <div class="form-control readonly-detail" id="receivingBranchName">@(selectedPo?.BranchName ?? Model.BranchName ?? "-")</div>
                         </div>
                         <div class="col-12">
                             <label asp-for="Remark" class="detail-label"></label>
@@ -148,7 +163,7 @@
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                         <div>
                             <div class="form-section-title mb-1">Receiving Lines</div>
-                            <div class="table-meta">Enter received quantities. Serial-controlled lines require one serial per unit and supplier warranty dates.</div>
+                            <div class="table-meta">Enter received quantities for the branch allocation. Serial-controlled lines require one serial per unit.</div>
                         </div>
                     </div>
                     <div class="receiving-lines-stack" id="receivingLineBody">
@@ -156,6 +171,9 @@
                             {
                                 <div class="receiving-line-card receiving-line-row">
                                     <input type="hidden" name="Details[@i].PurchaseOrderDetailId" value="@Model.Details[i].PurchaseOrderDetailId" />
+                                    <input type="hidden" name="Details[@i].PurchaseOrderAllocationId" value="@Model.Details[i].PurchaseOrderAllocationId" />
+                                    <input type="hidden" name="Details[@i].AllocationBranchId" value="@Model.Details[i].AllocationBranchId" />
+                                    <input type="hidden" name="Details[@i].AllocationBranchName" value="@Model.Details[i].AllocationBranchName" />
                                     <input type="hidden" name="Details[@i].ItemId" value="@Model.Details[i].ItemId" />
                                     <input type="hidden" name="Details[@i].LineNumber" value="@Model.Details[i].LineNumber" />
                                     <input type="hidden" name="Details[@i].ItemCode" value="@Model.Details[i].ItemCode" />
@@ -171,7 +189,7 @@
                                     <div class="receiving-line-header">
                                         <div>
                                             <div class="receiving-line-title">@Model.Details[i].ItemCode - @Model.Details[i].ItemName</div>
-                                            <div class="table-meta">PO Line @Model.Details[i].LineNumber</div>
+                                            <div class="table-meta">PO Line @Model.Details[i].LineNumber | Deliver to @(string.IsNullOrWhiteSpace(Model.Details[i].AllocationBranchName) ? Model.BranchName : Model.Details[i].AllocationBranchName)</div>
                                         </div>
                                         <div class="receiving-line-status-wrap">
                                             <span class="badge-soft">@(Model.Details[i].IsSerialControlled ? "Serial-controlled" : "Standard receiving")</span>
@@ -264,6 +282,14 @@
             <div class="form-actions mt-3">
                 <span class="table-meta" id="receivingPostReason">Save Draft keeps this receiving editable. Post Receiving updates stock and creates serial records.</span>
                 <div class="page-actions">
+                    @if (isEdit)
+                    {
+                        <a asp-action="Details" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary">@backLabel</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary">@backLabel</a>
+                    }
                     <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
                     <button type="submit" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="saveDraftButton" disabled="@(!canSaveDraft)">Save Draft</button>
                     <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)">Post Receiving</button>
@@ -285,6 +311,7 @@
             const lineBody = document.getElementById("receivingLineBody");
             const saveDraftButton = document.getElementById("saveDraftButton");
             const postButton = document.getElementById("postReceivingButton");
+            const topPostButton = document.getElementById("topPostReceivingButton");
             const postReason = document.getElementById("receivingPostReason");
 
             const money = value => Number(value || 0).toFixed(2);
@@ -422,17 +449,6 @@
                                 lineTone = "warning";
                             }
 
-                            const warrantyStart = row.querySelector('input[name$=".SupplierWarrantyStartDate"]');
-                            const warrantyEnd = row.querySelector('input[name$=".SupplierWarrantyEndDate"]');
-                            if (qty > 0 && (!warrantyStart?.value || !warrantyEnd?.value) && !reason) {
-                                reason = `Cannot post: ${lineLabel} requires supplier warranty start and end dates.`;
-                            }
-
-                            if (qty > 0 && (!warrantyStart?.value || !warrantyEnd?.value) && lineTone !== "warning") {
-                                lineStatus = "Needs warranty";
-                                lineMessage = "Enter supplier warranty start and end dates.";
-                                lineTone = "warning";
-                            }
                         }
 
                         setLineStatus(row, lineStatus, lineMessage, lineTone);
@@ -447,14 +463,19 @@
                     saveDraftButton.disabled = !selected;
                 }
                 postButton.disabled = Boolean(reason);
+                if (topPostButton) {
+                    topPostButton.disabled = Boolean(reason);
+                }
                 postReason.textContent = reason || "Ready to post. Posting immediately updates stock and creates serial records where required.";
             };
 
             const renderLines = poId => {
                 const selected = lookup.find(x => String(x.PurchaseOrderId) === String(poId));
                 supplierInput.value = selected ? selected.SupplierId : "";
+                document.getElementById("BranchId").value = selected?.BranchId || "";
                 document.getElementById("receivingPoNo").textContent = selected?.PONo || "-";
                 document.getElementById("receivingSupplierName").textContent = selected?.SupplierName || "-";
+                document.getElementById("receivingBranchName").textContent = selected?.BranchName || "-";
                 document.getElementById("poInfoNo").textContent = selected?.PONo || "-";
                 document.getElementById("poInfoSupplier").textContent = selected?.SupplierName || "-";
                 document.getElementById("receivingVatType").textContent = selected?.VatType || "-";
@@ -474,6 +495,9 @@
                     card.className = "receiving-line-card receiving-line-row";
                     card.innerHTML = `
                             <input type="hidden" name="Details[${index}].PurchaseOrderDetailId" value="${line.PurchaseOrderDetailId}" />
+                            <input type="hidden" name="Details[${index}].PurchaseOrderAllocationId" value="${line.PurchaseOrderAllocationId || ""}" />
+                            <input type="hidden" name="Details[${index}].AllocationBranchId" value="${line.AllocationBranchId || ""}" />
+                            <input type="hidden" name="Details[${index}].AllocationBranchName" value="${escapeHtml(line.AllocationBranchName || "")}" />
                             <input type="hidden" name="Details[${index}].ItemId" value="${line.ItemId}" />
                             <input type="hidden" name="Details[${index}].LineNumber" value="${line.LineNumber}" />
                             <input type="hidden" name="Details[${index}].ItemCode" value="${escapeHtml(line.ItemCode)}" />
@@ -488,7 +512,7 @@
                             <div class="receiving-line-header">
                                 <div>
                                     <div class="receiving-line-title">${escapeHtml(line.ItemCode)} - ${escapeHtml(line.ItemName)}</div>
-                                    <div class="table-meta">PO Line ${line.LineNumber}</div>
+                                    <div class="table-meta">PO Line ${line.LineNumber} | Deliver to ${escapeHtml(line.AllocationBranchName || selected.BranchName || "-")}</div>
                                 </div>
                                 <div class="receiving-line-status-wrap">
                                     <span class="badge-soft">${line.IsSerialControlled ? "Serial-controlled" : "Standard receiving"}</span>

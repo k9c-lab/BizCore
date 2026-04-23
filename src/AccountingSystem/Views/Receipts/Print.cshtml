@@ -10,6 +10,8 @@
     var allocations = payment?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo)
         ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>();
     var appliedAmount = allocations.Sum(x => x.AppliedAmount);
+    var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
+    var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -139,14 +141,26 @@
             text-align: center;
             font-size: 11px;
         }
-        .col-no { width: 48px; text-align: center; }
-        .col-invoice { width: auto; word-break: break-word; }
-        .col-date { width: 110px; text-align: center; }
-        .col-status { width: 110px; text-align: center; }
-        .col-amount { width: 130px; text-align: right; }
+        .col-no { width: 42px; text-align: center; }
+        .col-description { width: auto; word-break: break-word; }
+        .col-qty { width: 76px; text-align: right; }
+        .col-price { width: 100px; text-align: right; }
+        .col-amount { width: 110px; text-align: right; }
+        .invoice-row td {
+            background: #f9fafb;
+            font-weight: 700;
+        }
+        .item-code {
+            display: block;
+            color: #6b7280;
+            font-size: 10.5px;
+            margin-top: 2px;
+        }
         .summary-wrap {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 28px;
             margin-top: 14px;
         }
         .summary-table {
@@ -169,6 +183,9 @@
             border-top: 2px solid #9ca3af;
             font-weight: 700;
             font-size: 14px;
+        }
+        .payment-summary {
+            min-width: 260px;
         }
         .remark-box {
             border: 1px solid #d1d5db;
@@ -262,10 +279,10 @@
                 <thead>
                     <tr>
                         <th class="col-no">No</th>
-                        <th class="col-invoice">Invoice No.</th>
-                        <th class="col-date">Invoice Date</th>
-                        <th class="col-status">Status</th>
-                        <th class="col-amount">Applied Amount</th>
+                        <th class="col-description">Description</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-price">Unit Price</th>
+                        <th class="col-amount">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -274,23 +291,45 @@
                 }
                 @foreach (var allocation in allocations)
                 {
-                    <tr>
-                        <td class="col-no">@rowNo</td>
-                        <td class="col-invoice">@allocation.InvoiceHeader?.InvoiceNo</td>
-                        <td class="col-date">@allocation.InvoiceHeader?.InvoiceDate.ToString("dd/MM/yyyy")</td>
-                        <td class="col-status">@allocation.InvoiceHeader?.Status</td>
-                        <td class="col-amount">@allocation.AppliedAmount.ToString("N2")</td>
+                    var invoice = allocation.InvoiceHeader;
+                    if (invoice is null)
+                    {
+                        continue;
+                    }
+
+                    <tr class="invoice-row">
+                        <td colspan="5">Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
                     </tr>
-                    rowNo++;
+                    foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
+                    {
+                        <tr>
+                            <td class="col-no">@rowNo</td>
+                            <td class="col-description">
+                                @(line.Item?.ItemName ?? "-")
+                                <span class="item-code">@line.Item?.ItemCode</span>
+                            </td>
+                            <td class="col-qty">@line.Qty.ToString("N2")</td>
+                            <td class="col-price">@line.UnitPrice.ToString("N2")</td>
+                            <td class="col-amount">@line.LineTotal.ToString("N2")</td>
+                        </tr>
+                        rowNo++;
+                    }
                 }
                 </tbody>
             </table>
 
             <div class="summary-wrap">
+                <table class="summary-table payment-summary">
+                    <tr><td class="summary-label">Invoice Total</td><td>@invoiceTotal.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">Paid To Date</td><td>@((invoiceTotal - remainingBalance).ToString("N2"))</td></tr>
+                    <tr class="summary-total"><td>Remaining Balance</td><td>@remainingBalance.ToString("N2")</td></tr>
+                </table>
                 <table class="summary-table">
-                    <tr><td class="summary-label">Payment Amount</td><td>@((payment?.Amount ?? 0m).ToString("N2"))</td></tr>
-                    <tr><td class="summary-label">Applied Amount</td><td>@appliedAmount.ToString("N2")</td></tr>
-                    <tr class="summary-total"><td>Total Received</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">Payment Method</td><td>@(payment?.PaymentMethod ?? "-")</td></tr>
+                    <tr><td class="summary-label">Payment Reference</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
+                    <tr><td class="summary-label">Receipt Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
+                    <tr class="summary-total"><td>This Receipt Paid</td><td>@appliedAmount.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">Receipt Amount</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
                 </table>
             </div>
         </section>

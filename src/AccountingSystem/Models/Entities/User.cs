@@ -26,7 +26,15 @@ public class User
     [StringLength(30)]
     public string Role { get; set; } = "Viewer";
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    [Display(Name = "All Branches")]
+    public bool CanAccessAllBranches { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Branch? Branch { get; set; }
 }

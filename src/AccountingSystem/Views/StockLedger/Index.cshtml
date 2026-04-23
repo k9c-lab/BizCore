@@ -1,0 +1,166 @@
+@model BizCore.Models.ViewModels.StockLedgerPageViewModel
+
+@{
+    ViewData["Title"] = "Stock Ledger";
+
+    string? ReferenceAction(string? referenceType)
+    {
+        return referenceType switch
+        {
+            "Receiving" => "Details",
+            "Invoice" => "Details",
+            "StockTransfer" => "Details",
+            "StockIssue" => "Details",
+            _ => null
+        };
+    }
+
+    string? ReferenceController(string? referenceType)
+    {
+        return referenceType switch
+        {
+            "Receiving" => "Receivings",
+            "Invoice" => "Invoices",
+            "StockTransfer" => "StockTransfers",
+            "StockIssue" => "StockIssues",
+            _ => null
+        };
+    }
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Inquiry</div>
+        <h1 class="page-title">Stock Ledger</h1>
+        <p class="page-subtitle">Read stock movement history and issued quantity for @Model.BranchName.</p>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Issued Qty</span>
+        <p class="quote-summary-value">@Model.IssueQty.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Issue Cancel Qty</span>
+        <p class="quote-summary-value">@Model.IssueCancelQty.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Net Issued Qty</span>
+        <p class="quote-summary-value">@Model.NetIssuedQty.ToString("N2")</p>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Movement History</h2>
+            <p class="section-subtitle">Filter by item, branch, movement type, reference, or date range.</p>
+        </div>
+        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Item, serial, movement, branch, or remark" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="itemId">Item</label>
+                <select id="itemId" name="itemId" asp-items="Model.ItemOptions" class="form-select"></select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="movementType">Movement</label>
+                <select id="movementType" name="movementType" asp-items="Model.MovementTypeOptions" class="form-select"></select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="referenceType">Reference</label>
+                <select id="referenceType" name="referenceType" asp-items="Model.ReferenceTypeOptions" class="form-select"></select>
+            </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label class="form-label" for="branchId">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Movement</th>
+                        <th>Reference</th>
+                        <th>Item</th>
+                        <th>Serial</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Qty</th>
+                        <th>In</th>
+                        <th>Out</th>
+                        <th>Created By</th>
+                        <th>Remark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Results.Any())
+                {
+                    @foreach (var movement in Model.Results)
+                    {
+                        var referenceController = ReferenceController(movement.ReferenceType);
+                        var referenceAction = ReferenceAction(movement.ReferenceType);
+                        <tr>
+                            <td>@movement.MovementDate.ToString("dd MMM yyyy")</td>
+                            <td><span class="code-chip">@movement.MovementType</span></td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(referenceController) && !string.IsNullOrWhiteSpace(referenceAction) && movement.ReferenceId.HasValue)
+                                {
+                                    <a asp-controller="@referenceController" asp-action="@referenceAction" asp-route-id="@movement.ReferenceId.Value">@movement.ReferenceText</a>
+                                }
+                                else
+                                {
+                                    @movement.ReferenceText
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@movement.ItemCode</div>
+                                <div class="table-meta">@movement.ItemName</div>
+                                <div class="table-meta">@movement.PartNumber</div>
+                            </td>
+                            <td>@movement.SerialNo</td>
+                            <td>@movement.FromBranchName</td>
+                            <td>@movement.ToBranchName</td>
+                            <td>@movement.Qty.ToString("N2")</td>
+                            <td>@(movement.InQty == 0m ? "-" : movement.InQty.ToString("N2"))</td>
+                            <td>@(movement.OutQty == 0m ? "-" : movement.OutQty.ToString("N2"))</td>
+                            <td>@movement.CreatedByName</td>
+                            <td>@(string.IsNullOrWhiteSpace(movement.Remark) ? "-" : movement.Remark)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="12" class="table-empty">No stock movement records matched the current search.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

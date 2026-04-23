@@ -20,6 +20,9 @@ public class PaymentHeader
     [Display(Name = "Customer")]
     public int CustomerId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
     [Required]
     [Display(Name = "Payment Method")]
     [StringLength(20)]
@@ -52,6 +55,7 @@ public class PaymentHeader
     public string? CancelReason { get; set; }
 
     public Customer? Customer { get; set; }
+    public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? PostedByUser { get; set; }

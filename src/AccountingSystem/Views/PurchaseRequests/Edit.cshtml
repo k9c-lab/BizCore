@@ -1,0 +1,36 @@
+@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
+
+@{
+    ViewData["Title"] = "Edit Purchase Request";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Edit Purchase Request</h1>
+        <p class="page-subtitle">Update draft request details before submitting to central purchasing.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Details" asp-route-id="@Model.PurchaseRequestId" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.PurchaseRequestId" method="post">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">Only Draft purchase requests can be edited.</span>
+                <div class="page-actions">
+                    <a asp-action="Details" asp-route-id="@Model.PurchaseRequestId" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_FormScripts" />
+}

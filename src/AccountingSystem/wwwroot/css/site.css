@@ -511,6 +511,14 @@ a {
   overflow: visible;
 }
 
+.po-allocation-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(76px, 0.45fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
 .quote-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

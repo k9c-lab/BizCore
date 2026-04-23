@@ -3,6 +3,9 @@ namespace BizCore.Models.ViewModels;
 public class ReceivingPoLookupLineViewModel
 {
     public int PurchaseOrderDetailId { get; set; }
+    public int? PurchaseOrderAllocationId { get; set; }
+    public int? AllocationBranchId { get; set; }
+    public string AllocationBranchName { get; set; } = string.Empty;
     public int ItemId { get; set; }
     public int LineNumber { get; set; }
     public string ItemCode { get; set; } = string.Empty;

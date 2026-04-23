@@ -23,6 +23,9 @@ public class ReceivingHeader
     [Display(Name = "Purchase Order")]
     public int PurchaseOrderId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
     [StringLength(50)]
     [Display(Name = "Delivery Note No.")]
     public string? DeliveryNoteNo { get; set; }
@@ -49,6 +52,7 @@ public class ReceivingHeader
 
     public Supplier? Supplier { get; set; }
     public PurchaseOrderHeader? PurchaseOrderHeader { get; set; }
+    public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? PostedByUser { get; set; }

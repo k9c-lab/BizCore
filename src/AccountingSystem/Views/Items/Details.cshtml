@@ -11,6 +11,10 @@
         <p class="page-subtitle">Review pricing, item type, and inventory control settings.</p>
     </div>
     <div class="page-actions">
+        @if (Model.TrackStock)
+        {
+            <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@Model.ItemId" class="btn btn-outline-primary">View Ledger</a>
+        }
         <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">Edit Item</a>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>

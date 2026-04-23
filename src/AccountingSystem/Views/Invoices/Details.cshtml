@@ -39,10 +39,6 @@
                 issueBlockReasons.Add($"{line.Item?.ItemCode} serial numbers are incomplete ({line.InvoiceSerials.Count}/{(int)line.Qty}).");
             }
 
-            if (!line.CustomerWarrantyStartDate.HasValue || !line.CustomerWarrantyEndDate.HasValue)
-            {
-                issueBlockReasons.Add($"{line.Item?.ItemCode} customer warranty dates are incomplete.");
-            }
         }
     }
     var canIssue = Model.Status == "Draft" && issueBlockReasons.Count == 0;
@@ -158,6 +154,10 @@
                     <div class="col-md-3">
                         <div class="detail-label">Status</div>
                         <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-12">
                         <div class="detail-label">Remark</div>

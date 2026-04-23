@@ -25,6 +25,12 @@ public class UserFormViewModel
     [StringLength(30)]
     public string Role { get; set; } = "Viewer";
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    [Display(Name = "Access all branches")]
+    public bool CanAccessAllBranches { get; set; }
+
     [Display(Name = "Active")]
     public bool IsActive { get; set; } = true;
 
@@ -40,5 +46,5 @@ public class UserFormViewModel
     public bool IsEdit => UserId.HasValue;
 
     public IEnumerable<SelectListItem> RoleOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
 }
-

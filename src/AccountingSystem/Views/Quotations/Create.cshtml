@@ -55,6 +55,8 @@
             const salespersonSelect = document.getElementById("SalespersonId");
             const headerDiscountHelp = document.getElementById("quotationHeaderDiscountHelp");
             const discountModeText = document.getElementById("quotationDiscountModeText");
+            const branchInput = document.getElementById("BranchId");
+            const branchStockUrl = '@Url.Action("BranchStock", "Quotations")';
 
             const createRow = index => {
                 const mainRow = document.createElement("tr");
@@ -131,6 +133,41 @@
             };
 
             const getValue = value => value && value.trim() ? value : "-";
+            const hasSelectedBranch = () => branchInput && branchInput.value && branchInput.value.trim();
+            const formatStockHint = item => {
+                if (!item || !item.TrackStock) {
+                    return "";
+                }
+
+                if (!hasSelectedBranch()) {
+                    return "Select branch to view stock.";
+                }
+
+                const stock = Number(item.CurrentStock || 0);
+                return `Branch stock: ${stock.toFixed(2)}`;
+            };
+
+            const refreshBranchStock = async () => {
+                if (!branchInput || !hasSelectedBranch()) {
+                    itemLookup.forEach(item => item.CurrentStock = 0);
+                    lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => updateLine(row, false));
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${branchStockUrl}?branchId=${encodeURIComponent(branchInput.value)}`);
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const stockRows = await response.json();
+                    const stockMap = Object.fromEntries(stockRows.map(row => [String(row.itemId ?? row.ItemId), Number(row.currentStock ?? row.CurrentStock ?? 0)]));
+                    itemLookup.forEach(item => item.CurrentStock = stockMap[String(item.ItemId)] || 0);
+                    lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => updateLine(row, false));
+                } catch {
+                    // Keep the last known stock hint if the lookup refresh fails.
+                }
+            };
 
             const hideCustomerResults = () => {
                 customerResults.style.display = "none";
@@ -309,9 +346,7 @@
                 }
 
                 if (stockHint) {
-                    stockHint.textContent = selectedItem && (selectedItem.ItemType || "Product") === "Product"
-                        ? `Current stock: ${Number(selectedItem.CurrentStock || 0).toFixed(2)}`
-                        : "";
+                    stockHint.textContent = formatStockHint(selectedItem);
                 }
 
                 const qty = parseFloat(quantity.value || "0");
@@ -379,6 +414,7 @@
             headerDiscountInput.addEventListener("input", updateSummary);
             salespersonSelect.addEventListener("change", updateSalespersonInfo);
             noExpiryInput.addEventListener("change", updateExpiryState);
+            branchInput?.addEventListener("change", refreshBranchStock);
 
             customerSearch.addEventListener("input", () => {
                 delete customerSearch.dataset.selectedCustomerId;

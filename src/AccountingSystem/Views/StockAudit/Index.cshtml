@@ -1,0 +1,128 @@
+@model BizCore.Models.ViewModels.StockAuditPageViewModel
+
+@{
+    ViewData["Title"] = "Stock Audit";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Audit</div>
+        <h1 class="page-title">Stock Audit</h1>
+        <p class="page-subtitle">Read-only reconciliation for StockBalances, serial stock, and stock ledger net quantity in @Model.BranchName.</p>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Audited Rows</span>
+        <p class="quote-summary-value">@Model.TotalRows</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">OK</span>
+        <p class="quote-summary-value">@Model.OkRows</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Mismatch</span>
+        <p class="quote-summary-value">@Model.MismatchRows</p>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Reconciliation Results</h2>
+            <p class="section-subtitle">This page does not change stock. Use it to find rows that need investigation.</p>
+        </div>
+        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Item code, name, or part number" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="auditStatus">Status</label>
+                <select id="auditStatus" name="auditStatus" class="form-select">
+                    <option value="">All</option>
+                    <option value="Mismatch" selected="@(Model.AuditStatus == "Mismatch")">Mismatch</option>
+                    <option value="OK" selected="@(Model.AuditStatus == "OK")">OK</option>
+                </select>
+            </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label class="form-label" for="branchId">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Branch</th>
+                        <th>Item</th>
+                        <th>Serial</th>
+                        <th class="text-end">Balance Qty</th>
+                        <th class="text-end">Serial InStock</th>
+                        <th class="text-end">Ledger Net</th>
+                        <th class="text-end">Bal-Ledger Diff</th>
+                        <th class="text-end">Bal-Serial Diff</th>
+                        <th>Status</th>
+                        <th>Issue</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Results.Any())
+                {
+                    @foreach (var row in Model.Results)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">@row.BranchCode</div>
+                                <div class="table-meta">@row.BranchName</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@row.ItemCode</div>
+                                <div class="table-meta">@row.ItemName</div>
+                                <div class="table-meta">@row.PartNumber</div>
+                            </td>
+                            <td>@(row.IsSerialControlled ? "Yes" : "No")</td>
+                            <td class="text-end">@row.BalanceQty.ToString("N2")</td>
+                            <td class="text-end">@(row.SerialInStockQty.HasValue ? row.SerialInStockQty.Value.ToString("N2") : "-")</td>
+                            <td class="text-end">@row.LedgerNetQty.ToString("N2")</td>
+                            <td class="text-end @(row.BalanceLedgerDiff == 0m ? string.Empty : "text-danger fw-semibold")">@row.BalanceLedgerDiff.ToString("N2")</td>
+                            <td class="text-end @(row.BalanceSerialDiff.GetValueOrDefault() == 0m ? string.Empty : "text-danger fw-semibold")">@(row.BalanceSerialDiff.HasValue ? row.BalanceSerialDiff.Value.ToString("N2") : "-")</td>
+                            <td><span class="status-pill @(row.IsMismatch ? "inactive" : "active")">@row.StatusText</span></td>
+                            <td>@row.IssueText</td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-primary">Ledger</a>
+                                    @if (row.IsSerialControlled)
+                                    {
+                                        <a asp-controller="StockInquiry" asp-action="Serials" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-secondary">Serials</a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="11" class="table-empty">No stock audit rows matched the current search.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

@@ -1,0 +1,169 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseRequestHeader>
+
+@{
+    ViewData["Title"] = "Purchase Requests";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Purchase Requests</h1>
+        <p class="page-subtitle">Branch item requests before central admin creates supplier purchase orders.</p>
+    </div>
+    <div class="page-actions">
+        @if (User.IsInRole("Admin"))
+        {
+            <form asp-controller="PurchaseOrders" asp-action="Create" method="get" id="createPOFromPRsForm" class="d-inline"></form>
+            <button type="submit" form="createPOFromPRsForm" class="btn btn-outline-success">Create PO from Selected PRs</button>
+        }
+        <a asp-action="Create" class="btn btn-primary px-4">New PR</a>
+    </div>
+</div>
+
+@if (TempData["PurchaseRequestNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">PR Register</h2>
+            <p class="section-subtitle">Track branch requests, approval, and PO conversion.</p>
+        </div>
+        <div class="table-meta">@Model.TotalCount records</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="PR no., branch, item, purpose, or remark" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
+                    <option value="Submitted" selected="@(status == "Submitted")">Submitted</option>
+                    <option value="Approved" selected="@(status == "Approved")">Approved</option>
+                    <option value="ConvertedToPO" selected="@(status == "ConvertedToPO")">Converted To PO</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <th style="width: 42px;">Select</th>
+                        }
+                        <th>PR No.</th>
+                        <th>Date</th>
+                        <th>Branch</th>
+                        <th>Lines</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var pr in Model)
+                    {
+                        var canSubmit = pr.Status == "Draft" && pr.PurchaseRequestDetails.Any();
+                        var submitBlockedReason = pr.Status == "Draft"
+                            ? "Submit is blocked because no PR lines exist."
+                            : $"Submit is available only for Draft purchase requests. Current status is {pr.Status}.";
+                        var canApprove = User.IsInRole("Admin") && pr.Status == "Submitted";
+                        var approveBlockedReason = pr.Status == "Submitted"
+                            ? "Only Admin can approve purchase requests."
+                            : $"Approve is available only for Submitted purchase requests. Current status is {pr.Status}.";
+                        var hasPO = pr.PurchaseOrderHeaders.Any() ||
+                            pr.PurchaseRequestDetails.Any(d => d.PurchaseOrderAllocationSources.Any());
+                        var canCreatePO = User.IsInRole("Admin") && pr.Status == "Approved" && !hasPO;
+                        var createPOBlockedReason = hasPO
+                            ? "Create PO is blocked because this PR already has a PO."
+                            : pr.Status == "Approved"
+                                ? "Only Admin can create a PO from this PR."
+                                : "Create PO is available only after PR approval.";
+                        <tr>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <td>
+                                    <input type="checkbox" class="form-check-input" form="createPOFromPRsForm" name="purchaseRequestIds" value="@pr.PurchaseRequestId" disabled="@(!canCreatePO)" title="@(canCreatePO ? "Include this PR in PO creation." : createPOBlockedReason)" />
+                                </td>
+                            }
+                            <td><span class="code-chip">@pr.PRNo</span></td>
+                            <td>@pr.RequestDate.ToString("dd MMM yyyy")</td>
+                            <td>@(pr.Branch?.BranchName ?? "-")</td>
+                            <td>@pr.PurchaseRequestDetails.Count</td>
+                            <td>@pr.PurchaseRequestDetails.Sum(x => x.RequestedQty).ToString("N2")</td>
+                            <td><span class="status-pill active">@pr.Status</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @if (canSubmit)
+                                    {
+                                        <form asp-action="Submit" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Submit</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
+                                    }
+                                    @if (canApprove)
+                                    {
+                                        <form asp-action="Approve" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Approve</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+                                    }
+                                    @if (canCreatePO)
+                                    {
+                                        <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-purchaseRequestId="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-success">Create PO</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@createPOBlockedReason">Create PO</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="@(User.IsInRole("Admin") ? 8 : 7)" class="table-empty">No purchase requests yet. Start with a branch request.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

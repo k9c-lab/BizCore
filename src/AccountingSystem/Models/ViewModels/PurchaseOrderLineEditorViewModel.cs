@@ -25,4 +25,6 @@ public class PurchaseOrderLineEditorViewModel
 
     [StringLength(300)]
     public string? Remark { get; set; }
+
+    public List<PurchaseOrderAllocationEditorViewModel> Allocations { get; set; } = new();
 }

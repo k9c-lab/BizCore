@@ -1,0 +1,199 @@
+@model BizCore.Models.Entities.StockTransferHeader
+
+@{
+    ViewData["Title"] = "Stock Transfer Details";
+    var canEdit = Model.Status == "Draft";
+    var editBlockedReason = canEdit ? string.Empty : $"Edit is available only for Draft stock transfers. Current status is {Model.Status}.";
+    var canPost = Model.Status == "Draft" && Model.StockTransferDetails.Any();
+    var postBlockedReason = canPost
+        ? string.Empty
+        : Model.Status != "Draft"
+            ? $"Post is available only for Draft stock transfers. Current status is {Model.Status}."
+            : "Post is blocked because no transfer lines exist.";
+    var canCancel = Model.Status == "Draft" || Model.Status == "Posted";
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : "Cancelled stock transfers are read-only.";
+}
+
+@if (TempData["StockTransferNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Module</div>
+        <h1 class="page-title">Stock Transfer Details</h1>
+        <p class="page-subtitle">Review branch movement, serials, and document history.</p>
+    </div>
+    <div class="page-actions">
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.StockTransferId" class="btn btn-primary">Edit Transfer</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit Transfer</button>
+        }
+        @if (canPost)
+        {
+            <form asp-action="Post" asp-route-id="@Model.StockTransferId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success">Post Transfer</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">Post Transfer</button>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.StockTransferId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this stock transfer (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this stock transfer?');">Cancel Transfer</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Transfer</button>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="workflow-info mb-3">
+    @if (!canEdit) { <div>@editBlockedReason</div> }
+    @if (!canPost) { <div>@postBlockedReason</div> }
+    @if (!canCancel) { <div>@cancelBlockedReason</div> }
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Transfer Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Transfer No.</div>
+                        <div class="form-control readonly-detail">@Model.TransferNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Transfer Date</div>
+                        <div class="form-control readonly-detail">@Model.TransferDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Total Qty</div>
+                        <div class="form-control readonly-detail">@Model.StockTransferDetails.Sum(x => x.Qty).ToString("N2")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">From Branch</div>
+                        <div class="form-control readonly-detail">@(Model.FromBranch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">To Branch</div>
+                        <div class="form-control readonly-detail">@(Model.ToBranch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">Transferred Items</div>
+                        <div class="table-meta">@Model.StockTransferDetails.Count line(s).</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table quote-editor-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">#</th>
+                                <th>Item</th>
+                                <th style="width: 14%;">Qty</th>
+                                <th style="width: 34%;">Serial Numbers</th>
+                                <th style="width: 22%;">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.StockTransferDetails.OrderBy(x => x.LineNumber))
+                        {
+                            var serials = line.StockTransferSerials
+                                .Select(x => x.SerialNumber?.SerialNo)
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .ToList();
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
+                                    <div class="table-meta">Part No.: @(string.IsNullOrWhiteSpace(line.Item?.PartNumber) ? "-" : line.Item!.PartNumber)</div>
+                                </td>
+                                <td>@line.Qty.ToString("N2")</td>
+                                <td>
+                                    @if (serials.Count == 0)
+                                    {
+                                        <span>-</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="serial-chip-list">
+                                        @foreach (var serial in serials)
+                                        {
+                                            <span class="code-chip">@serial</span>
+                                        }
+                                        </div>
+                                    }
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(line.Remark) ? "-" : line.Remark)</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Posted</span>
+                        <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                </div>
+                @if (Model.Status == "Cancelled")
+                {
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

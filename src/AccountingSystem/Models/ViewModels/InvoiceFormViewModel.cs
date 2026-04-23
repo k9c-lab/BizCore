@@ -25,6 +25,12 @@ public class InvoiceFormViewModel
     [Display(Name = "Salesperson")]
     public int? SalespersonId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    public string BranchName { get; set; } = string.Empty;
+    public bool CanAccessAllBranches { get; set; }
+
     [Display(Name = "Quotation No.")]
     public string? QuotationNo { get; set; }
 
@@ -61,6 +67,7 @@ public class InvoiceFormViewModel
 
     public IEnumerable<SelectListItem> CustomerOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> SalespersonOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<InvoiceItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<InvoiceItemLookupViewModel>();

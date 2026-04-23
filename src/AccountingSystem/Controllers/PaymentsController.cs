@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Sales")]
+[Authorize(Roles = "Admin,BranchAdmin,Sales")]
 public class PaymentsController : CrudControllerBase
 {
     private const string PaymentNumberPrefix = "PAY";
@@ -25,8 +25,15 @@ public class PaymentsController : CrudControllerBase
         var query = _context.PaymentHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.Branch)
             .Include(x => x.ReceiptHeader)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -73,7 +80,8 @@ public class PaymentsController : CrudControllerBase
     {
         var model = new PaymentFormViewModel
         {
-            PaymentNo = await GetNextPaymentNumberAsync(DateTime.Today)
+            PaymentNo = await GetNextPaymentNumberAsync(DateTime.Today),
+            BranchId = CurrentBranchId()
         };
 
         if (invoiceId.HasValue)
@@ -82,7 +90,7 @@ public class PaymentsController : CrudControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.InvoiceId == invoiceId.Value);
 
-            if (invoice is null)
+            if (invoice is null || !CanAccessBranch(invoice.BranchId))
             {
                 return NotFound();
             }
@@ -94,6 +102,7 @@ public class PaymentsController : CrudControllerBase
             }
 
             model.CustomerId = invoice.CustomerId;
+            model.BranchId = invoice.BranchId;
             model.Amount = invoice.BalanceAmount;
             model.Allocations.Add(new PaymentInvoiceAllocationEditorViewModel
             {
@@ -133,12 +142,14 @@ public class PaymentsController : CrudControllerBase
             var invoiceMap = await _context.InvoiceHeaders
                 .Where(x => invoiceIds.Contains(x.InvoiceId))
                 .ToDictionaryAsync(x => x.InvoiceId);
+            var branchId = invoiceMap.Values.Select(x => x.BranchId).FirstOrDefault(x => x.HasValue) ?? model.BranchId ?? CurrentBranchId();
 
             var payment = new PaymentHeader
             {
                 PaymentNo = model.PaymentNo,
                 PaymentDate = model.PaymentDate.Date,
                 CustomerId = model.CustomerId!.Value,
+                BranchId = branchId,
                 PaymentMethod = model.PaymentMethod,
                 ReferenceNo = model.ReferenceNo?.Trim(),
                 Amount = model.Amount,
@@ -196,6 +207,7 @@ public class PaymentsController : CrudControllerBase
         var payment = await _context.PaymentHeaders
             .AsNoTracking()
             .Include(x => x.Customer)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.PostedByUser)
@@ -205,7 +217,7 @@ public class PaymentsController : CrudControllerBase
                 .ThenInclude(x => x.InvoiceHeader)
             .FirstOrDefaultAsync(x => x.PaymentId == id.Value);
 
-        return payment is null ? NotFound() : View(payment);
+        return payment is null || !CanAccessBranch(payment.BranchId) ? NotFound() : View(payment);
     }
 
     [HttpPost]
@@ -213,10 +225,11 @@ public class PaymentsController : CrudControllerBase
     public async Task<IActionResult> GenerateReceipt(int id)
     {
         var payment = await _context.PaymentHeaders
+            .Include(x => x.Branch)
             .Include(x => x.ReceiptHeader)
             .FirstOrDefaultAsync(x => x.PaymentId == id);
 
-        if (payment is null)
+        if (payment is null || !CanAccessBranch(payment.BranchId))
         {
             return NotFound();
         }
@@ -241,6 +254,7 @@ public class PaymentsController : CrudControllerBase
             ReceiptDate = DateTime.Today,
             CustomerId = payment.CustomerId,
             PaymentId = payment.PaymentId,
+            BranchId = payment.BranchId,
             TotalReceivedAmount = payment.Amount,
             Remark = payment.Remark,
             Status = "Issued",
@@ -269,11 +283,12 @@ public class PaymentsController : CrudControllerBase
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
         var payment = await _context.PaymentHeaders
+            .Include(x => x.Branch)
             .Include(x => x.ReceiptHeader)
             .Include(x => x.PaymentAllocations)
             .FirstOrDefaultAsync(x => x.PaymentId == id);
 
-        if (payment is null)
+        if (payment is null || !CanAccessBranch(payment.BranchId))
         {
             return NotFound();
         }
@@ -337,6 +352,19 @@ public class PaymentsController : CrudControllerBase
 
     private async Task PopulateLookupsAsync(PaymentFormViewModel model)
     {
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        model.BranchName = model.BranchId.HasValue
+            ? await _context.Branches
+                .AsNoTracking()
+                .Where(x => x.BranchId == model.BranchId.Value)
+                .Select(x => x.BranchName)
+                .FirstOrDefaultAsync() ?? "No Branch"
+            : "All Branches";
+
         model.CustomerOptions = await _context.Customers
             .AsNoTracking()
             .OrderBy(x => x.CustomerCode)
@@ -381,6 +409,11 @@ public class PaymentsController : CrudControllerBase
             .ThenBy(x => x.InvoiceDate)
             .ThenBy(x => x.InvoiceNo)
             .ToListAsync();
+
+        if (model.BranchId.HasValue)
+        {
+            openInvoices = openInvoices.Where(x => x.BranchId == model.BranchId.Value).ToList();
+        }
 
         var appliedMap = model.Allocations
             .Where(x => x.AppliedAmount > 0)
@@ -433,6 +466,24 @@ public class PaymentsController : CrudControllerBase
             .AsNoTracking()
             .Where(x => invoiceIds.Contains(x.InvoiceId))
             .ToDictionaryAsync(x => x.InvoiceId);
+        var branchIds = invoiceMap.Values.Select(x => x.BranchId).Distinct().ToList();
+        var paymentBranchId = branchIds.FirstOrDefault(x => x.HasValue) ?? model.BranchId ?? CurrentBranchId();
+
+        if (!paymentBranchId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Payment branch could not be determined.");
+        }
+        else if (!CanAccessBranch(paymentBranchId))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "You cannot post payment for this branch.");
+        }
+
+        if (branchIds.Count > 1)
+        {
+            ModelState.AddModelError(nameof(model.Allocations), "All payment allocations must belong to the same branch.");
+        }
+
+        model.BranchId = paymentBranchId;
 
         decimal totalApplied = 0m;
 
@@ -448,6 +499,11 @@ public class PaymentsController : CrudControllerBase
             if (invoice.CustomerId != model.CustomerId!.Value)
             {
                 ModelState.AddModelError($"Allocations[{i}].AppliedAmount", "Invoice customer must match the payment customer.");
+            }
+
+            if (invoice.BranchId != model.BranchId)
+            {
+                ModelState.AddModelError($"Allocations[{i}].AppliedAmount", "Invoice branch must match the payment branch.");
             }
 
             if (invoice.Status == "Cancelled")
@@ -512,6 +568,11 @@ public class PaymentsController : CrudControllerBase
     {
         return invoice.BalanceAmount > 0 &&
             (invoice.Status == "Issued" || invoice.Status == "PartiallyPaid");
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
     }
 
     private Task<string> GetNextPaymentNumberAsync(DateTime date)

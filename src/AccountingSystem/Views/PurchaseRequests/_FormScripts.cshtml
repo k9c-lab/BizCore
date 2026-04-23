@@ -1,0 +1,143 @@
+<script>
+    (() => {
+        const itemLookup = JSON.parse(document.getElementById("prItemLookupData").textContent);
+        const itemMap = Object.fromEntries(itemLookup.map(item => [String(item.ItemId), item]));
+        const lineBody = document.getElementById("prLineBody");
+        const addButton = document.getElementById("addPRLine");
+
+        const escapeHtml = value => String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
+        const normalize = value => String(value ?? "").toLowerCase();
+        const money = value => Number(value || 0).toFixed(2);
+
+        const setItemInfo = (row, item) => {
+            const serialFlag = row.querySelector(".js-serial-flag");
+            const itemMeta = row.querySelector(".js-item-meta");
+
+            if (serialFlag) {
+                serialFlag.textContent = item?.IsSerialControlled ? "Yes" : "No";
+            }
+
+            if (itemMeta) {
+                itemMeta.textContent = item
+                    ? `Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"} | Last price: ${money(item.UnitPrice)}`
+                    : "Select item from master data.";
+            }
+        };
+
+        const renderItemResults = row => {
+            const searchInput = row.querySelector(".js-item-search");
+            const results = row.querySelector(".js-item-results");
+            const term = normalize(searchInput.value.trim());
+            const matches = itemLookup
+                .filter(item => !term ||
+                    normalize(item.ItemCode).includes(term) ||
+                    normalize(item.ItemName).includes(term) ||
+                    normalize(item.PartNumber).includes(term))
+                .slice(0, 12);
+
+            if (matches.length === 0) {
+                results.innerHTML = `<div class="search-dropdown-empty">No matching items found.</div>`;
+                results.style.display = "block";
+                return;
+            }
+
+            results.innerHTML = matches.map(item => `
+                <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
+                    <span class="search-dropdown-title">${escapeHtml(item.ItemCode)} - ${escapeHtml(item.ItemName)}</span>
+                    <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")} | ${money(item.UnitPrice)}</span>
+                </button>`).join("");
+            results.style.display = "block";
+        };
+
+        const createRow = index => {
+            const row = document.createElement("tr");
+            row.className = "pr-line-row";
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" name="Details[${index}].PurchaseRequestDetailId" value="" />
+                    <input type="hidden" class="js-line-number" name="Details[${index}].LineNumber" value="${index + 1}" />
+                    <input type="hidden" name="Details[${index}].ItemId" id="Details_${index}__ItemId" value="" class="js-item-id" />
+                    <div class="search-dropdown">
+                        <input type="text" class="form-control js-item-search" placeholder="Search item code, name, or part no." autocomplete="off" />
+                        <div id="prItemResults_${index}" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                    </div>
+                    <div class="table-meta js-item-meta">Select item from master data.</div>
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
+                </td>
+                <td><span class="js-serial-flag badge-soft">No</span></td>
+                <td>
+                    <input type="number" step="0.01" min="0.01" name="Details[${index}].RequestedQty" id="Details_${index}__RequestedQty" value="1" class="form-control" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].RequestedQty" data-valmsg-replace="true"></span>
+                </td>
+                <td><input type="text" name="Details[${index}].Remark" id="Details_${index}__Remark" class="form-control" /></td>
+                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button></td>`;
+            return row;
+        };
+
+        const reindexRows = () => {
+            [...lineBody.querySelectorAll(".pr-line-row")].forEach((row, index) => {
+                row.querySelectorAll("input, span[data-valmsg-for]").forEach(element => {
+                    if (element.name) element.name = element.name.replace(/Details\[\d+\]/g, `Details[${index}]`);
+                    if (element.id) element.id = element.id.replace(/Details_\d+__/g, `Details_${index}__`);
+                    const field = element.getAttribute("data-valmsg-for");
+                    if (field) element.setAttribute("data-valmsg-for", field.replace(/Details\[\d+\]/g, `Details[${index}]`));
+                });
+                const itemResults = row.querySelector(".js-item-results");
+                if (itemResults) {
+                    itemResults.id = `prItemResults_${index}`;
+                }
+                row.querySelector(".js-line-number").value = String(index + 1);
+            });
+        };
+
+        lineBody.addEventListener("input", event => {
+            const row = event.target.closest(".pr-line-row");
+            if (!row || !event.target.classList.contains("js-item-search")) return;
+            row.querySelector(".js-item-id").value = "";
+            setItemInfo(row, null);
+            renderItemResults(row);
+        });
+
+        lineBody.addEventListener("focusin", event => {
+            const row = event.target.closest(".pr-line-row");
+            if (!row || !event.target.classList.contains("js-item-search")) return;
+            renderItemResults(row);
+        });
+
+        lineBody.addEventListener("click", event => {
+            const itemOption = event.target.closest(".search-dropdown-option[data-item-id]");
+            if (itemOption) {
+                const row = itemOption.closest(".pr-line-row");
+                const item = itemMap[itemOption.dataset.itemId];
+                if (!row || !item) return;
+
+                row.querySelector(".js-item-id").value = item.ItemId;
+                row.querySelector(".js-item-search").value = `${item.ItemCode} - ${item.ItemName}`;
+                row.querySelector(".js-item-results").style.display = "none";
+                setItemInfo(row, item);
+                return;
+            }
+
+            if (!event.target.classList.contains("js-remove-line")) return;
+            if (lineBody.querySelectorAll(".pr-line-row").length === 1) return;
+            event.target.closest(".pr-line-row").remove();
+            reindexRows();
+        });
+
+        addButton.addEventListener("click", () => {
+            lineBody.appendChild(createRow(lineBody.querySelectorAll(".pr-line-row").length));
+        });
+
+        document.addEventListener("click", event => {
+            if (!event.target.closest(".search-dropdown")) {
+                lineBody.querySelectorAll(".js-item-results").forEach(results => results.style.display = "none");
+            }
+        });
+    })();
+</script>

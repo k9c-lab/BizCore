@@ -1,0 +1,131 @@
+@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<input asp-for="Status" type="hidden" />
+
+<div class="form-shell">
+    <div class="form-section">
+        <div class="form-section-title">PR Header</div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label asp-for="PRNo" class="form-label"></label>
+                <input asp-for="PRNo" class="form-control" readonly />
+                <div class="form-text">Auto-generated monthly PR number.</div>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="RequestDate" class="form-label"></label>
+                <input asp-for="RequestDate" class="form-control" />
+                <span asp-validation-for="RequestDate" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="RequiredDate" class="form-label"></label>
+                <input asp-for="RequiredDate" class="form-control" />
+                <span asp-validation-for="RequiredDate" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="BranchId" class="form-label"></label>
+                @if (Model.CanAccessAllBranches)
+                {
+                    <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
+                        <option value="">Select branch</option>
+                    </select>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="BranchId" />
+                    <div class="form-control readonly-detail">@Model.BranchName</div>
+                }
+                <span asp-validation-for="BranchId" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Purpose" class="form-label"></label>
+                <textarea asp-for="Purpose" class="form-control" rows="3" placeholder="Why does this branch need these items?"></textarea>
+                <span asp-validation-for="Purpose" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Remark" class="form-label"></label>
+                <textarea asp-for="Remark" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Remark" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="quotation-party-grid">
+        <div class="quotation-party-column">
+            <div class="quotation-info-card">
+                <div class="quotation-info-card-title">Workflow</div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Current Status</span>
+                        <span class="quotation-info-value">@Model.Status</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Next Step</span>
+                        <span class="quotation-info-value">Submit from details</span>
+                    </div>
+                </div>
+                <div class="table-meta">Central admin approves submitted PRs and creates supplier POs.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+            <div>
+                <div class="form-section-title mb-1">Requested Items</div>
+                <div class="table-meta">Select item master records and requested quantities for this branch.</div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addPRLine">Add Line</button>
+        </div>
+        <div class="table-responsive po-lines-editor-wrap">
+            <table class="table entity-table quote-editor-table" id="prLinesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 42%;">Item</th>
+                        <th style="width: 12%;">Is Serial</th>
+                        <th style="width: 16%;">Requested Qty</th>
+                        <th>Remark</th>
+                        <th style="width: 8%;" class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="prLineBody">
+                @for (var i = 0; i < Model.Details.Count; i++)
+                {
+                    var selectedItem = Model.ItemLookup.FirstOrDefault(x => x.ItemId == Model.Details[i].ItemId);
+                    <tr class="pr-line-row">
+                        <td>
+                            <input type="hidden" name="Details[@i].PurchaseRequestDetailId" value="@Model.Details[i].PurchaseRequestDetailId" />
+                            <input type="hidden" class="js-line-number" name="Details[@i].LineNumber" value="@(i + 1)" />
+                            <input type="hidden" name="Details[@i].ItemId" id="Details_@(i)__ItemId" value="@Model.Details[i].ItemId" class="js-item-id" />
+                            <div class="search-dropdown">
+                                <input type="text"
+                                       class="form-control js-item-search"
+                                       value="@(selectedItem is null ? string.Empty : $"{selectedItem.ItemCode} - {selectedItem.ItemName}")"
+                                       placeholder="Search item code, name, or part no."
+                                       autocomplete="off" />
+                                <div id="prItemResults_@i" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                            </div>
+                            <div class="table-meta js-item-meta">@(selectedItem is null ? "Select item from master data." : $"Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)}")</div>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
+                        </td>
+                        <td><span class="js-serial-flag badge-soft">@(selectedItem?.IsSerialControlled == true ? "Yes" : "No")</span></td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" name="Details[@i].RequestedQty" id="Details_@(i)__RequestedQty" value="@Model.Details[i].RequestedQty.ToString("0.##")" class="form-control" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].RequestedQty" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="text" name="Details[@i].Remark" id="Details_@(i)__Remark" value="@Model.Details[i].Remark" class="form-control" />
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <span class="text-danger field-validation-valid" data-valmsg-for="Details" data-valmsg-replace="true"></span>
+    </div>
+</div>
+
+<script type="application/json" id="prItemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>

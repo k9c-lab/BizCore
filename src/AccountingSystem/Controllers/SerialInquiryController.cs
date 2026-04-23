@@ -2,11 +2,12 @@ using BizCore.Data;
 using BizCore.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Warehouse")]
+[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
 public class SerialInquiryController : Controller
 {
     private readonly AccountingDbContext _context;
@@ -16,15 +17,26 @@ public class SerialInquiryController : Controller
         _context = context;
     }
 
-    public async Task<IActionResult> Index(string? search, string? status, int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? search, string? status, int? branchId, int page = 1, int pageSize = 20)
     {
+        var canAccessAllBranches = CanAccessAllBranches();
+        var effectiveBranchId = ResolveBranchId(branchId, canAccessAllBranches);
+        var branchName = await ResolveBranchNameAsync(effectiveBranchId, canAccessAllBranches);
+
         var query = _context.SerialNumbers
             .AsNoTracking()
             .Include(x => x.Item)
             .Include(x => x.Supplier)
             .Include(x => x.CurrentCustomer)
             .Include(x => x.InvoiceHeader)
+            .Include(x => x.Branch)
             .AsQueryable();
+
+        if (effectiveBranchId.HasValue)
+        {
+            var selectedBranchId = effectiveBranchId.Value;
+            query = query.Where(x => x.BranchId == selectedBranchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -70,6 +82,8 @@ public class SerialInquiryController : Controller
                 CurrentCustomerName = x.CurrentCustomer != null ? x.CurrentCustomer.CustomerName : "-",
                 InvoiceId = x.InvoiceId,
                 InvoiceCode = x.InvoiceHeader != null ? x.InvoiceHeader.InvoiceNo : "-",
+                BranchId = x.BranchId,
+                BranchName = x.Branch != null ? x.Branch.BranchName : "-",
                 SupplierWarrantyStartDate = x.SupplierWarrantyStartDate,
                 SupplierWarrantyEndDate = x.SupplierWarrantyEndDate,
                 CustomerWarrantyStartDate = x.CustomerWarrantyStartDate,
@@ -77,9 +91,8 @@ public class SerialInquiryController : Controller
                 CanCustomerClaim = x.Status == "Sold" &&
                     x.CurrentCustomerId.HasValue &&
                     x.InvoiceId.HasValue &&
-                    x.CustomerWarrantyStartDate.HasValue &&
-                    x.CustomerWarrantyEndDate.HasValue &&
-                    x.CustomerWarrantyEndDate.Value.Date >= DateTime.Today &&
+                    (!x.CustomerWarrantyStartDate.HasValue || x.CustomerWarrantyStartDate.Value.Date <= DateTime.Today) &&
+                    (!x.CustomerWarrantyEndDate.HasValue || x.CustomerWarrantyEndDate.Value.Date >= DateTime.Today) &&
                     !_context.CustomerClaimDetails.Any(d => d.SerialId == x.SerialId &&
                         d.CustomerClaimHeader != null &&
                         (d.CustomerClaimHeader.Status == "Open" ||
@@ -94,9 +107,9 @@ public class SerialInquiryController : Controller
                         ? "Customer claim is blocked because this serial is not linked to a customer."
                         : !x.InvoiceId.HasValue
                             ? "Customer claim is blocked because this serial is not linked to an invoice."
-                            : !x.CustomerWarrantyStartDate.HasValue || !x.CustomerWarrantyEndDate.HasValue
-                                ? "Customer warranty is missing."
-                                : x.CustomerWarrantyEndDate.Value.Date < DateTime.Today
+                            : x.CustomerWarrantyStartDate.HasValue && x.CustomerWarrantyStartDate.Value.Date > DateTime.Today
+                                ? "Customer warranty has not started."
+                                : x.CustomerWarrantyEndDate.HasValue && x.CustomerWarrantyEndDate.Value.Date < DateTime.Today
                                     ? "Customer warranty has expired."
                                     : _context.CustomerClaimDetails.Any(d => d.SerialId == x.SerialId &&
                                         d.CustomerClaimHeader != null &&
@@ -114,10 +127,76 @@ public class SerialInquiryController : Controller
         {
             Search = search?.Trim(),
             Status = status,
+            BranchId = effectiveBranchId,
+            BranchName = branchName,
+            CanAccessAllBranches = canAccessAllBranches,
+            BranchOptions = await BuildBranchOptionsAsync(effectiveBranchId, canAccessAllBranches),
             Pagination = results.Pagination,
             Results = results.Items
         };
 
         return View(model);
+    }
+
+    private bool CanAccessAllBranches()
+    {
+        return !User.IsInRole("BranchAdmin")
+            && (string.Equals(User.FindFirst("CanAccessAllBranches")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                || User.IsInRole("Admin"));
+    }
+
+    private int? CurrentBranchId()
+    {
+        return int.TryParse(User.FindFirst("BranchId")?.Value, out var branchId) ? branchId : null;
+    }
+
+    private int? ResolveBranchId(int? requestedBranchId, bool canAccessAllBranches)
+    {
+        return canAccessAllBranches ? requestedBranchId : CurrentBranchId();
+    }
+
+    private async Task<string> ResolveBranchNameAsync(int? branchId, bool canAccessAllBranches)
+    {
+        if (!branchId.HasValue && canAccessAllBranches)
+        {
+            return "All Branches";
+        }
+
+        if (!branchId.HasValue)
+        {
+            return "No Branch";
+        }
+
+        return await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.BranchId == branchId.Value)
+            .Select(x => x.BranchName)
+            .FirstOrDefaultAsync() ?? "No Branch";
+    }
+
+    private async Task<IReadOnlyList<SelectListItem>> BuildBranchOptionsAsync(int? selectedBranchId, bool canAccessAllBranches)
+    {
+        if (!canAccessAllBranches)
+        {
+            return Array.Empty<SelectListItem>();
+        }
+
+        var options = new List<SelectListItem>
+        {
+            new() { Value = string.Empty, Text = "All Branches", Selected = !selectedBranchId.HasValue }
+        };
+
+        options.AddRange(await _context.Branches
+            .AsNoTracking()
+            .OrderBy(x => x.BranchCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.BranchId.ToString(),
+                Text = x.BranchCode + " - " + x.BranchName,
+                Selected = selectedBranchId.HasValue && x.BranchId == selectedBranchId.Value
+            })
+            .ToListAsync());
+
+        return options;
     }
 }

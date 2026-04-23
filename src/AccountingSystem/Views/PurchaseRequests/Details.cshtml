@@ -1,0 +1,251 @@
+@model BizCore.Models.Entities.PurchaseRequestHeader
+
+@{
+    ViewData["Title"] = "Purchase Request Details";
+    var linkedPOs = Model.PurchaseOrderHeaders
+        .Concat(Model.PurchaseRequestDetails
+            .SelectMany(x => x.PurchaseOrderAllocationSources)
+            .Select(x => x.PurchaseOrderAllocation?.PurchaseOrderDetail?.PurchaseOrderHeader)
+            .Where(x => x is not null)!)
+        .GroupBy(x => x!.PurchaseOrderId)
+        .Select(x => x.First()!)
+        .OrderByDescending(x => x.PurchaseOrderId)
+        .ToList();
+    var hasPO = linkedPOs.Any();
+    var linkedPO = linkedPOs.FirstOrDefault();
+    var canEdit = Model.Status == "Draft";
+    var editBlockedReason = canEdit ? string.Empty : $"Edit PR is available only for Draft purchase requests. Current status is {Model.Status}.";
+    var canSubmit = Model.Status == "Draft" && Model.PurchaseRequestDetails.Any();
+    var submitBlockedReason = canSubmit
+        ? string.Empty
+        : Model.Status != "Draft"
+            ? $"Submit is available only for Draft purchase requests. Current status is {Model.Status}."
+            : "Submit is blocked because no PR lines exist.";
+    var canApprove = User.IsInRole("Admin") && Model.Status == "Submitted";
+    var approveBlockedReason = canApprove
+        ? string.Empty
+        : Model.Status != "Submitted"
+            ? $"Approve is available only for Submitted purchase requests. Current status is {Model.Status}."
+            : "Only Admin can approve purchase requests.";
+    var canCreatePO = User.IsInRole("Admin") && Model.Status == "Approved" && !hasPO;
+    var createPOBlockedReason = canCreatePO
+        ? string.Empty
+        : hasPO
+            ? "Create PO is blocked because this PR already has a PO."
+            : Model.Status != "Approved"
+                ? "Create PO is available only after PR approval."
+                : "Only Admin can create a PO from this PR.";
+    var canCancel = (Model.Status == "Draft" || Model.Status == "Submitted" || Model.Status == "Approved") && !hasPO;
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : hasPO
+            ? "Cancel PR is blocked because a purchase order has already been created."
+            : Model.Status == "Cancelled"
+                ? "Cancelled purchase requests are read-only."
+                : $"Cancel PR is available only for Draft, Submitted, or Approved purchase requests. Current status is {Model.Status}.";
+}
+
+@if (TempData["PurchaseRequestNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    <div class="workflow-info mb-3">@notice</div>
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Purchase Request Details</h1>
+        <p class="page-subtitle">Review branch item request before PO creation.</p>
+    </div>
+    <div class="page-actions">
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PurchaseRequestId" class="btn btn-primary">Edit PR</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit PR</button>
+        }
+        @if (canSubmit)
+        {
+            <form asp-action="Submit" asp-route-id="@Model.PurchaseRequestId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
+        }
+        @if (canApprove)
+        {
+            <form asp-action="Approve" asp-route-id="@Model.PurchaseRequestId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Approve</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+        }
+        @if (canCreatePO)
+        {
+            <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-purchaseRequestId="@Model.PurchaseRequestId" class="btn btn-success">Create PO</a>
+        }
+        else if (linkedPO is not null)
+        {
+            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@linkedPO.PurchaseOrderId" class="btn btn-outline-success">View PO</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@createPOBlockedReason">Create PO</button>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.PurchaseRequestId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this purchase request (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this purchase request?');">Cancel PR</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel PR</button>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="workflow-info mb-3">
+    @if (!canEdit) { <div>@editBlockedReason</div> }
+    @if (!canSubmit) { <div>@submitBlockedReason</div> }
+    @if (!canApprove) { <div>@approveBlockedReason</div> }
+    @if (!canCreatePO && linkedPO is null) { <div>@createPOBlockedReason</div> }
+    @if (!canCancel) { <div>@cancelBlockedReason</div> }
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">PR Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">PR No.</div>
+                        <div class="form-control readonly-detail">@Model.PRNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Request Date</div>
+                        <div class="form-control readonly-detail">@Model.RequestDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Required Date</div>
+                        <div class="form-control readonly-detail">@(Model.RequiredDate?.ToString("dd MMM yyyy") ?? "-")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Linked PO</div>
+                        <div class="form-control readonly-detail">
+                            @if (linkedPO is null)
+                            {
+                                <span>-</span>
+                            }
+                            else
+                            {
+                                <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@linkedPO.PurchaseOrderId">@linkedPO.PONo</a>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Purpose</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Purpose) ? "-" : Model.Purpose)</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">Requested Items</div>
+                        <div class="table-meta">@Model.PurchaseRequestDetails.Count line(s) requested by branch.</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table quote-editor-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">#</th>
+                                <th>Item</th>
+                                <th style="width: 16%;">Requested Qty</th>
+                                <th style="width: 30%;">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.PurchaseRequestDetails.OrderBy(x => x.LineNumber))
+                        {
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
+                                    <div class="table-meta">Part No.: @(string.IsNullOrWhiteSpace(line.Item?.PartNumber) ? "-" : line.Item!.PartNumber)</div>
+                                </td>
+                                <td>@line.RequestedQty.ToString("N2")</td>
+                                <td>@(string.IsNullOrWhiteSpace(line.Remark) ? "-" : line.Remark)</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">Document History</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">Created</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Submitted</span>
+                        <span class="document-history-value">@(Model.SubmittedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.SubmittedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Approved</span>
+                        <span class="document-history-value">@(Model.ApprovedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                </div>
+                @if (Model.Status == "Cancelled")
+                {
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

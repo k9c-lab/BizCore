@@ -1,46 +1,295 @@
+@model BizCore.Models.ViewModels.DashboardViewModel
+
 @{
-    ViewData["Title"] = "Core Module";
+    ViewData["Title"] = "Dashboard";
 }
 
-<section class="py-2">
-    <div class="row g-4 align-items-stretch">
-        <div class="col-lg-7">
-            <div class="card hero-card h-100">
-                <div class="card-body p-4">
-                    <span class="badge text-bg-primary mb-3">Phase 1</span>
-                    <h1 class="display-6 mb-3">BizCore Master Data Module</h1>
-                    <p class="lead text-muted mb-4">
-                        Manage the master data used by sales and inventory flows: customers, suppliers,
-                        items, and salespeople.
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a class="btn btn-primary" asp-controller="Customers" asp-action="Index">Customers</a>
-                        <a class="btn btn-outline-primary" asp-controller="Quotations" asp-action="Index">Quotations</a>
-                        <a class="btn btn-outline-primary" asp-controller="Invoices" asp-action="Index">Invoices</a>
-                        <a class="btn btn-outline-primary" asp-controller="Payments" asp-action="Index">Payments</a>
-                        <a class="btn btn-outline-primary" asp-controller="Receipts" asp-action="Index">Receipts</a>
-                        <a class="btn btn-outline-primary" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
-                        <a class="btn btn-outline-primary" asp-controller="Receivings" asp-action="Index">Receivings</a>
-                        <a class="btn btn-outline-primary" asp-controller="Items" asp-action="Index">Items</a>
-                        <a class="btn btn-outline-primary" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
-                        <a class="btn btn-outline-primary" asp-controller="Salespersons" asp-action="Index">Salespersons</a>
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Executive Overview</div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Operational snapshot for @Model.BranchName on @Model.Today.ToString("dd MMM yyyy").</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Reports" asp-action="Index" class="btn btn-primary">Open Reports</a>
+        <a asp-controller="StockAudit" asp-action="Index" class="btn btn-outline-secondary">Stock Audit</a>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Sales Today</span>
+        <p class="quote-summary-value">@Model.SalesToday.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Sales This Month</span>
+        <p class="quote-summary-value">@Model.SalesThisMonth.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Payments This Month</span>
+        <p class="quote-summary-value">@Model.PaymentsThisMonth.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Outstanding AR</span>
+        <p class="quote-summary-value">@Model.OutstandingAr.ToString("N2")</p>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Stock On Hand Qty</span>
+        <p class="quote-summary-value">@Model.StockOnHandQty.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Low Stock Items</span>
+        <p class="quote-summary-value">@Model.LowStockItems</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Open PO</span>
+        <p class="quote-summary-value">@Model.OpenPurchaseOrders</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Open Claims</span>
+        <p class="quote-summary-value">@(Model.OpenCustomerClaims + Model.OpenSupplierClaims)</p>
+    </div>
+</div>
+
+<div class="quotation-party-grid mb-3">
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Sales Trend</h2>
+                        <p class="section-subtitle">Last 7 days invoice amount.</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="card content-card h-100">
-                <div class="card-body p-4">
-                    <h2 class="h4 mb-3">Included in this start</h2>
-                    <ul class="mb-0">
-                        <li>EF Core entities with validation attributes</li>
-                        <li>SQL Server `DbContext` with unique constraints</li>
-                        <li>CRUD screens for the phase 1 master data</li>
-                        <li>Purchasing start: PO and receiving foundations</li>
-                        <li>Database bootstrap script in `/database`</li>
-                    </ul>
+                @{
+                    var maxSales = Model.SalesTrend.Any() ? Model.SalesTrend.Max(x => x.Value) : 0m;
+                }
+                <div class="dashboard-bars" aria-label="Sales trend chart">
+                    @foreach (var point in Model.SalesTrend)
+                    {
+                        var height = maxSales <= 0m ? 4 : Math.Max(4, (int)Math.Round(point.Value / maxSales * 100));
+                        <div class="dashboard-bar-cell">
+                            <div class="dashboard-bar-value">@point.Value.ToString("N0")</div>
+                            <div class="dashboard-bar-track">
+                                <div class="dashboard-bar-fill" style="height:@height%"></div>
+                            </div>
+                            <div class="dashboard-bar-label">@point.Label</div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
-</section>
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Open Claim Mix</h2>
+                        <p class="section-subtitle">Customer vs supplier claim workload.</p>
+                    </div>
+                </div>
+                @{
+                    var claimTotal = Model.ClaimMix.Sum(x => x.Value);
+                }
+                <div class="dashboard-meter-list">
+                    @foreach (var point in Model.ClaimMix)
+                    {
+                        var width = claimTotal <= 0m ? 0 : (int)Math.Round(point.Value / claimTotal * 100);
+                        <div class="dashboard-meter-row">
+                            <div class="dashboard-meter-head">
+                                <span>@point.Label</span>
+                                <strong>@point.Value.ToString("N0")</strong>
+                            </div>
+                            <div class="dashboard-meter-track">
+                                <div class="dashboard-meter-fill" style="width:@width%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="quotation-party-grid">
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Needs Attention</h2>
+                    <p class="section-subtitle">Low stock and workflow queues for today.</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="quotation-info-grid mb-3">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Pending Receivings</span>
+                        <span class="quotation-info-value">@Model.PendingReceivings</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Customer Claims</span>
+                        <span class="quotation-info-value">@Model.OpenCustomerClaims</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">Supplier Claims</span>
+                        <span class="quotation-info-value">@Model.OpenSupplierClaims</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Detail</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @if (Model.AttentionItems.Any())
+                        {
+                            @foreach (var item in Model.AttentionItems)
+                            {
+                                <tr>
+                                    <td><span class="code-chip">@item.Label</span></td>
+                                    <td>@item.Value</td>
+                                    <td>@item.Detail</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="3" class="table-empty">No low stock items found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Recent Activity</h2>
+                    <p class="section-subtitle">Latest invoices and payments.</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Document</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @if (Model.RecentActivities.Any())
+                        {
+                            @foreach (var activity in Model.RecentActivities)
+                            {
+                                <tr>
+                                    <td>@activity.Date.ToString("dd MMM")</td>
+                                    <td>@activity.Type</td>
+                                    <td>
+                                        @if (activity.ReferenceId.HasValue)
+                                        {
+                                            <a asp-controller="@activity.Controller" asp-action="Details" asp-route-id="@activity.ReferenceId.Value">@activity.DocumentNo</a>
+                                        }
+                                        else
+                                        {
+                                            @activity.DocumentNo
+                                        }
+                                        <div class="table-meta">@activity.Description</div>
+                                    </td>
+                                    <td class="text-end">@(activity.Amount?.ToString("N2") ?? "-")</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="4" class="table-empty">No recent activity found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-bars {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 10px;
+        min-height: 220px;
+        align-items: end;
+    }
+
+    .dashboard-bar-cell {
+        display: grid;
+        grid-template-rows: auto 150px auto;
+        gap: 6px;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .dashboard-bar-value,
+    .dashboard-bar-label {
+        color: #64748b;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .dashboard-bar-track {
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        height: 150px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .dashboard-bar-fill {
+        width: 100%;
+        min-height: 4px;
+        background: #2563eb;
+    }
+
+    .dashboard-meter-list {
+        display: grid;
+        gap: 18px;
+        padding-top: 18px;
+    }
+
+    .dashboard-meter-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .dashboard-meter-track {
+        height: 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .dashboard-meter-fill {
+        height: 100%;
+        background: #16a34a;
+    }
+</style>

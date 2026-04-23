@@ -11,7 +11,8 @@
         <p class="page-subtitle">Read-only serial listing for the selected serial-controlled item.</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Stock Inquiry</a>
+        <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@Model.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-outline-primary">View Ledger</a>
+        <a asp-action="Index" asp-route-branchId="@Model.BranchId" class="btn btn-outline-secondary">Back to Stock Inquiry</a>
     </div>
 </div>
 
@@ -21,6 +22,7 @@
             <div class="detail-item"><span class="detail-label">Item Code</span><p class="detail-value">@Model.ItemCode</p></div>
             <div class="detail-item"><span class="detail-label">Item Name</span><p class="detail-value">@Model.ItemName</p></div>
             <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@Model.PartNumber</p></div>
+            <div class="detail-item"><span class="detail-label">Branch</span><p class="detail-value">@Model.BranchName</p></div>
             <div class="detail-item"><span class="detail-label">Current Stock</span><p class="detail-value">@Model.CurrentStock.ToString("N2")</p></div>
         </div>
     </div>
@@ -53,8 +55,15 @@
                     <option value="Available" selected="@(Model.Status == "Available")">Available</option>
                 </select>
             </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label for="branchId" class="form-label">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
             <div class="list-filter-actions">
-                <a asp-action="Serials" asp-route-itemId="@Model.ItemId" class="btn btn-outline-secondary">Clear</a>
+                <a asp-action="Serials" asp-route-itemId="@Model.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-outline-secondary">Clear</a>
                 <button type="submit" class="btn btn-primary">Search</button>
             </div>
         </form>
@@ -96,6 +105,10 @@
                         </div>
 
                         <div class="inquiry-card-grid">
+                            <div class="inquiry-card-field">
+                                <span class="inquiry-card-label">Branch</span>
+                                <span class="inquiry-card-value">@serial.BranchName</span>
+                            </div>
                             <div class="inquiry-card-field">
                                 <span class="inquiry-card-label">Supplier</span>
                                 <span class="inquiry-card-value">@serial.SupplierName</span>

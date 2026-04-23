@@ -6,6 +6,8 @@ public class ReceivingPoLookupViewModel
     public string PONo { get; set; } = string.Empty;
     public int SupplierId { get; set; }
     public string SupplierName { get; set; } = string.Empty;
+    public int? BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
     public string VatType { get; set; } = "VAT";
     public decimal Subtotal { get; set; }
     public decimal VatAmount { get; set; }

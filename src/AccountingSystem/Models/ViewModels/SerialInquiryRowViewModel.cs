@@ -8,6 +8,8 @@ public class SerialInquiryRowViewModel
     public string ItemName { get; set; } = string.Empty;
     public string PartNumber { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public int? BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
     public string SupplierName { get; set; } = string.Empty;
     public string CurrentCustomerName { get; set; } = string.Empty;
     public int? InvoiceId { get; set; }

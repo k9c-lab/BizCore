@@ -23,6 +23,9 @@ public class ReceiptHeader
     [Required]
     public int PaymentId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
     [Display(Name = "Total Received Amount")]
     public decimal TotalReceivedAmount { get; set; }
 
@@ -46,6 +49,7 @@ public class ReceiptHeader
     public string? CancelReason { get; set; }
 
     public Customer? Customer { get; set; }
+    public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? IssuedByUser { get; set; }

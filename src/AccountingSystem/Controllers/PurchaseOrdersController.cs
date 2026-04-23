@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Warehouse")]
+[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
 public class PurchaseOrdersController : CrudControllerBase
 {
     private const string NumberPrefix = "PO";
@@ -29,12 +29,22 @@ public class PurchaseOrdersController : CrudControllerBase
         var query = _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
+            .Include(x => x.Branch)
+            .Include(x => x.PurchaseRequestHeader)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId ||
+                x.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == branchId)));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -42,6 +52,7 @@ public class PurchaseOrdersController : CrudControllerBase
             query = query.Where(x =>
                 x.PONo.Contains(keyword) ||
                 (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.PurchaseRequestHeader != null && x.PurchaseRequestHeader.PRNo.Contains(keyword)) ||
                 (x.Supplier != null && (
                     x.Supplier.SupplierCode.Contains(keyword) ||
                     x.Supplier.SupplierName.Contains(keyword) ||
@@ -76,18 +87,52 @@ public class PurchaseOrdersController : CrudControllerBase
         return View(orders);
     }
 
-    public async Task<IActionResult> Create()
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create(int? purchaseRequestId, int[]? purchaseRequestIds)
     {
         var model = new PurchaseOrderFormViewModel
         {
-            PONo = await GetNextPONumberAsync(DateTime.Today)
+            PONo = await GetNextPONumberAsync(DateTime.Today),
+            BranchId = CurrentBranchId()
         };
+
+        var selectedRequestIds = (purchaseRequestIds ?? Array.Empty<int>())
+            .Concat(purchaseRequestId.HasValue ? new[] { purchaseRequestId.Value } : Array.Empty<int>())
+            .Distinct()
+            .ToList();
+
+        if (selectedRequestIds.Count > 0)
+        {
+            var requests = await _context.PurchaseRequestHeaders
+                .AsNoTracking()
+                .Include(x => x.Branch)
+                .Include(x => x.PurchaseRequestDetails)
+                    .ThenInclude(x => x.Item)
+                .Include(x => x.PurchaseRequestDetails)
+                    .ThenInclude(x => x.PurchaseOrderAllocationSources)
+                .Where(x => selectedRequestIds.Contains(x.PurchaseRequestId))
+                .ToListAsync();
+
+            if (requests.Count != selectedRequestIds.Count || requests.Any(x => !CanAccessBranch(x.BranchId)))
+            {
+                return NotFound();
+            }
+
+            if (requests.Any(x => x.Status != "Approved" || x.PurchaseRequestDetails.Any(d => d.PurchaseOrderAllocationSources.Any())))
+            {
+                TempData["PurchaseOrderNotice"] = "Create PO from PR is available only for Approved purchase requests that have not been converted to PO.";
+                return RedirectToAction("Index", "PurchaseRequests");
+            }
+
+            ApplyPurchaseRequestSources(model, requests);
+        }
 
         await PopulateLookupsAsync(model);
         return View(model);
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PurchaseOrderFormViewModel model)
     {
@@ -107,6 +152,8 @@ public class PurchaseOrdersController : CrudControllerBase
             PONo = model.PONo,
             PODate = model.PODate,
             SupplierId = model.SupplierId!.Value,
+            BranchId = model.BranchId,
+            PurchaseRequestId = model.PurchaseRequestId,
             ReferenceNo = model.ReferenceNo?.Trim(),
             ExpectedReceiveDate = model.ExpectedReceiveDate,
             Remark = model.Remark?.Trim(),
@@ -122,6 +169,14 @@ public class PurchaseOrdersController : CrudControllerBase
         };
 
         _context.PurchaseOrderHeaders.Add(header);
+        var linkedRequests = await GetValidPurchaseRequestsForPoAsync(model);
+        foreach (var linkedRequest in linkedRequests)
+        {
+            linkedRequest.Status = "ConvertedToPO";
+            linkedRequest.UpdatedByUserId = CurrentUserId();
+            linkedRequest.UpdatedDate = DateTime.UtcNow;
+        }
+
         if (!await TrySaveAsync("PO number must be unique."))
         {
             await PopulateLookupsAsync(model);
@@ -131,6 +186,7 @@ public class PurchaseOrdersController : CrudControllerBase
         return RedirectToAction(nameof(Details), new { id = header.PurchaseOrderId });
     }
 
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id is null)
@@ -140,10 +196,15 @@ public class PurchaseOrdersController : CrudControllerBase
 
         var header = await _context.PurchaseOrderHeaders
             .AsNoTracking()
+            .Include(x => x.PurchaseRequestHeader)
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.PurchaseOrderAllocationSources)
+                        .ThenInclude(x => x.PurchaseRequestDetail!)
+                            .ThenInclude(x => x.PurchaseRequestHeader)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id.Value);
 
-        if (header is null)
+        if (header is null || !CanAccessBranch(header.BranchId))
         {
             return NotFound();
         }
@@ -160,6 +221,9 @@ public class PurchaseOrdersController : CrudControllerBase
             PONo = header.PONo,
             PODate = header.PODate,
             SupplierId = header.SupplierId,
+            BranchId = header.BranchId,
+            PurchaseRequestId = header.PurchaseRequestId,
+            PurchaseRequestNo = header.PurchaseRequestHeader?.PRNo,
             ReferenceNo = header.ReferenceNo,
             ExpectedReceiveDate = header.ExpectedReceiveDate,
             Remark = header.Remark,
@@ -181,7 +245,28 @@ public class PurchaseOrdersController : CrudControllerBase
                     UnitPrice = x.UnitPrice,
                     DiscountAmount = x.DiscountAmount,
                     LineTotal = x.LineTotal,
-                    Remark = x.Remark
+                    Remark = x.Remark,
+                    Allocations = x.PurchaseOrderAllocations
+                        .OrderBy(a => a.Branch != null ? a.Branch.BranchCode : string.Empty)
+                        .Select(a => new PurchaseOrderAllocationEditorViewModel
+                        {
+                            PurchaseOrderAllocationId = a.PurchaseOrderAllocationId,
+                            BranchId = a.BranchId,
+                            AllocatedQty = a.AllocatedQty,
+                            ReceivedQty = a.ReceivedQty,
+                            Sources = a.PurchaseOrderAllocationSources
+                                .OrderBy(s => s.PurchaseRequestDetail?.PurchaseRequestHeader?.PRNo)
+                                .Select(s => new PurchaseOrderAllocationSourceEditorViewModel
+                                {
+                                    PurchaseOrderAllocationSourceId = s.PurchaseOrderAllocationSourceId,
+                                    PurchaseRequestDetailId = s.PurchaseRequestDetailId,
+                                    PurchaseRequestId = s.PurchaseRequestDetail?.PurchaseRequestId,
+                                    PurchaseRequestNo = s.PurchaseRequestDetail?.PurchaseRequestHeader?.PRNo ?? string.Empty,
+                                    SourceQty = s.SourceQty
+                                })
+                                .ToList()
+                        })
+                        .ToList()
                 })
                 .ToList()
         };
@@ -196,6 +281,7 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, PurchaseOrderFormViewModel model)
     {
@@ -206,9 +292,11 @@ public class PurchaseOrdersController : CrudControllerBase
 
         var existingHeader = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.PurchaseOrderAllocationSources)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id);
 
-        if (existingHeader is null)
+        if (existingHeader is null || !CanAccessBranch(existingHeader.BranchId))
         {
             return NotFound();
         }
@@ -238,6 +326,8 @@ public class PurchaseOrdersController : CrudControllerBase
         existingHeader.PONo = model.PONo.Trim();
         existingHeader.PODate = model.PODate;
         existingHeader.SupplierId = model.SupplierId!.Value;
+        existingHeader.BranchId = model.BranchId;
+        existingHeader.PurchaseRequestId = model.PurchaseRequestId;
         existingHeader.ReferenceNo = model.ReferenceNo?.Trim();
         existingHeader.ExpectedReceiveDate = model.ExpectedReceiveDate;
         existingHeader.Remark = model.Remark?.Trim();
@@ -271,15 +361,25 @@ public class PurchaseOrdersController : CrudControllerBase
         var order = await _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
+            .Include(x => x.Branch)
+            .Include(x => x.PurchaseRequestHeader)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.Branch)
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.PurchaseOrderAllocationSources)
+                        .ThenInclude(x => x.PurchaseRequestDetail!)
+                            .ThenInclude(x => x.PurchaseRequestHeader)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id.Value);
 
-        return order is null ? NotFound() : View(order);
+        return order is null || !CanAccessOrder(order) ? NotFound() : View(order);
     }
 
     public async Task<IActionResult> Print(int? id)
@@ -292,15 +392,25 @@ public class PurchaseOrdersController : CrudControllerBase
         var order = await _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
+            .Include(x => x.Branch)
+            .Include(x => x.PurchaseRequestHeader)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.Branch)
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.PurchaseOrderAllocationSources)
+                        .ThenInclude(x => x.PurchaseRequestDetail!)
+                            .ThenInclude(x => x.PurchaseRequestHeader)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id.Value);
 
-        if (order is null)
+        if (order is null || !CanAccessOrder(order))
         {
             return NotFound();
         }
@@ -314,14 +424,16 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Approve(int id)
     {
         var order = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id);
 
-        if (order is null)
+        if (order is null || !CanAccessBranch(order.BranchId))
         {
             return NotFound();
         }
@@ -345,14 +457,16 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
         var order = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
             .FirstOrDefaultAsync(x => x.PurchaseOrderId == id);
 
-        if (order is null)
+        if (order is null || !CanAccessBranch(order.BranchId))
         {
             return NotFound();
         }
@@ -386,6 +500,34 @@ public class PurchaseOrdersController : CrudControllerBase
         model.SupplierOptions = suppliers
             .Select(x => new SelectListItem($"{x.SupplierCode} - {x.SupplierName}", x.SupplierId.ToString()))
             .ToList();
+
+        var canAccessAllBranches = CurrentUserCanAccessAllBranches();
+        model.CanAccessAllBranches = canAccessAllBranches;
+        if (!canAccessAllBranches)
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        var branches = await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.BranchId == model.BranchId)
+            .OrderBy(x => x.BranchCode)
+            .ToListAsync();
+
+        model.BranchOptions = branches
+            .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
+            .ToList();
+
+        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
+
+        if (model.PurchaseRequestId.HasValue && string.IsNullOrWhiteSpace(model.PurchaseRequestNo))
+        {
+            model.PurchaseRequestNo = await _context.PurchaseRequestHeaders
+                .AsNoTracking()
+                .Where(x => x.PurchaseRequestId == model.PurchaseRequestId.Value)
+                .Select(x => x.PRNo)
+                .FirstOrDefaultAsync();
+        }
 
         model.SupplierLookup = suppliers
             .Select(x => new PurchaseOrderSupplierLookupViewModel
@@ -432,6 +574,67 @@ public class PurchaseOrdersController : CrudControllerBase
         };
     }
 
+    private void ApplyPurchaseRequestSources(PurchaseOrderFormViewModel model, List<PurchaseRequestHeader> requests)
+    {
+        var orderedRequests = requests.OrderBy(x => x.PRNo).ToList();
+        model.PurchaseRequestIds = orderedRequests.Select(x => x.PurchaseRequestId).ToList();
+        model.PurchaseRequestId = orderedRequests.Count == 1 ? orderedRequests[0].PurchaseRequestId : null;
+        model.PurchaseRequestNo = string.Join(", ", orderedRequests.Select(x => x.PRNo));
+        model.PurchaseRequestSourceSummary = $"{orderedRequests.Count} PR source(s): {model.PurchaseRequestNo}";
+        model.ReferenceNo = model.PurchaseRequestNo;
+        model.ExpectedReceiveDate = orderedRequests
+            .Where(x => x.RequiredDate.HasValue)
+            .Select(x => x.RequiredDate)
+            .OrderBy(x => x)
+            .FirstOrDefault();
+        model.Remark = string.Join(Environment.NewLine, orderedRequests
+            .Where(x => !string.IsNullOrWhiteSpace(x.Purpose))
+            .Select(x => $"{x.PRNo}: {x.Purpose!.Trim()}"));
+
+        model.Details = orderedRequests
+            .SelectMany(request => request.PurchaseRequestDetails.Select(detail => new { Request = request, Detail = detail }))
+            .GroupBy(x => new { x.Detail.ItemId, UnitPrice = x.Detail.Item?.UnitPrice ?? 0m })
+            .OrderBy(g => g.Min(x => x.Detail.LineNumber))
+            .Select((group, index) =>
+            {
+                var qty = group.Sum(x => x.Detail.RequestedQty);
+                return new PurchaseOrderLineEditorViewModel
+                {
+                    LineNumber = index + 1,
+                    ItemId = group.Key.ItemId,
+                    Qty = qty,
+                    UnitPrice = group.Key.UnitPrice,
+                    DiscountAmount = 0m,
+                    LineTotal = qty * group.Key.UnitPrice,
+                    Remark = string.Join("; ", group
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Detail.Remark))
+                        .Select(x => $"{x.Request.PRNo}: {x.Detail.Remark!.Trim()}")),
+                    Allocations = group
+                        .Where(x => x.Request.BranchId.HasValue)
+                        .GroupBy(x => x.Request.BranchId!.Value)
+                        .Select(branchGroup => new PurchaseOrderAllocationEditorViewModel
+                        {
+                            BranchId = branchGroup.Key,
+                            BranchName = branchGroup.First().Request.Branch?.BranchName ?? string.Empty,
+                            AllocatedQty = branchGroup.Sum(x => x.Detail.RequestedQty),
+                            Sources = branchGroup
+                                .OrderBy(x => x.Request.PRNo)
+                                .ThenBy(x => x.Detail.LineNumber)
+                                .Select(x => new PurchaseOrderAllocationSourceEditorViewModel
+                                {
+                                    PurchaseRequestDetailId = x.Detail.PurchaseRequestDetailId,
+                                    PurchaseRequestId = x.Request.PurchaseRequestId,
+                                    PurchaseRequestNo = x.Request.PRNo,
+                                    SourceQty = x.Detail.RequestedQty
+                                })
+                                .ToList()
+                        })
+                        .ToList()
+                };
+            })
+            .ToList();
+    }
+
     private async Task<bool> ValidateAndComputeAsync(PurchaseOrderFormViewModel model, PurchaseOrderHeader? existingHeader)
     {
         model.Details = NormalizeDetails(model.Details);
@@ -457,6 +660,73 @@ public class PurchaseOrdersController : CrudControllerBase
             ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
         }
 
+        if (!model.BranchId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+        }
+        else if (!CanAccessBranch(model.BranchId))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit purchase orders for this branch.");
+        }
+        else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
+        }
+
+        model.PurchaseRequestIds = model.Details
+            .SelectMany(x => x.Allocations)
+            .SelectMany(x => x.Sources)
+            .Where(x => x.PurchaseRequestId.HasValue)
+            .Select(x => x.PurchaseRequestId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (model.PurchaseRequestId.HasValue)
+        {
+            var request = await _context.PurchaseRequestHeaders
+                .AsNoTracking()
+                .Include(x => x.PurchaseOrderHeaders)
+                .FirstOrDefaultAsync(x => x.PurchaseRequestId == model.PurchaseRequestId.Value);
+
+            if (request is null)
+            {
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "Selected purchase request was not found.");
+            }
+            else if (!CanAccessBranch(request.BranchId))
+            {
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "You cannot create a PO from this purchase request branch.");
+            }
+            else if (existingHeader is null && request.Status != "Approved")
+            {
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "PO can be created from Approved purchase requests only.");
+            }
+            else if (existingHeader is null && request.PurchaseOrderHeaders.Any())
+            {
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "This purchase request already has a purchase order.");
+            }
+            else if (existingHeader is not null &&
+                request.PurchaseOrderHeaders.Any(x => x.PurchaseOrderId != existingHeader.PurchaseOrderId))
+            {
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "This purchase request is linked to another purchase order.");
+            }
+        }
+
+        var sourceDetailIds = model.Details
+            .SelectMany(x => x.Allocations)
+            .SelectMany(x => x.Sources)
+            .Where(x => x.PurchaseRequestDetailId.HasValue)
+            .Select(x => x.PurchaseRequestDetailId!.Value)
+            .Distinct()
+            .ToList();
+        var sourceDetailMap = sourceDetailIds.Count == 0
+            ? new Dictionary<int, PurchaseRequestDetail>()
+            : await _context.PurchaseRequestDetails
+                .AsNoTracking()
+                .Include(x => x.PurchaseRequestHeader)
+                .Include(x => x.PurchaseOrderAllocationSources)
+                .Where(x => sourceDetailIds.Contains(x.PurchaseRequestDetailId))
+                .ToDictionaryAsync(x => x.PurchaseRequestDetailId);
+
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
         var itemMap = await _context.Items
             .AsNoTracking()
@@ -465,6 +735,20 @@ public class PurchaseOrdersController : CrudControllerBase
 
         var existingReceivedQty = existingHeader?.PurchaseOrderDetails.ToDictionary(x => x.PurchaseOrderDetailId, x => x.ReceivedQty)
             ?? new Dictionary<int, decimal>();
+        var existingAllocationReceivedQty = existingHeader?.PurchaseOrderDetails
+            .SelectMany(x => x.PurchaseOrderAllocations)
+            .ToDictionary(x => x.PurchaseOrderAllocationId, x => x.ReceivedQty)
+            ?? new Dictionary<int, decimal>();
+        var existingSourceDetailIds = existingHeader?.PurchaseOrderDetails
+            .SelectMany(x => x.PurchaseOrderAllocations)
+            .SelectMany(x => x.PurchaseOrderAllocationSources)
+            .Select(x => x.PurchaseRequestDetailId)
+            .ToHashSet() ?? new HashSet<int>();
+        var branchIdSet = (await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .Select(x => x.BranchId)
+            .ToListAsync()).ToHashSet();
 
         decimal subtotal = 0m;
         decimal discount = 0m;
@@ -500,6 +784,90 @@ public class PurchaseOrdersController : CrudControllerBase
             }
 
             detail.LineTotal = gross - detail.DiscountAmount;
+            detail.Allocations = NormalizeAllocations(detail.Allocations, detail.Qty, model.BranchId);
+
+            var allocationTotal = 0m;
+            var allocationBranches = new HashSet<int>();
+            for (var j = 0; j < detail.Allocations.Count; j++)
+            {
+                var allocation = detail.Allocations[j];
+                if (!allocation.BranchId.HasValue || !branchIdSet.Contains(allocation.BranchId.Value))
+                {
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "Please select a valid delivery branch.");
+                    continue;
+                }
+
+                if (!allocationBranches.Add(allocation.BranchId.Value))
+                {
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "Duplicate delivery branches are not allowed for the same PO line.");
+                }
+
+                if (allocation.PurchaseOrderAllocationId.HasValue &&
+                    existingAllocationReceivedQty.TryGetValue(allocation.PurchaseOrderAllocationId.Value, out var allocationReceivedQty) &&
+                    allocation.AllocatedQty < allocationReceivedQty)
+                {
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].AllocatedQty", "Allocated quantity cannot be less than already received quantity for this branch.");
+                }
+
+                allocationTotal += allocation.AllocatedQty;
+
+                var sourceTotal = 0m;
+                for (var k = 0; k < allocation.Sources.Count; k++)
+                {
+                    var source = allocation.Sources[k];
+                    if (!source.PurchaseRequestDetailId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    if (!sourceDetailMap.TryGetValue(source.PurchaseRequestDetailId.Value, out var sourceDetail))
+                    {
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "Selected PR source was not found.");
+                        continue;
+                    }
+
+                    if (sourceDetail.PurchaseRequestHeader?.Status != "Approved" &&
+                        sourceDetail.PurchaseRequestHeader?.Status != "ConvertedToPO")
+                    {
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source must be approved.");
+                    }
+
+                    if (sourceDetail.ItemId != detail.ItemId)
+                    {
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source item must match the PO line item.");
+                    }
+
+                    if (sourceDetail.PurchaseRequestHeader?.BranchId != allocation.BranchId)
+                    {
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source branch must match the delivery branch.");
+                    }
+
+                    if (sourceDetail.PurchaseOrderAllocationSources.Any(x => !existingSourceDetailIds.Contains(x.PurchaseRequestDetailId)))
+                    {
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "One or more PR sources already have a PO.");
+                    }
+
+                    source.PurchaseRequestId = sourceDetail.PurchaseRequestId;
+                    source.PurchaseRequestNo = sourceDetail.PurchaseRequestHeader?.PRNo ?? source.PurchaseRequestNo;
+                    sourceTotal += source.SourceQty;
+                }
+
+                if (allocation.Sources.Count > 0 && sourceTotal != allocation.AllocatedQty)
+                {
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources", "PR source quantity must equal delivery allocation quantity.");
+                }
+            }
+
+            if (detail.Allocations.Count == 0)
+            {
+                ModelState.AddModelError($"Details[{i}].Allocations", "Please allocate this PO line to at least one branch.");
+            }
+
+            if (allocationTotal != detail.Qty)
+            {
+                ModelState.AddModelError($"Details[{i}].Allocations", "Allocated quantity must equal PO line quantity.");
+            }
+
             subtotal += gross;
             discount += detail.DiscountAmount;
         }
@@ -536,6 +904,12 @@ public class PurchaseOrdersController : CrudControllerBase
         if (order.PurchaseOrderDetails.Any(x => x.ItemId <= 0 || x.Qty <= 0 || x.UnitPrice < 0 || x.DiscountAmount < 0))
         {
             return "Approve is blocked because one or more PO lines are incomplete.";
+        }
+
+        if (order.PurchaseOrderDetails.Any(x => !x.PurchaseOrderAllocations.Any() ||
+            x.PurchaseOrderAllocations.Sum(a => a.AllocatedQty) != x.Qty))
+        {
+            return "Approve is blocked because delivery allocation must equal PO quantity for every line.";
         }
 
         return string.Empty;
@@ -599,8 +973,90 @@ public class PurchaseOrdersController : CrudControllerBase
             UnitPrice = detail.UnitPrice,
             DiscountAmount = detail.DiscountAmount,
             LineTotal = detail.LineTotal,
-            Remark = detail.Remark?.Trim()
+            Remark = detail.Remark?.Trim(),
+            PurchaseOrderAllocations = detail.Allocations
+                .Where(x => x.BranchId.HasValue && x.AllocatedQty > 0)
+                .Select(x => new PurchaseOrderAllocation
+                {
+                    BranchId = x.BranchId!.Value,
+                    AllocatedQty = x.AllocatedQty,
+                    ReceivedQty = x.ReceivedQty,
+                    PurchaseOrderAllocationSources = x.Sources
+                        .Where(s => s.PurchaseRequestDetailId.HasValue && s.SourceQty > 0)
+                        .Select(s => new PurchaseOrderAllocationSource
+                        {
+                            PurchaseRequestDetailId = s.PurchaseRequestDetailId!.Value,
+                            SourceQty = s.SourceQty
+                        })
+                        .ToList()
+                })
+                .ToList()
         };
+    }
+
+    private static List<PurchaseOrderAllocationEditorViewModel> NormalizeAllocations(
+        IEnumerable<PurchaseOrderAllocationEditorViewModel>? allocations,
+        decimal lineQty,
+        int? defaultBranchId)
+    {
+        var normalized = (allocations ?? Enumerable.Empty<PurchaseOrderAllocationEditorViewModel>())
+            .Where(x => x.BranchId.HasValue || x.AllocatedQty > 0 || x.PurchaseOrderAllocationId.HasValue)
+            .Select(x =>
+            {
+                x.AllocatedQty = Math.Max(0m, x.AllocatedQty);
+                return x;
+            })
+            .Where(x => x.AllocatedQty > 0 || x.ReceivedQty > 0)
+            .ToList();
+
+        if (normalized.Count == 0 && defaultBranchId.HasValue)
+        {
+            normalized.Add(new PurchaseOrderAllocationEditorViewModel
+            {
+                BranchId = defaultBranchId,
+                AllocatedQty = lineQty
+            });
+        }
+
+        return normalized;
+    }
+
+    private async Task<List<PurchaseRequestHeader>> GetValidPurchaseRequestsForPoAsync(PurchaseOrderFormViewModel model)
+    {
+        var requestIds = model.Details
+            .SelectMany(x => x.Allocations)
+            .SelectMany(x => x.Sources)
+            .Where(x => x.PurchaseRequestId.HasValue)
+            .Select(x => x.PurchaseRequestId!.Value)
+            .Concat(model.PurchaseRequestId.HasValue ? new[] { model.PurchaseRequestId.Value } : Array.Empty<int>())
+            .Distinct()
+            .ToList();
+
+        if (requestIds.Count == 0)
+        {
+            return new List<PurchaseRequestHeader>();
+        }
+
+        return await _context.PurchaseRequestHeaders
+            .Where(x => requestIds.Contains(x.PurchaseRequestId) && x.Status == "Approved")
+            .ToListAsync();
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
+    }
+
+    private bool CanAccessOrder(PurchaseOrderHeader order)
+    {
+        if (CurrentUserCanAccessAllBranches())
+        {
+            return true;
+        }
+
+        var branchId = CurrentBranchId();
+        return order.BranchId == branchId ||
+            order.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == branchId));
     }
 
     private static string? NormalizeCancelReason(string? cancelReason)

@@ -1,6 +1,10 @@
 @model BizCore.Models.ViewModels.QuotationFormViewModel
 
-<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<div asp-validation-summary="All" class="form-alert"></div>
+@if (!Model.CanAccessAllBranches)
+{
+    <input asp-for="BranchId" type="hidden" />
+}
 
 <div class="form-shell">
     <div class="form-section quotation-header-section">
@@ -48,6 +52,20 @@
                 <label asp-for="VatType" class="form-label"></label>
                 <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="VatType"></select>
                 <span asp-validation-for="VatType" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="BranchId" class="form-label"></label>
+                @if (Model.CanAccessAllBranches)
+                {
+                    <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
+                        <option value="">Select branch</option>
+                    </select>
+                }
+                else
+                {
+                    <div class="form-control readonly-detail">@Model.BranchName</div>
+                }
+                <span asp-validation-for="BranchId" class="text-danger"></span>
             </div>
             <div class="col-md-4">
                 <label asp-for="HeaderDiscountAmount" class="form-label"></label>
@@ -176,9 +194,9 @@
                                     : null;
                             }
                             <div class="table-meta js-stock-hint">
-                                @if (selectedItem?.ItemType == "Product")
+                                @if (selectedItem?.TrackStock == true)
                                 {
-                                    <span>Current stock: @selectedItem.CurrentStock.ToString("N2")</span>
+                                    <span>Branch stock: @selectedItem.CurrentStock.ToString("N2")</span>
                                 }
                             </div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>

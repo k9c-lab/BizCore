@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Sales")]
+[Authorize(Roles = "Admin,BranchAdmin,Sales")]
 public class QuotationsController : CrudControllerBase
 {
     private const string NumberPrefix = "QT";
@@ -31,7 +31,14 @@ public class QuotationsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.Branch)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -82,11 +89,41 @@ public class QuotationsController : CrudControllerBase
             Status = "Draft",
             DiscountMode = "Line",
             VatType = "NoVAT",
-            ExpiryDate = null
+            ExpiryDate = null,
+            BranchId = CurrentBranchId()
         };
 
         await PopulateLookupsAsync(model);
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> BranchStock(int? branchId)
+    {
+        var effectiveBranchId = CurrentUserCanAccessAllBranches() ? branchId : CurrentBranchId();
+        if (!effectiveBranchId.HasValue)
+        {
+            return Json(Array.Empty<object>());
+        }
+
+        if (!CanAccessBranch(effectiveBranchId) ||
+            !await _context.Branches.AnyAsync(x => x.BranchId == effectiveBranchId.Value && x.IsActive))
+        {
+            return BadRequest();
+        }
+
+        var stock = await _context.StockBalances
+            .AsNoTracking()
+            .Where(x => x.BranchId == effectiveBranchId.Value)
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                itemId = x.Key,
+                currentStock = x.Sum(b => b.QtyOnHand)
+            })
+            .ToListAsync();
+
+        return Json(stock);
     }
 
     [HttpPost]
@@ -109,6 +146,7 @@ public class QuotationsController : CrudControllerBase
             ExpiryDate = model.ExpiryDate?.Date,
             CustomerId = model.CustomerId!.Value,
             SalespersonId = model.SalespersonId,
+            BranchId = model.BranchId,
             ReferenceNo = model.ReferenceNo?.Trim(),
             Status = model.Status,
             Remarks = model.Remarks?.Trim(),
@@ -144,10 +182,11 @@ public class QuotationsController : CrudControllerBase
 
         var header = await _context.QuotationHeaders
             .AsNoTracking()
+            .Include(x => x.Branch)
             .Include(x => x.QuotationDetails)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id.Value);
 
-        if (header is null)
+        if (header is null || !CanAccessBranch(header.BranchId))
         {
             return NotFound();
         }
@@ -166,6 +205,8 @@ public class QuotationsController : CrudControllerBase
             ExpiryDate = header.ExpiryDate,
             CustomerId = header.CustomerId,
             SalespersonId = header.SalespersonId,
+            BranchId = header.BranchId,
+            BranchName = header.Branch?.BranchName ?? string.Empty,
             ReferenceNo = header.ReferenceNo,
             Status = header.Status,
             VatType = header.VatType,
@@ -220,7 +261,7 @@ public class QuotationsController : CrudControllerBase
             .Include(x => x.QuotationDetails)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id);
 
-        if (header is null)
+        if (header is null || !CanAccessBranch(header.BranchId))
         {
             return NotFound();
         }
@@ -236,6 +277,7 @@ public class QuotationsController : CrudControllerBase
         header.ExpiryDate = model.ExpiryDate?.Date;
         header.CustomerId = model.CustomerId!.Value;
         header.SalespersonId = model.SalespersonId;
+        header.BranchId = model.BranchId;
         header.ReferenceNo = model.ReferenceNo?.Trim();
         header.Status = model.Status;
         header.VatType = model.VatType;
@@ -272,6 +314,7 @@ public class QuotationsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
@@ -280,7 +323,7 @@ public class QuotationsController : CrudControllerBase
                 .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id.Value);
 
-        return quotation is null ? NotFound() : View(quotation);
+        return quotation is null || !CanAccessBranch(quotation.BranchId) ? NotFound() : View(quotation);
     }
 
     public async Task<IActionResult> Print(int? id)
@@ -294,11 +337,12 @@ public class QuotationsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.Branch)
             .Include(x => x.QuotationDetails)
                 .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id.Value);
 
-        if (quotation is null)
+        if (quotation is null || !CanAccessBranch(quotation.BranchId))
         {
             return NotFound();
         }
@@ -317,9 +361,10 @@ public class QuotationsController : CrudControllerBase
     {
         var quotation = await _context.QuotationHeaders
             .Include(x => x.QuotationDetails)
+                .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id);
 
-        if (quotation is null)
+        if (quotation is null || !CanAccessBranch(quotation.BranchId))
         {
             return NotFound();
         }
@@ -343,6 +388,13 @@ public class QuotationsController : CrudControllerBase
                 : RedirectToAction(nameof(Details), new { id });
         }
 
+        var shortageMessages = await GetBranchStockShortageMessagesAsync(quotation);
+        if (shortageMessages.Count > 0)
+        {
+            TempData["QuotationNotice"] = "Cannot convert to invoice because selected branch stock is not enough: " + string.Join("; ", shortageMessages);
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -354,6 +406,7 @@ public class QuotationsController : CrudControllerBase
                 InvoiceDate = invoiceDate,
                 CustomerId = quotation.CustomerId,
                 SalespersonId = quotation.SalespersonId,
+                BranchId = quotation.BranchId,
                 QuotationId = quotation.QuotationHeaderId,
                 ReferenceNo = quotation.ReferenceNo?.Trim(),
                 Remark = string.IsNullOrWhiteSpace(quotation.Remarks)
@@ -415,7 +468,7 @@ public class QuotationsController : CrudControllerBase
         var quotation = await _context.QuotationHeaders
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id);
 
-        if (quotation is null)
+        if (quotation is null || !CanAccessBranch(quotation.BranchId))
         {
             return NotFound();
         }
@@ -439,6 +492,25 @@ public class QuotationsController : CrudControllerBase
 
     private async Task PopulateLookupsAsync(QuotationFormViewModel model)
     {
+        var canAccessAllBranches = CurrentUserCanAccessAllBranches();
+        model.CanAccessAllBranches = canAccessAllBranches;
+        if (!canAccessAllBranches)
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        var branches = await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.BranchId == model.BranchId)
+            .OrderBy(x => x.BranchCode)
+            .ToListAsync();
+
+        model.BranchOptions = branches
+            .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
+            .ToList();
+
+        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
+
         model.CustomerOptions = await _context.Customers
             .AsNoTracking()
             .OrderBy(x => x.CustomerCode)
@@ -459,6 +531,7 @@ public class QuotationsController : CrudControllerBase
             })
             .ToListAsync();
 
+        var selectedBranchId = model.BranchId;
         model.ItemLookup = await _context.Items
             .AsNoTracking()
             .OrderBy(x => x.ItemCode)
@@ -471,7 +544,12 @@ public class QuotationsController : CrudControllerBase
                 PartNumber = x.PartNumber,
                 ItemType = x.ItemType,
                 UnitPrice = x.UnitPrice,
-                CurrentStock = x.CurrentStock,
+                CurrentStock = selectedBranchId.HasValue
+                    ? (_context.StockBalances
+                        .Where(b => b.ItemId == x.ItemId && b.BranchId == selectedBranchId.Value)
+                        .Sum(b => (decimal?)b.QtyOnHand) ?? 0m)
+                    : 0m,
+                TrackStock = x.TrackStock,
                 IsSerialControlled = x.IsSerialControlled
             })
             .ToListAsync();
@@ -544,6 +622,24 @@ public class QuotationsController : CrudControllerBase
         if (!customerExists)
         {
             ModelState.AddModelError(nameof(model.CustomerId), "Selected customer was not found.");
+        }
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        if (!model.BranchId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+        }
+        else if (!CanAccessBranch(model.BranchId))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit quotations for this branch.");
+        }
+        else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
         }
 
         if (model.SalespersonId.HasValue)
@@ -658,6 +754,11 @@ public class QuotationsController : CrudControllerBase
         }
     }
 
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
+    }
+
     private static void EnsureAtLeastOneLine(QuotationFormViewModel model)
     {
         if (model.Details.Count == 0)
@@ -702,6 +803,57 @@ public class QuotationsController : CrudControllerBase
         return quotation.HeaderDiscountAmount > 0
             ? $"Converted from quotation {quotation.QuotationNumber} (includes header discount {quotation.HeaderDiscountAmount:N2})"
             : $"Converted from quotation {quotation.QuotationNumber}";
+    }
+
+    private async Task<IReadOnlyList<string>> GetBranchStockShortageMessagesAsync(QuotationHeader quotation)
+    {
+        if (!quotation.BranchId.HasValue)
+        {
+            return new[] { "quotation branch is missing" };
+        }
+
+        var requiredItems = quotation.QuotationDetails
+            .Where(x => x.Item?.TrackStock == true)
+            .GroupBy(x => new
+            {
+                x.ItemId,
+                x.Item!.ItemCode,
+                x.Item.ItemName
+            })
+            .Select(x => new
+            {
+                x.Key.ItemId,
+                x.Key.ItemCode,
+                x.Key.ItemName,
+                RequiredQty = x.Sum(d => d.Quantity)
+            })
+            .ToList();
+
+        if (requiredItems.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var itemIds = requiredItems.Select(x => x.ItemId).ToList();
+        var stockMap = await _context.StockBalances
+            .AsNoTracking()
+            .Where(x => x.BranchId == quotation.BranchId.Value && itemIds.Contains(x.ItemId))
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                ItemId = x.Key,
+                Qty = x.Sum(b => b.QtyOnHand)
+            })
+            .ToDictionaryAsync(x => x.ItemId, x => x.Qty);
+
+        return requiredItems
+            .Where(x => !stockMap.TryGetValue(x.ItemId, out var availableQty) || availableQty < x.RequiredQty)
+            .Select(x =>
+            {
+                var availableQty = stockMap.TryGetValue(x.ItemId, out var qty) ? qty : 0m;
+                return $"{x.ItemCode} - {x.ItemName} needs {x.RequiredQty:N2}, available {availableQty:N2}";
+            })
+            .ToList();
     }
 
     private Task<string> GetNextQuotationNumberAsync(DateTime date)

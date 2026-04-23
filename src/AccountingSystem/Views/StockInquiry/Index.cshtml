@@ -8,7 +8,7 @@
     <div>
         <div class="page-eyebrow">Inventory Inquiry</div>
         <h1 class="page-title">Stock Inquiry</h1>
-        <p class="page-subtitle">Read-only stock visibility from the current item master and stock balance data.</p>
+        <p class="page-subtitle">Read-only stock visibility for @Model.BranchName.</p>
     </div>
 </div>
 
@@ -43,6 +43,13 @@
                     <option value="Inactive" selected="@(Model.Status == "Inactive")">Inactive</option>
                 </select>
             </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label for="branchId" class="form-label">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
             <div class="list-filter-actions">
                 <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
                 <button type="submit" class="btn btn-primary">Search</button>
@@ -57,6 +64,7 @@
                         <th>Part Number</th>
                         <th>Type</th>
                         <th>Unit</th>
+                        <th>Branch</th>
                         <th>Current Stock</th>
                         <th>Track Stock</th>
                         <th>Is Serial Controlled</th>
@@ -75,19 +83,19 @@
                             <td>@item.PartNumber</td>
                             <td>@item.ItemType</td>
                             <td>@item.Unit</td>
+                            <td>@item.BranchName</td>
                             <td>@item.CurrentStock.ToString("N2")</td>
                             <td>@(item.TrackStock ? "Yes" : "No")</td>
                             <td>@(item.IsSerialControlled ? "Yes" : "No")</td>
                             <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
                             <td class="text-end">
-                                @if (item.IsSerialControlled)
-                                {
-                                    <a asp-action="Serials" asp-route-itemId="@item.ItemId" class="btn btn-sm btn-outline-primary">View Serials</a>
-                                }
-                                else
-                                {
-                                    <span class="table-meta">-</span>
-                                }
+                                <div class="table-actions">
+                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-primary">Ledger</a>
+                                    @if (item.IsSerialControlled)
+                                    {
+                                        <a asp-action="Serials" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-secondary">Serials</a>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -95,7 +103,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="10" class="table-empty">No stock records matched the current search.</td>
+                        <td colspan="11" class="table-empty">No stock records matched the current search.</td>
                     </tr>
                 }
                 </tbody>

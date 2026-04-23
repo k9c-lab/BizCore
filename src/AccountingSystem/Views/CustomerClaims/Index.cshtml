@@ -40,6 +40,13 @@
                 <select id="status" name="status" class="form-select">
                     <option value="">All</option>
                     <option value="Open" selected="@(status == "Open")">Open</option>
+                    <option value="Received" selected="@(status == "Received")">Received</option>
+                    <option value="SentToSupplier" selected="@(status == "SentToSupplier")">Sent To Supplier</option>
+                    <option value="Repairing" selected="@(status == "Repairing")">Repairing</option>
+                    <option value="ReadyToReturn" selected="@(status == "ReadyToReturn")">Ready To Return</option>
+                    <option value="ReturnedToCustomer" selected="@(status == "ReturnedToCustomer")">Returned To Customer</option>
+                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
+                    <option value="Closed" selected="@(status == "Closed")">Closed</option>
                     <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
                 </select>
             </div>

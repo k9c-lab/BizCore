@@ -21,6 +21,19 @@ public class PurchaseOrderFormViewModel
     [Display(Name = "Supplier")]
     public int? SupplierId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    [Display(Name = "Purchase Request")]
+    public int? PurchaseRequestId { get; set; }
+
+    public string? PurchaseRequestNo { get; set; }
+    public List<int> PurchaseRequestIds { get; set; } = new();
+    public string PurchaseRequestSourceSummary { get; set; } = string.Empty;
+
+    public string BranchName { get; set; } = string.Empty;
+    public bool CanAccessAllBranches { get; set; }
+
     [StringLength(50)]
     [Display(Name = "Reference No.")]
     public string? ReferenceNo { get; set; }
@@ -56,6 +69,7 @@ public class PurchaseOrderFormViewModel
     public List<PurchaseOrderLineEditorViewModel> Details { get; set; } = new() { new() };
 
     public IEnumerable<SelectListItem> SupplierOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> StatusOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<PurchaseOrderSupplierLookupViewModel> SupplierLookup { get; set; } = Array.Empty<PurchaseOrderSupplierLookupViewModel>();

@@ -14,6 +14,7 @@ public class SerialClaimLog
 
     public int? CustomerClaimId { get; set; }
     public int? SupplierReplacementSerialId { get; set; }
+    public int? BranchId { get; set; }
 
     [Required]
     [DataType(DataType.Date)]
@@ -48,5 +49,6 @@ public class SerialClaimLog
     public SerialNumber? SerialNumber { get; set; }
     public SerialNumber? SupplierReplacementSerialNumber { get; set; }
     public Supplier? Supplier { get; set; }
+    public Branch? Branch { get; set; }
     public CustomerClaimHeader? CustomerClaimHeader { get; set; }
 }

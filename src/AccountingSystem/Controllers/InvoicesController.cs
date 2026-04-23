@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Sales")]
+[Authorize(Roles = "Admin,BranchAdmin,Sales")]
 public class InvoicesController : CrudControllerBase
 {
     private const string NumberPrefix = "INV";
@@ -30,9 +30,16 @@ public class InvoicesController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.Branch)
             .Include(x => x.Quotation)
             .Include(x => x.PaymentAllocations)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -82,7 +89,8 @@ public class InvoicesController : CrudControllerBase
         {
             InvoiceNo = await GetNextInvoiceNumberAsync(DateTime.Today),
             Status = "Issued",
-            DiscountMode = "Line"
+            DiscountMode = "Line",
+            BranchId = CurrentBranchId()
         };
 
         await PopulateLookupsAsync(model);
@@ -99,13 +107,14 @@ public class InvoicesController : CrudControllerBase
         var invoice = await _context.InvoiceHeaders
             .AsNoTracking()
             .Include(x => x.Quotation)
+            .Include(x => x.Branch)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.InvoiceSerials)
             .FirstOrDefaultAsync(x => x.InvoiceId == id.Value);
 
-        if (invoice is null)
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
         {
             return NotFound();
         }
@@ -135,7 +144,7 @@ public class InvoicesController : CrudControllerBase
                 .ThenInclude(x => x.InvoiceSerials)
             .FirstOrDefaultAsync(x => x.InvoiceId == id);
 
-        if (invoice is null)
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
         {
             return NotFound();
         }
@@ -150,6 +159,7 @@ public class InvoicesController : CrudControllerBase
         model.Status = "Draft";
         model.PaidAmount = invoice.PaidAmount;
         model.QuotationId = invoice.QuotationId;
+        model.BranchId = invoice.BranchId;
         ModelState.Remove(nameof(InvoiceFormViewModel.InvoiceNo));
 
         if (!await ValidateAndComputeAsync(model, requireSerials: false))
@@ -161,6 +171,7 @@ public class InvoicesController : CrudControllerBase
         invoice.InvoiceDate = model.InvoiceDate.Date;
         invoice.CustomerId = model.CustomerId!.Value;
         invoice.SalespersonId = model.SalespersonId;
+        invoice.BranchId = model.BranchId;
         invoice.ReferenceNo = model.ReferenceNo?.Trim();
         invoice.Remark = model.Remark?.Trim();
         invoice.Subtotal = model.Subtotal;
@@ -193,6 +204,10 @@ public class InvoicesController : CrudControllerBase
         model.InvoiceNo = await GetNextInvoiceNumberAsync(model.InvoiceDate);
         model.Status = "Issued";
         model.PaidAmount = 0m;
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            model.BranchId = CurrentBranchId();
+        }
         ModelState.Remove(nameof(InvoiceFormViewModel.InvoiceNo));
 
         if (!await ValidateAndComputeAsync(model, requireSerials: true))
@@ -224,6 +239,7 @@ public class InvoicesController : CrudControllerBase
                 InvoiceDate = model.InvoiceDate.Date,
                 CustomerId = model.CustomerId!.Value,
                 SalespersonId = model.SalespersonId,
+                BranchId = model.BranchId,
                 ReferenceNo = model.ReferenceNo?.Trim(),
                 Remark = model.Remark?.Trim(),
                 Subtotal = model.Subtotal,
@@ -250,12 +266,26 @@ public class InvoicesController : CrudControllerBase
                 var isProduct = string.Equals(item.ItemType, "Product", StringComparison.OrdinalIgnoreCase);
                 if (isProduct && item.TrackStock)
                 {
-                    if (item.CurrentStock < detail.Qty)
+                    var branchStock = await GetBranchStockAsync(model.BranchId, detail.ItemId!.Value);
+                    if (branchStock < detail.Qty)
                     {
-                        throw new InvalidOperationException($"Insufficient stock for item {item.ItemCode}.");
+                        throw new InvalidOperationException($"Insufficient stock for item {item.ItemCode}. Branch stock is {branchStock:N2}.");
                     }
 
-                    item.CurrentStock -= detail.Qty;
+                    await AdjustStockBalanceAsync(model.BranchId, detail.ItemId!.Value, -detail.Qty);
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        MovementDate = header.InvoiceDate,
+                        MovementType = "InvoiceIssue",
+                        ReferenceType = "Invoice",
+                        ReferenceId = header.InvoiceId,
+                        ItemId = detail.ItemId!.Value,
+                        FromBranchId = model.BranchId,
+                        Qty = -detail.Qty,
+                        Remark = header.InvoiceNo,
+                        CreatedByUserId = CurrentUserId(),
+                        CreatedDate = DateTime.UtcNow
+                    });
                 }
             }
 
@@ -307,12 +337,14 @@ public class InvoicesController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Salesperson)
+            .Include(x => x.Branch)
             .Include(x => x.Quotation)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PaymentAllocations)
+            .Include(x => x.Branch)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
@@ -320,7 +352,7 @@ public class InvoicesController : CrudControllerBase
                     .ThenInclude(x => x.SerialNumber)
             .FirstOrDefaultAsync(x => x.InvoiceId == id.Value);
 
-        return invoice is null ? NotFound() : View(invoice);
+        return invoice is null || !CanAccessBranch(invoice.BranchId) ? NotFound() : View(invoice);
     }
 
     [HttpPost]
@@ -329,13 +361,14 @@ public class InvoicesController : CrudControllerBase
     {
         var invoice = await _context.InvoiceHeaders
             .Include(x => x.Quotation)
+            .Include(x => x.Branch)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.InvoiceSerials)
             .FirstOrDefaultAsync(x => x.InvoiceId == id);
 
-        if (invoice is null)
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
         {
             return NotFound();
         }
@@ -349,7 +382,7 @@ public class InvoicesController : CrudControllerBase
         var model = MapInvoiceToForm(invoice);
         if (!await ValidateAndComputeAsync(model, requireSerials: true))
         {
-            TempData["InvoiceNotice"] = "Cannot issue invoice. Serial-controlled items must have selected serial count equal to quantity and complete warranty dates.";
+            TempData["InvoiceNotice"] = "Cannot issue invoice. Serial-controlled items must have selected serial count equal to quantity.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -376,12 +409,26 @@ public class InvoicesController : CrudControllerBase
                 var isProduct = string.Equals(item.ItemType, "Product", StringComparison.OrdinalIgnoreCase);
                 if (isProduct && item.TrackStock)
                 {
-                    if (item.CurrentStock < detail.Qty)
+                    var branchStock = await GetBranchStockAsync(invoice.BranchId, detail.ItemId);
+                    if (branchStock < detail.Qty)
                     {
-                        throw new InvalidOperationException($"Insufficient stock for item {item.ItemCode}.");
+                        throw new InvalidOperationException($"Insufficient stock for item {item.ItemCode}. Branch stock is {branchStock:N2}.");
                     }
 
-                    item.CurrentStock -= detail.Qty;
+                    await AdjustStockBalanceAsync(invoice.BranchId, detail.ItemId, -detail.Qty);
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        MovementDate = invoice.InvoiceDate,
+                        MovementType = "InvoiceIssue",
+                        ReferenceType = "Invoice",
+                        ReferenceId = invoice.InvoiceId,
+                        ItemId = detail.ItemId,
+                        FromBranchId = invoice.BranchId,
+                        Qty = -detail.Qty,
+                        Remark = invoice.InvoiceNo,
+                        CreatedByUserId = CurrentUserId(),
+                        CreatedDate = DateTime.UtcNow
+                    });
                 }
 
                 foreach (var invoiceSerial in detail.InvoiceSerials)
@@ -437,7 +484,7 @@ public class InvoicesController : CrudControllerBase
                     .ThenInclude(x => x.SerialNumber)
             .FirstOrDefaultAsync(x => x.InvoiceId == id);
 
-        if (invoice is null)
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
         {
             return NotFound();
         }
@@ -466,7 +513,20 @@ public class InvoicesController : CrudControllerBase
                     var item = detail.Item;
                     if (item is not null && item.TrackStock)
                     {
-                        item.CurrentStock += detail.Qty;
+                        await AdjustStockBalanceAsync(invoice.BranchId, detail.ItemId, detail.Qty);
+                        _context.StockMovements.Add(new StockMovement
+                        {
+                            MovementDate = DateTime.Today,
+                            MovementType = "InvoiceCancel",
+                            ReferenceType = "Invoice",
+                            ReferenceId = invoice.InvoiceId,
+                            ItemId = detail.ItemId,
+                            ToBranchId = invoice.BranchId,
+                            Qty = detail.Qty,
+                            Remark = invoice.InvoiceNo,
+                            CreatedByUserId = CurrentUserId(),
+                            CreatedDate = DateTime.UtcNow
+                        });
                     }
 
                     foreach (var invoiceSerial in detail.InvoiceSerials)
@@ -556,8 +616,68 @@ public class InvoicesController : CrudControllerBase
         }
     }
 
+    private async Task AdjustStockBalanceAsync(int? branchId, int itemId, decimal qtyDelta)
+    {
+        if (!branchId.HasValue || qtyDelta == 0)
+        {
+            return;
+        }
+
+        var balance = await _context.StockBalances
+            .FirstOrDefaultAsync(x => x.BranchId == branchId.Value && x.ItemId == itemId);
+
+        if (balance is null)
+        {
+            balance = new StockBalance
+            {
+                BranchId = branchId.Value,
+                ItemId = itemId,
+                QtyOnHand = 0
+            };
+            _context.StockBalances.Add(balance);
+        }
+
+        balance.QtyOnHand += qtyDelta;
+    }
+
+    private async Task<decimal> GetBranchStockAsync(int? branchId, int itemId)
+    {
+        if (!branchId.HasValue)
+        {
+            return 0m;
+        }
+
+        return await _context.StockBalances
+            .Where(x => x.BranchId == branchId.Value && x.ItemId == itemId)
+            .SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m;
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
+    }
+
     private async Task PopulateLookupsAsync(InvoiceFormViewModel model)
     {
+        var canAccessAllBranches = CurrentUserCanAccessAllBranches();
+        model.CanAccessAllBranches = canAccessAllBranches;
+        if (!canAccessAllBranches)
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        var branches = await _context.Branches
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.BranchId == model.BranchId)
+            .OrderBy(x => x.BranchCode)
+            .ToListAsync();
+
+        model.BranchOptions = branches
+            .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
+            .ToList();
+
+        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
+
         model.CustomerOptions = await _context.Customers
             .AsNoTracking()
             .OrderBy(x => x.CustomerCode)
@@ -619,33 +739,67 @@ public class InvoicesController : CrudControllerBase
             })
             .ToListAsync();
 
-        model.ItemLookup = await _context.Items
+        var itemQuery = _context.Items
             .AsNoTracking()
             .Where(x => x.IsActive)
-            .OrderBy(x => x.ItemCode)
-            .Select(x => new InvoiceItemLookupViewModel
-            {
-                ItemId = x.ItemId,
-                DisplayText = $"{x.ItemCode} - {x.ItemName}",
-                ItemCode = x.ItemCode,
-                ItemName = x.ItemName,
-                PartNumber = x.PartNumber,
-                ItemType = x.ItemType,
-                UnitPrice = x.UnitPrice,
-                TrackStock = x.TrackStock,
-                IsSerialControlled = x.IsSerialControlled,
-                CurrentStock = x.CurrentStock
-            })
-            .ToListAsync();
+            .OrderBy(x => x.ItemCode);
+
+        if (model.BranchId.HasValue)
+        {
+            var selectedBranchId = model.BranchId.Value;
+            model.ItemLookup = await itemQuery
+                .Select(x => new InvoiceItemLookupViewModel
+                {
+                    ItemId = x.ItemId,
+                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
+                    ItemCode = x.ItemCode,
+                    ItemName = x.ItemName,
+                    PartNumber = x.PartNumber,
+                    ItemType = x.ItemType,
+                    UnitPrice = x.UnitPrice,
+                    TrackStock = x.TrackStock,
+                    IsSerialControlled = x.IsSerialControlled,
+                    CurrentStock = _context.StockBalances
+                        .Where(b => b.ItemId == x.ItemId && b.BranchId == selectedBranchId)
+                        .Sum(b => (decimal?)b.QtyOnHand) ?? 0
+                })
+                .ToListAsync();
+        }
+        else
+        {
+            model.ItemLookup = await itemQuery
+                .Select(x => new InvoiceItemLookupViewModel
+                {
+                    ItemId = x.ItemId,
+                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
+                    ItemCode = x.ItemCode,
+                    ItemName = x.ItemName,
+                    PartNumber = x.PartNumber,
+                    ItemType = x.ItemType,
+                    UnitPrice = x.UnitPrice,
+                    TrackStock = x.TrackStock,
+                    IsSerialControlled = x.IsSerialControlled,
+                    CurrentStock = x.CurrentStock
+                })
+                .ToListAsync();
+        }
 
         var selectedSerialIds = model.Details
             .SelectMany(x => x.SelectedSerialIds)
             .Distinct()
             .ToList();
 
-        model.SerialLookup = await _context.SerialNumbers
+        var serialQuery = _context.SerialNumbers
             .AsNoTracking()
-            .Where(x => x.Status == "InStock" || selectedSerialIds.Contains(x.SerialId))
+            .Where(x => x.Status == "InStock" || selectedSerialIds.Contains(x.SerialId));
+
+        if (model.BranchId.HasValue)
+        {
+            var selectedBranchId = model.BranchId.Value;
+            serialQuery = serialQuery.Where(x => x.BranchId == selectedBranchId || selectedSerialIds.Contains(x.SerialId));
+        }
+
+        model.SerialLookup = await serialQuery
             .OrderBy(x => x.SerialNo)
             .Select(x => new InvoiceSerialLookupViewModel
             {
@@ -670,6 +824,8 @@ public class InvoicesController : CrudControllerBase
             InvoiceDate = invoice.InvoiceDate,
             CustomerId = invoice.CustomerId,
             SalespersonId = invoice.SalespersonId,
+            BranchId = invoice.BranchId,
+            BranchName = invoice.Branch?.BranchName ?? string.Empty,
             QuotationNo = invoice.Quotation?.QuotationNumber,
             ReferenceNo = invoice.ReferenceNo,
             VatType = invoice.VatType,
@@ -729,6 +885,24 @@ public class InvoicesController : CrudControllerBase
         if (!customerExists)
         {
             ModelState.AddModelError(nameof(model.CustomerId), "Selected customer was not found.");
+        }
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            model.BranchId = CurrentBranchId();
+        }
+
+        if (!model.BranchId.HasValue)
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+        }
+        else if (!CanAccessBranch(model.BranchId))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit invoices for this branch.");
+        }
+        else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
         }
 
         if (model.SalespersonId.HasValue)
@@ -792,7 +966,11 @@ public class InvoicesController : CrudControllerBase
             detail.ItemType = item.ItemType;
             detail.TrackStock = string.Equals(item.ItemType, "Product", StringComparison.OrdinalIgnoreCase) && item.TrackStock;
             detail.IsSerialControlled = string.Equals(item.ItemType, "Product", StringComparison.OrdinalIgnoreCase) && item.IsSerialControlled;
-            detail.CurrentStock = detail.TrackStock ? item.CurrentStock : 0m;
+            detail.CurrentStock = detail.TrackStock && model.BranchId.HasValue
+                ? await _context.StockBalances
+                    .Where(x => x.ItemId == item.ItemId && x.BranchId == model.BranchId.Value)
+                    .SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m
+                : detail.TrackStock ? item.CurrentStock : 0m;
 
             if (detail.UnitPrice <= 0)
             {
@@ -838,16 +1016,6 @@ public class InvoicesController : CrudControllerBase
                     ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial count must exactly match quantity.");
                 }
 
-                if (requireSerials && !detail.CustomerWarrantyStartDate.HasValue)
-                {
-                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyStartDate", "Customer warranty start date is required for serial-controlled items.");
-                }
-
-                if (requireSerials && !detail.CustomerWarrantyEndDate.HasValue)
-                {
-                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyEndDate", "Customer warranty end date is required for serial-controlled items.");
-                }
-
                 if (detail.CustomerWarrantyStartDate.HasValue &&
                     detail.CustomerWarrantyEndDate.HasValue &&
                     detail.CustomerWarrantyEndDate.Value.Date < detail.CustomerWarrantyStartDate.Value.Date)
@@ -876,6 +1044,11 @@ public class InvoicesController : CrudControllerBase
                     if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
                     {
                         ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Only InStock serials can be invoiced.");
+                    }
+
+                    if (model.BranchId.HasValue && serial.BranchId != model.BranchId.Value)
+                    {
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial does not belong to the invoice branch.");
                     }
                 }
             }

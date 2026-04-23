@@ -21,6 +21,8 @@ public class CustomerClaimHeader
 
     public int? InvoiceId { get; set; }
 
+    public int? BranchId { get; set; }
+
     [Required]
     [StringLength(30)]
     public string Status { get; set; } = "Open";
@@ -54,6 +56,7 @@ public class CustomerClaimHeader
 
     public Customer? Customer { get; set; }
     public InvoiceHeader? InvoiceHeader { get; set; }
+    public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? ReceivedByUser { get; set; }

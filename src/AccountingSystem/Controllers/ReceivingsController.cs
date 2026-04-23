@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,Warehouse")]
+[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
 public class ReceivingsController : CrudControllerBase
 {
     private const string NumberPrefix = "GR";
@@ -30,7 +30,14 @@ public class ReceivingsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.PurchaseOrderHeader)
+            .Include(x => x.Branch)
             .AsQueryable();
+
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            var branchId = CurrentBranchId();
+            query = query.Where(x => x.BranchId == branchId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -73,11 +80,12 @@ public class ReceivingsController : CrudControllerBase
         return View(receivings);
     }
 
-    public async Task<IActionResult> Create(int? purchaseOrderId)
+    public async Task<IActionResult> Create(int? purchaseOrderId, int? branchId)
     {
         var model = new ReceivingFormViewModel
         {
-            ReceivingNo = await GetNextReceivingNumberAsync(DateTime.Today)
+            ReceivingNo = await GetNextReceivingNumberAsync(DateTime.Today),
+            BranchId = branchId
         };
 
         await PopulateLookupsAsync(model);
@@ -102,6 +110,7 @@ public class ReceivingsController : CrudControllerBase
         ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
         var saveDraft = IsSaveDraftCommand(command);
 
+        EnsureBranchFromPostedAllocation(model);
         await PopulateLookupsAsync(model);
         if (saveDraft ? !await ValidateReceivingDraftAsync(model) : !await ValidateReceivingAsync(model))
         {
@@ -120,6 +129,7 @@ public class ReceivingsController : CrudControllerBase
                 ReceiveDate = model.ReceiveDate,
                 SupplierId = model.SupplierId!.Value,
                 PurchaseOrderId = model.PurchaseOrderId!.Value,
+                BranchId = model.BranchId,
                 DeliveryNoteNo = model.DeliveryNoteNo?.Trim(),
                 Remark = model.Remark?.Trim(),
                 Status = saveDraft ? "Draft" : "Posted",
@@ -159,7 +169,7 @@ public class ReceivingsController : CrudControllerBase
         }
 
         var receiving = await GetReceivingForEditAsync(id.Value);
-        if (receiving is null)
+        if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
             return NotFound();
         }
@@ -179,7 +189,7 @@ public class ReceivingsController : CrudControllerBase
     public async Task<IActionResult> Edit(int id, ReceivingFormViewModel model, string command)
     {
         var receiving = await GetReceivingForEditAsync(id);
-        if (receiving is null)
+        if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
             return NotFound();
         }
@@ -195,6 +205,7 @@ public class ReceivingsController : CrudControllerBase
         ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
         var saveDraft = IsSaveDraftCommand(command);
 
+        EnsureBranchFromPostedAllocation(model);
         await PopulateLookupsAsync(model);
         if (saveDraft ? !await ValidateReceivingDraftAsync(model) : !await ValidateReceivingAsync(model))
         {
@@ -211,6 +222,7 @@ public class ReceivingsController : CrudControllerBase
             receiving.ReceiveDate = model.ReceiveDate;
             receiving.SupplierId = model.SupplierId!.Value;
             receiving.PurchaseOrderId = model.PurchaseOrderId!.Value;
+            receiving.BranchId = model.BranchId;
             receiving.DeliveryNoteNo = model.DeliveryNoteNo?.Trim();
             receiving.Remark = model.Remark?.Trim();
             receiving.Status = saveDraft ? "Draft" : "Posted";
@@ -249,6 +261,7 @@ public class ReceivingsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.PurchaseOrderHeader)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.PostedByUser)
@@ -261,7 +274,58 @@ public class ReceivingsController : CrudControllerBase
                 .ThenInclude(x => x.ReceivingSerials)
             .FirstOrDefaultAsync(x => x.ReceivingId == id.Value);
 
-        return receiving is null ? NotFound() : View(receiving);
+        return receiving is null || !CanAccessBranch(receiving.BranchId) ? NotFound() : View(receiving);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Post(int id)
+    {
+        var receiving = await GetReceivingForEditAsync(id);
+        if (receiving is null || !CanAccessBranch(receiving.BranchId))
+        {
+            return NotFound();
+        }
+
+        if (!string.Equals(receiving.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ReceivingNotice"] = "Only Draft receiving documents can be posted.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var model = await BuildFormModelFromReceivingAsync(receiving);
+        if (!await ValidateReceivingAsync(model))
+        {
+            TempData["ReceivingNotice"] = GetFirstModelStateErrorMessage("Post Receiving is blocked because this draft is not complete.");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
+
+            receiving.Status = "Posted";
+            receiving.PostedByUserId = userId;
+            receiving.PostedDate = now;
+            receiving.UpdatedByUserId = userId;
+            receiving.UpdatedDate = now;
+
+            await ApplyPostedReceivingAsync(receiving, model);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            TempData["ReceivingNotice"] = "Receiving posted successfully.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
+        {
+            await transaction.RollbackAsync();
+            TempData["ReceivingNotice"] = "Receiving number or serial number must be unique.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
     }
 
     public async Task<IActionResult> Print(int? id)
@@ -275,6 +339,7 @@ public class ReceivingsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.PurchaseOrderHeader)
+            .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.PostedByUser)
@@ -287,7 +352,7 @@ public class ReceivingsController : CrudControllerBase
                 .ThenInclude(x => x.ReceivingSerials)
             .FirstOrDefaultAsync(x => x.ReceivingId == id.Value);
 
-        if (receiving is null)
+        if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
             return NotFound();
         }
@@ -317,7 +382,7 @@ public class ReceivingsController : CrudControllerBase
                 .ThenInclude(x => x.ReceivingSerials)
             .FirstOrDefaultAsync(x => x.ReceivingId == id);
 
-        if (receiving is null)
+        if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
             return NotFound();
         }
@@ -367,10 +432,22 @@ public class ReceivingsController : CrudControllerBase
         var purchaseOrders = await _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
+            .Include(x => x.Branch)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+                    .ThenInclude(x => x.Branch)
             .Where(x => x.Status != "Cancelled")
             .ToListAsync();
+
+        var effectiveBranchId = CurrentUserCanAccessAllBranches() ? model.BranchId : CurrentBranchId();
+        if (!CurrentUserCanAccessAllBranches())
+        {
+            purchaseOrders = purchaseOrders
+                .Where(x => x.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == effectiveBranchId && a.AllocatedQty > a.ReceivedQty)))
+                .ToList();
+        }
 
         model.PurchaseOrderLookup = purchaseOrders
             .Select(x => new ReceivingPoLookupViewModel
@@ -379,28 +456,37 @@ public class ReceivingsController : CrudControllerBase
                 PONo = x.PONo,
                 SupplierId = x.SupplierId,
                 SupplierName = x.Supplier?.SupplierName ?? string.Empty,
+                BranchId = effectiveBranchId ?? x.BranchId,
+                BranchName = effectiveBranchId.HasValue
+                    ? x.PurchaseOrderDetails.SelectMany(d => d.PurchaseOrderAllocations).FirstOrDefault(a => a.BranchId == effectiveBranchId.Value)?.Branch?.BranchName ?? string.Empty
+                    : x.Branch?.BranchName ?? string.Empty,
                 VatType = x.VatType,
                 Subtotal = x.Subtotal,
                 VatAmount = x.VatAmount,
                 TotalAmount = x.TotalAmount,
                 Lines = x.PurchaseOrderDetails
-                    .Where(d => d.Qty > d.ReceivedQty)
+                    .SelectMany(d => d.PurchaseOrderAllocations
+                        .Where(a => (!effectiveBranchId.HasValue || a.BranchId == effectiveBranchId.Value) && a.AllocatedQty > a.ReceivedQty)
+                        .Select(a => new ReceivingPoLookupLineViewModel
+                        {
+                            PurchaseOrderDetailId = d.PurchaseOrderDetailId,
+                            PurchaseOrderAllocationId = a.PurchaseOrderAllocationId,
+                            AllocationBranchId = a.BranchId,
+                            AllocationBranchName = a.Branch?.BranchName ?? string.Empty,
+                            ItemId = d.ItemId,
+                            LineNumber = d.LineNumber,
+                            ItemCode = d.Item?.ItemCode ?? string.Empty,
+                            ItemName = d.Item?.ItemName ?? string.Empty,
+                            IsSerialControlled = d.Item?.IsSerialControlled ?? false,
+                            TrackStock = d.Item?.TrackStock ?? false,
+                            OrderedQty = a.AllocatedQty,
+                            ReceivedQty = a.ReceivedQty,
+                            RemainingQty = a.AllocatedQty - a.ReceivedQty,
+                            UnitPrice = d.UnitPrice,
+                            LineTotal = d.LineTotal
+                        }))
                     .OrderBy(d => d.LineNumber)
-                    .Select(d => new ReceivingPoLookupLineViewModel
-                    {
-                        PurchaseOrderDetailId = d.PurchaseOrderDetailId,
-                        ItemId = d.ItemId,
-                        LineNumber = d.LineNumber,
-                        ItemCode = d.Item?.ItemCode ?? string.Empty,
-                        ItemName = d.Item?.ItemName ?? string.Empty,
-                        IsSerialControlled = d.Item?.IsSerialControlled ?? false,
-                        TrackStock = d.Item?.TrackStock ?? false,
-                        OrderedQty = d.Qty,
-                        ReceivedQty = d.ReceivedQty,
-                        RemainingQty = d.Qty - d.ReceivedQty,
-                        UnitPrice = d.UnitPrice,
-                        LineTotal = d.LineTotal
-                    })
+                    .ThenBy(d => d.AllocationBranchName)
                     .ToList()
             })
             .Where(x => x.Lines.Count > 0)
@@ -408,8 +494,22 @@ public class ReceivingsController : CrudControllerBase
             .ToList();
 
         model.PurchaseOrderOptions = model.PurchaseOrderLookup
-            .Select(x => new SelectListItem($"{x.PONo} - {x.SupplierName}", x.PurchaseOrderId.ToString()))
+            .Select(x => new SelectListItem($"{x.PONo} - {x.SupplierName} - {x.BranchName}", x.PurchaseOrderId.ToString()))
             .ToList();
+    }
+
+    private static void EnsureBranchFromPostedAllocation(ReceivingFormViewModel model)
+    {
+        var postedAllocationBranchIds = model.Details
+            .Where(x => x.AllocationBranchId.HasValue)
+            .Select(x => x.AllocationBranchId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (postedAllocationBranchIds.Count == 1)
+        {
+            model.BranchId = postedAllocationBranchIds[0];
+        }
     }
 
     private static void PopulateDetailsFromLookup(ReceivingFormViewModel model, int purchaseOrderId)
@@ -423,10 +523,15 @@ public class ReceivingsController : CrudControllerBase
 
         model.PurchaseOrderId = selected.PurchaseOrderId;
         model.SupplierId = selected.SupplierId;
+        model.BranchId = selected.BranchId;
+        model.BranchName = selected.BranchName;
         model.Details = selected.Lines
             .Select(x => new ReceivingLineEditorViewModel
             {
                 PurchaseOrderDetailId = x.PurchaseOrderDetailId,
+                PurchaseOrderAllocationId = x.PurchaseOrderAllocationId,
+                AllocationBranchId = x.AllocationBranchId,
+                AllocationBranchName = x.AllocationBranchName,
                 ItemId = x.ItemId,
                 LineNumber = x.LineNumber,
                 ItemCode = x.ItemCode,
@@ -448,6 +553,7 @@ public class ReceivingsController : CrudControllerBase
     private async Task<ReceivingHeader?> GetReceivingForEditAsync(int id)
     {
         return await _context.ReceivingHeaders
+            .Include(x => x.Branch)
             .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.ReceivingSerials)
             .FirstOrDefaultAsync(x => x.ReceivingId == id);
@@ -462,6 +568,8 @@ public class ReceivingsController : CrudControllerBase
             ReceiveDate = receiving.ReceiveDate,
             PurchaseOrderId = receiving.PurchaseOrderId,
             SupplierId = receiving.SupplierId,
+            BranchId = receiving.BranchId,
+            BranchName = receiving.Branch?.BranchName ?? string.Empty,
             DeliveryNoteNo = receiving.DeliveryNoteNo,
             Remark = receiving.Remark,
             Status = receiving.Status
@@ -472,7 +580,9 @@ public class ReceivingsController : CrudControllerBase
 
         foreach (var savedLine in receiving.ReceivingDetails)
         {
-            var line = model.Details.FirstOrDefault(x => x.PurchaseOrderDetailId == savedLine.PurchaseOrderDetailId);
+            var line = model.Details.FirstOrDefault(x =>
+                x.PurchaseOrderAllocationId == savedLine.PurchaseOrderAllocationId ||
+                (!savedLine.PurchaseOrderAllocationId.HasValue && x.PurchaseOrderDetailId == savedLine.PurchaseOrderDetailId));
             if (line is null)
             {
                 continue;
@@ -500,6 +610,7 @@ public class ReceivingsController : CrudControllerBase
             {
                 ReceivingId = receivingId,
                 PurchaseOrderDetailId = line.PurchaseOrderDetailId,
+                PurchaseOrderAllocationId = line.PurchaseOrderAllocationId,
                 ItemId = line.ItemId,
                 LineNumber = line.LineNumber,
                 QtyReceived = line.QtyReceivedInput,
@@ -544,6 +655,7 @@ public class ReceivingsController : CrudControllerBase
     {
         var po = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
             .FirstAsync(x => x.PurchaseOrderId == receiving.PurchaseOrderId);
 
         var details = await _context.ReceivingDetails
@@ -556,10 +668,31 @@ public class ReceivingsController : CrudControllerBase
         {
             var poDetail = po.PurchaseOrderDetails.First(x => x.PurchaseOrderDetailId == detail.PurchaseOrderDetailId);
             poDetail.ReceivedQty += detail.QtyReceived;
+            var allocation = detail.PurchaseOrderAllocationId.HasValue
+                ? poDetail.PurchaseOrderAllocations.FirstOrDefault(x => x.PurchaseOrderAllocationId == detail.PurchaseOrderAllocationId.Value)
+                : null;
+            if (allocation is not null)
+            {
+                allocation.ReceivedQty += detail.QtyReceived;
+            }
 
             if (detail.Item?.TrackStock == true)
             {
                 detail.Item.CurrentStock += detail.QtyReceived;
+                await AdjustStockBalanceAsync(receiving.BranchId, detail.ItemId, detail.QtyReceived);
+                _context.StockMovements.Add(new StockMovement
+                {
+                    MovementDate = receiving.ReceiveDate,
+                    MovementType = "Receiving",
+                    ReferenceType = "Receiving",
+                    ReferenceId = receiving.ReceivingId,
+                    ItemId = detail.ItemId,
+                    ToBranchId = receiving.BranchId,
+                    Qty = detail.QtyReceived,
+                    Remark = receiving.ReceivingNo,
+                    CreatedByUserId = CurrentUserId(),
+                    CreatedDate = DateTime.UtcNow
+                });
             }
 
             if (detail.Item?.IsSerialControlled == true)
@@ -572,6 +705,7 @@ public class ReceivingsController : CrudControllerBase
                         SerialNo = serial.SerialNo,
                         Status = "InStock",
                         SupplierId = receiving.SupplierId,
+                        BranchId = receiving.BranchId,
                         CurrentCustomerId = null,
                         InvoiceId = null,
                         SupplierWarrantyStartDate = detail.SupplierWarrantyStartDate?.Date,
@@ -670,6 +804,7 @@ public class ReceivingsController : CrudControllerBase
     {
         var po = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
             .FirstAsync(x => x.PurchaseOrderId == receiving.PurchaseOrderId);
 
         var serialNos = receiving.ReceivingDetails
@@ -688,10 +823,31 @@ public class ReceivingsController : CrudControllerBase
         {
             var poDetail = po.PurchaseOrderDetails.First(x => x.PurchaseOrderDetailId == detail.PurchaseOrderDetailId);
             poDetail.ReceivedQty = Math.Max(0m, poDetail.ReceivedQty - detail.QtyReceived);
+            var allocation = detail.PurchaseOrderAllocationId.HasValue
+                ? poDetail.PurchaseOrderAllocations.FirstOrDefault(x => x.PurchaseOrderAllocationId == detail.PurchaseOrderAllocationId.Value)
+                : null;
+            if (allocation is not null)
+            {
+                allocation.ReceivedQty = Math.Max(0m, allocation.ReceivedQty - detail.QtyReceived);
+            }
 
             if (detail.Item?.TrackStock == true)
             {
                 detail.Item.CurrentStock -= detail.QtyReceived;
+                await AdjustStockBalanceAsync(receiving.BranchId, detail.ItemId, -detail.QtyReceived);
+                _context.StockMovements.Add(new StockMovement
+                {
+                    MovementDate = DateTime.Today,
+                    MovementType = "ReceivingCancel",
+                    ReferenceType = "Receiving",
+                    ReferenceId = receiving.ReceivingId,
+                    ItemId = detail.ItemId,
+                    FromBranchId = receiving.BranchId,
+                    Qty = -detail.QtyReceived,
+                    Remark = receiving.ReceivingNo,
+                    CreatedByUserId = CurrentUserId(),
+                    CreatedDate = DateTime.UtcNow
+                });
             }
         }
 
@@ -721,6 +877,8 @@ public class ReceivingsController : CrudControllerBase
         }
 
         model.SupplierId = selectedLookup.SupplierId;
+        model.BranchId = selectedLookup.BranchId;
+        model.BranchName = selectedLookup.BranchName;
         var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId.Value);
         if (!supplierExists)
         {
@@ -736,7 +894,9 @@ public class ReceivingsController : CrudControllerBase
         {
             var line = requestLine.Line;
             var i = requestLine.Index;
-            var lookupLine = selectedLookup.Lines.FirstOrDefault(x => x.PurchaseOrderDetailId == line.PurchaseOrderDetailId);
+            var lookupLine = selectedLookup.Lines.FirstOrDefault(x =>
+                x.PurchaseOrderAllocationId == line.PurchaseOrderAllocationId ||
+                (!line.PurchaseOrderAllocationId.HasValue && x.PurchaseOrderDetailId == line.PurchaseOrderDetailId));
             if (lookupLine is null)
             {
                 ModelState.AddModelError(nameof(model.Details), "One or more receiving lines are not valid for the selected PO.");
@@ -814,6 +974,8 @@ public class ReceivingsController : CrudControllerBase
         }
 
         model.SupplierId = selectedLookup.SupplierId;
+        model.BranchId = selectedLookup.BranchId;
+        model.BranchName = selectedLookup.BranchName;
         var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId.Value);
         if (!supplierExists)
         {
@@ -829,7 +991,9 @@ public class ReceivingsController : CrudControllerBase
         {
             var line = requestLine.Line;
             var i = requestLine.Index;
-            var lookupLine = selectedLookup.Lines.FirstOrDefault(x => x.PurchaseOrderDetailId == line.PurchaseOrderDetailId);
+            var lookupLine = selectedLookup.Lines.FirstOrDefault(x =>
+                x.PurchaseOrderAllocationId == line.PurchaseOrderAllocationId ||
+                (!line.PurchaseOrderAllocationId.HasValue && x.PurchaseOrderDetailId == line.PurchaseOrderDetailId));
             if (lookupLine is null)
             {
                 ModelState.AddModelError(nameof(model.Details), "One or more receiving lines are not valid for the selected PO.");
@@ -863,16 +1027,6 @@ public class ReceivingsController : CrudControllerBase
                 if (serials.Count != serials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
                 {
                     ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same receiving line.");
-                }
-
-                if (!line.SupplierWarrantyStartDate.HasValue)
-                {
-                    ModelState.AddModelError($"Details[{i}].SupplierWarrantyStartDate", "Supplier warranty start date is required for serial-controlled items.");
-                }
-
-                if (!line.SupplierWarrantyEndDate.HasValue)
-                {
-                    ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "Supplier warranty end date is required for serial-controlled items.");
                 }
 
                 if (line.SupplierWarrantyStartDate.HasValue &&
@@ -931,6 +1085,43 @@ public class ReceivingsController : CrudControllerBase
         return (details ?? Enumerable.Empty<ReceivingLineEditorViewModel>())
             .Where(x => x.QtyReceivedInput > 0)
             .ToList();
+    }
+
+    private string GetFirstModelStateErrorMessage(string fallback)
+    {
+        return ModelState.Values
+            .SelectMany(x => x.Errors)
+            .Select(x => x.ErrorMessage)
+            .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? fallback;
+    }
+
+    private async Task AdjustStockBalanceAsync(int? branchId, int itemId, decimal qtyDelta)
+    {
+        if (!branchId.HasValue || qtyDelta == 0)
+        {
+            return;
+        }
+
+        var balance = await _context.StockBalances
+            .FirstOrDefaultAsync(x => x.BranchId == branchId.Value && x.ItemId == itemId);
+
+        if (balance is null)
+        {
+            balance = new StockBalance
+            {
+                BranchId = branchId.Value,
+                ItemId = itemId,
+                QtyOnHand = 0
+            };
+            _context.StockBalances.Add(balance);
+        }
+
+        balance.QtyOnHand += qtyDelta;
+    }
+
+    private bool CanAccessBranch(int? branchId)
+    {
+        return CurrentUserCanAccessAllBranches() || branchId == CurrentBranchId();
     }
 
     private static bool IsSaveDraftCommand(string? command)

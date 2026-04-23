@@ -25,6 +25,11 @@ public class ReceivingFormViewModel
     [Display(Name = "Supplier")]
     public int? SupplierId { get; set; }
 
+    [Display(Name = "Branch")]
+    public int? BranchId { get; set; }
+
+    public string BranchName { get; set; } = string.Empty;
+
     [StringLength(50)]
     [Display(Name = "Delivery Note No.")]
     public string? DeliveryNoteNo { get; set; }

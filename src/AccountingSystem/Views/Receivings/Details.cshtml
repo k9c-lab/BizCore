@@ -21,6 +21,10 @@
         @if (isDraft)
         {
             <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-primary">Edit Draft</a>
+            <form asp-action="Post" asp-route-id="@Model.ReceivingId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success" onclick="return confirm('Post this receiving document? Stock and serial records will be updated.');">Post Receiving</button>
+            </form>
             <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
         }
         else if (isPosted)
@@ -85,6 +89,10 @@
                     <div class="col-md-3">
                         <div class="detail-label">Status</div>
                         <div class="form-control readonly-detail">@Model.Status</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-12">
                         <div class="detail-label">Remark</div>

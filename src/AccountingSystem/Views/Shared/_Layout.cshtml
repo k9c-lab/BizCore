@@ -3,9 +3,12 @@
     string ActiveLink(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty;
     string ActiveSection(params string[] controllers) => controllers.Any(controller => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)) ? " active" : string.Empty;
     string? AriaCurrent(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "page" : null;
-    var canUseSales = User.IsInRole("Admin") || User.IsInRole("Sales");
-    var canUseWarehouse = User.IsInRole("Admin") || User.IsInRole("Warehouse");
+    var canUseSales = User.IsInRole("Admin") || User.IsInRole("BranchAdmin") || User.IsInRole("Sales");
+    var canUseWarehouse = User.IsInRole("Admin") || User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse");
     var canUseMasterData = User.IsInRole("Admin");
+    var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
+        ? "All Branches"
+        : User.FindFirst("BranchName")?.Value;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -26,9 +29,10 @@
             </div>
 
             <nav class="sidebar-nav">
-                <div class="sidebar-section@(ActiveSection("Home"))">
+                <div class="sidebar-section@(ActiveSection("Home", "Reports"))">
                     <div class="sidebar-section-title">Dashboard</div>
                     <a class="sidebar-link@(ActiveLink("Home"))" asp-controller="Home" asp-action="Index" aria-current="@AriaCurrent("Home")">Dashboard</a>
+                    <a class="sidebar-link@(ActiveLink("Reports"))" asp-controller="Reports" asp-action="Index" aria-current="@AriaCurrent("Reports")">Reports</a>
                 </div>
 
                 @if (canUseSales)
@@ -44,16 +48,21 @@
 
                 @if (canUseWarehouse)
                 {
-                    <div class="sidebar-section@(ActiveSection("PurchaseOrders", "Receivings"))">
+                    <div class="sidebar-section@(ActiveSection("PurchaseRequests", "PurchaseOrders", "Receivings"))">
                         <div class="sidebar-section-title">Purchasing</div>
+                        <a class="sidebar-link@(ActiveLink("PurchaseRequests"))" asp-controller="PurchaseRequests" asp-action="Index" aria-current="@AriaCurrent("PurchaseRequests")">Purchase Requests</a>
                         <a class="sidebar-link@(ActiveLink("PurchaseOrders"))" asp-controller="PurchaseOrders" asp-action="Index" aria-current="@AriaCurrent("PurchaseOrders")">Purchase Orders</a>
                         <a class="sidebar-link@(ActiveLink("Receivings"))" asp-controller="Receivings" asp-action="Index" aria-current="@AriaCurrent("Receivings")">Receivings</a>
                     </div>
 
-                    <div class="sidebar-section@(ActiveSection("StockInquiry", "SerialInquiry"))">
+                    <div class="sidebar-section@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues"))">
                         <div class="sidebar-section-title">Inventory</div>
                         <a class="sidebar-link@(ActiveLink("StockInquiry"))" asp-controller="StockInquiry" asp-action="Index" aria-current="@AriaCurrent("StockInquiry")">Stock Inquiry</a>
                         <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index" aria-current="@AriaCurrent("SerialInquiry")">Serial Inquiry</a>
+                        <a class="sidebar-link@(ActiveLink("StockLedger"))" asp-controller="StockLedger" asp-action="Index" aria-current="@AriaCurrent("StockLedger")">Stock Ledger</a>
+                        <a class="sidebar-link@(ActiveLink("StockAudit"))" asp-controller="StockAudit" asp-action="Index" aria-current="@AriaCurrent("StockAudit")">Stock Audit</a>
+                        <a class="sidebar-link@(ActiveLink("StockTransfers"))" asp-controller="StockTransfers" asp-action="Index" aria-current="@AriaCurrent("StockTransfers")">Stock Transfers</a>
+                        <a class="sidebar-link@(ActiveLink("StockIssues"))" asp-controller="StockIssues" asp-action="Index" aria-current="@AriaCurrent("StockIssues")">Stock Issues</a>
                     </div>
 
                     <div class="sidebar-section@(ActiveSection("SupplierClaims", "CustomerClaims"))">
@@ -65,8 +74,9 @@
 
                 @if (canUseMasterData)
                 {
-                    <div class="sidebar-section@(ActiveSection("Customers", "Suppliers", "Salespersons", "Items", "Users"))">
+                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "Items", "Users"))">
                         <div class="sidebar-section-title">Master Data</div>
+                        <a class="sidebar-link@(ActiveLink("Branches"))" asp-controller="Branches" asp-action="Index" aria-current="@AriaCurrent("Branches")">Branches</a>
                         <a class="sidebar-link@(ActiveLink("Customers"))" asp-controller="Customers" asp-action="Index" aria-current="@AriaCurrent("Customers")">Customers</a>
                         <a class="sidebar-link@(ActiveLink("Suppliers"))" asp-controller="Suppliers" asp-action="Index" aria-current="@AriaCurrent("Suppliers")">Suppliers</a>
                         <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index" aria-current="@AriaCurrent("Salespersons")">Salespersons</a>
@@ -82,6 +92,10 @@
                     <div class="sidebar-user">
                         <div class="sidebar-user-name">@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</div>
                         <div class="sidebar-user-role">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
+                        @if (!string.IsNullOrWhiteSpace(branchName))
+                        {
+                            <div class="sidebar-user-role">@branchName</div>
+                        }
                     </div>
                     <form asp-controller="Account" asp-action="Logout" method="post">
                         @Html.AntiForgeryToken()

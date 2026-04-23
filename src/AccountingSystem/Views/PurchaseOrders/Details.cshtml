@@ -2,39 +2,72 @@
 
 @{
     ViewData["Title"] = "Purchase Order Details";
+    var canAccessAllBranches = !User.IsInRole("BranchAdmin") &&
+        (User.IsInRole("Admin") || string.Equals(User.FindFirst("CanAccessAllBranches")?.Value, "true", StringComparison.OrdinalIgnoreCase));
+    var currentBranchId = int.TryParse(User.FindFirst("BranchId")?.Value, out var parsedBranchId) ? parsedBranchId : (int?)null;
     var hasReceiving = Model.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
     var hasOpenLines = Model.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
-    var canEdit = Model.Status == "Draft" && !hasReceiving;
+    var openReceivingBranches = Model.PurchaseOrderDetails
+        .SelectMany(x => x.PurchaseOrderAllocations)
+        .Where(x => x.AllocatedQty > x.ReceivedQty && (canAccessAllBranches || x.BranchId == currentBranchId))
+        .GroupBy(x => x.BranchId)
+        .Select(x => new
+        {
+            BranchId = x.Key,
+            BranchName = x.First().Branch?.BranchName ?? "Branch",
+            RemainingQty = x.Sum(a => a.AllocatedQty - a.ReceivedQty)
+        })
+        .OrderBy(x => x.BranchName)
+        .ToList();
+    if (!openReceivingBranches.Any() && hasOpenLines && Model.BranchId.HasValue && (canAccessAllBranches || Model.BranchId == currentBranchId))
+    {
+        openReceivingBranches.Add(new
+        {
+            BranchId = Model.BranchId.Value,
+            BranchName = Model.Branch?.BranchName ?? "Branch",
+            RemainingQty = Model.PurchaseOrderDetails.Sum(x => Math.Max(0m, x.Qty - x.ReceivedQty))
+        });
+    }
+    var canEdit = User.IsInRole("Admin") && Model.Status == "Draft" && !hasReceiving;
     var editBlockedReason = canEdit
         ? string.Empty
-        : Model.Status == "Cancelled"
+        : !User.IsInRole("Admin")
+            ? "Only Admin can edit purchase orders."
+            : Model.Status == "Cancelled"
             ? "Cancelled purchase orders are read-only."
             : hasReceiving
                 ? "Edit PO is blocked because receiving already exists."
                 : $"Edit PO is available only for Draft purchase orders. Current status is {Model.Status}.";
-    var canApprove = Model.Status == "Draft" &&
+    var canApprove = User.IsInRole("Admin") &&
+        Model.Status == "Draft" &&
         Model.SupplierId > 0 &&
         Model.PurchaseOrderDetails.Any() &&
         Model.PurchaseOrderDetails.All(x => x.ItemId > 0 && x.Qty > 0 && x.UnitPrice >= 0 && x.DiscountAmount >= 0);
     var approveBlockedReason = canApprove
         ? string.Empty
-        : Model.Status != "Draft"
+        : !User.IsInRole("Admin")
+            ? "Only Admin can approve purchase orders."
+            : Model.Status != "Draft"
             ? $"Approve is available only for Draft purchase orders. Current status is {Model.Status}."
             : !Model.PurchaseOrderDetails.Any()
                 ? "Approve is blocked because no PO lines exist."
                 : "Approve is blocked because supplier or PO lines are incomplete.";
-    var canReceive = (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && hasOpenLines;
+    var canReceive = (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && openReceivingBranches.Any();
     var receiveBlockedReason = canReceive
         ? string.Empty
         : Model.Status == "Cancelled"
             ? "Receive Goods is blocked because the PO is cancelled."
             : Model.Status == "FullyReceived" || !hasOpenLines
                 ? "Receive Goods is blocked because the PO is already fully received."
-                : "Receive Goods is available only after PO approval.";
-    var canCancel = (Model.Status == "Draft" || Model.Status == "Approved") && !hasReceiving;
+                : !openReceivingBranches.Any() && hasOpenLines
+                    ? "Receive Goods is blocked because this PO has no open allocation for your branch."
+                    : "Receive Goods is available only after PO approval.";
+    var canCancel = User.IsInRole("Admin") && (Model.Status == "Draft" || Model.Status == "Approved") && !hasReceiving;
     var cancelBlockedReason = canCancel
         ? string.Empty
-        : Model.Status == "Cancelled"
+        : !User.IsInRole("Admin")
+            ? "Only Admin can cancel purchase orders."
+            : Model.Status == "Cancelled"
             ? "Cancelled purchase orders are read-only."
             : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
                 ? "Cancel PO is blocked because receiving already exists."
@@ -86,7 +119,12 @@
         }
         @if (canReceive)
         {
-            <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" class="btn btn-success">Receive Goods</a>
+            @foreach (var branch in openReceivingBranches)
+            {
+                <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" asp-route-branchId="@branch.BranchId" class="btn btn-success">
+                    @(openReceivingBranches.Count == 1 ? "Receive Goods" : $"Receive {branch.BranchName}")
+                </a>
+            }
         }
         else
         {
@@ -144,6 +182,23 @@
                     <div class="col-md-3">
                         <div class="detail-label">VAT Type</div>
                         <div class="form-control readonly-detail">@Model.VatType</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Purchase Request</div>
+                        <div class="form-control readonly-detail">
+                            @if (Model.PurchaseRequestHeader is null)
+                            {
+                                <span>-</span>
+                            }
+                            else
+                            {
+                                <a asp-controller="PurchaseRequests" asp-action="Details" asp-route-id="@Model.PurchaseRequestHeader.PurchaseRequestId">@Model.PurchaseRequestHeader.PRNo</a>
+                            }
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Received Lines</div>
@@ -234,6 +289,34 @@
                                 <td>@line.DiscountAmount.ToString("N2")</td>
                                 <td>@line.LineTotal.ToString("N2")</td>
                             </tr>
+                            @if (line.PurchaseOrderAllocations.Any())
+                            {
+                                <tr>
+                                    <td></td>
+                                    <td colspan="7">
+                                        <div class="table-meta mb-1">Delivery Allocation</div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach (var allocation in line.PurchaseOrderAllocations.OrderBy(x => x.Branch?.BranchCode))
+                                            {
+                                                <span class="badge-soft">
+                                                    @(allocation.Branch?.BranchName ?? "-"):
+                                                    @allocation.AllocatedQty.ToString("N2")
+                                                    received @allocation.ReceivedQty.ToString("N2")
+                                                </span>
+                                                @if (allocation.PurchaseOrderAllocationSources.Any())
+                                                {
+                                                    <span class="table-meta">
+                                                        Source PR:
+                                                        @string.Join(", ", allocation.PurchaseOrderAllocationSources
+                                                            .OrderBy(x => x.PurchaseRequestDetail?.PurchaseRequestHeader?.PRNo)
+                                                            .Select(x => $"{x.PurchaseRequestDetail?.PurchaseRequestHeader?.PRNo ?? "-"} {x.SourceQty:N2}"))
+                                                    </span>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
                         </tbody>
                     </table>
