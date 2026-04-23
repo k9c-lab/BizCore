@@ -1357,3 +1357,64 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
 - Result:
   - role no longer decides which menu is shown
   - permissions decide which modules are visible and directly accessible
+
+## 2026-04-23 Company Profile Config
+- Added central `CompanyProfile` configuration in `appsettings.json` for company name, address, tax ID, phone, and email.
+- Updated print controllers to read company header data from config instead of hardcoded `BizCore` test values:
+  - `QuotationsController`
+  - `InvoicesController`
+  - `PurchaseOrdersController`
+  - `ReceivingsController`
+  - `ReceiptsController`
+- Added `CompanyProfileSettings` class and configured it in `Program.cs`.
+- Updated print views to:
+  - support multi-line company addresses
+  - hide the email row when the configured email is blank
+
+## 2026-04-24 Print / PO / Handover Cleanup
+- Print templates were standardized further for customer-facing documents:
+  - repaired corrupted Thai labels in print templates
+  - switched main document labels to Thai/English paired wording
+  - updated print table headers to use two lines:
+    - Thai on the first line
+    - English on the second line
+  - kept preview-style print page layout for:
+    - Quotation
+    - Invoice
+    - Purchase Order
+    - Receiving
+    - Receipt
+- PO pricing workflow was simplified to `header discount only`:
+  - removed line discount entry from PO item rows
+  - added header discount field on the PO form
+  - updated PO calculations so:
+    - line total = qty x unit price
+    - summary total uses header discount + VAT
+  - updated PO details/print so item-level discount is no longer shown
+- Item selector UX updates:
+  - added fuller item hint text after selection on PO
+    - item code + item name
+    - part number
+    - item type
+    - serial-controlled flag
+    - stock when applicable
+  - widened item search dropdown result panels beyond the input width for:
+    - Purchase Requests
+    - Purchase Orders
+    - Quotations
+    - Invoices
+- PO line layout tuning:
+  - removed `Is Serial` column from the PO line table and moved that info into the item hint
+  - reduced `Received` column width
+  - widened `Line Total`
+  - reduced delivery-allocation quantity input width slightly
+- Customer handover database preparation:
+  - added `database/101_clear_customer_handover_keep_admin.sql`
+  - purpose:
+    - clear transaction/demo data
+    - remove customers, suppliers, salespersons, items, serials, stock state
+    - delete all users except `admin`
+    - keep permissions, role-permission setup, and branches
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreDropdownAndPOLayoutBuild`
+  - result: 0 warnings, 0 errors

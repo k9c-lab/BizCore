@@ -103,7 +103,7 @@
                                        value="@(selectedItem is null ? string.Empty : $"{selectedItem.ItemCode} - {selectedItem.ItemName}")"
                                        placeholder="Search item code, name, or part no."
                                        autocomplete="off" />
-                                <div id="prItemResults_@i" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                                <div id="prItemResults_@i" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                             </div>
                             <div class="table-meta js-item-meta">@(selectedItem is null ? "Select item from master data." : $"Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)}")</div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>

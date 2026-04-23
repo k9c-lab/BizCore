@@ -1,25 +1,24 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BizCore.Controllers;
 
 [Authorize]
 public class ReceiptsController : CrudControllerBase
 {
-    private const string PrintCompanyName = "BizCore Co., Ltd.";
-    private const string PrintCompanyAddress = "99 Business Center Road, Huai Khwang, Bangkok 10310";
-    private const string PrintCompanyTaxId = "0105559999999";
-    private const string PrintCompanyPhone = "02-555-0100";
-    private const string PrintCompanyEmail = "sales@bizcore.local";
     private readonly AccountingDbContext _context;
+    private readonly CompanyProfileSettings _companyProfile;
 
-    public ReceiptsController(AccountingDbContext context)
+    public ReceiptsController(AccountingDbContext context, IOptions<CompanyProfileSettings> companyProfileOptions)
     {
         _context = context;
+        _companyProfile = companyProfileOptions.Value;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -131,11 +130,7 @@ public class ReceiptsController : CrudControllerBase
             return NotFound();
         }
 
-        ViewData["PrintCompanyName"] = PrintCompanyName;
-        ViewData["PrintCompanyAddress"] = PrintCompanyAddress;
-        ViewData["PrintCompanyTaxId"] = PrintCompanyTaxId;
-        ViewData["PrintCompanyPhone"] = PrintCompanyPhone;
-        ViewData["PrintCompanyEmail"] = PrintCompanyEmail;
+        PopulatePrintCompanyViewData(_companyProfile);
         return View(receipt);
     }
 

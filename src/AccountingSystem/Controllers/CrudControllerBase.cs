@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Security.Claims;
+using BizCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
@@ -126,6 +127,15 @@ public abstract class CrudControllerBase : Controller
     protected bool CurrentUserHasMenuAccess(string permissionCode)
     {
         return User.IsInRole("Admin") || User.HasClaim("Permission", permissionCode);
+    }
+
+    protected void PopulatePrintCompanyViewData(CompanyProfileSettings companyProfile)
+    {
+        ViewData["PrintCompanyName"] = string.IsNullOrWhiteSpace(companyProfile.Name) ? "-" : companyProfile.Name.Trim();
+        ViewData["PrintCompanyAddress"] = string.IsNullOrWhiteSpace(companyProfile.Address) ? "-" : companyProfile.Address.Trim();
+        ViewData["PrintCompanyTaxId"] = string.IsNullOrWhiteSpace(companyProfile.TaxId) ? "-" : companyProfile.TaxId.Trim();
+        ViewData["PrintCompanyPhone"] = string.IsNullOrWhiteSpace(companyProfile.Phone) ? "-" : companyProfile.Phone.Trim();
+        ViewData["PrintCompanyEmail"] = companyProfile.Email?.Trim() ?? string.Empty;
     }
 
     protected bool CurrentUserHasPermission(string permissionCode)

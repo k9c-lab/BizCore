@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BizCore.Controllers;
 
@@ -13,18 +14,18 @@ namespace BizCore.Controllers;
 public class PurchaseOrdersController : CrudControllerBase
 {
     private const string NumberPrefix = "PO";
-    private const string PrintCompanyName = "BizCore Co., Ltd.";
-    private const string PrintCompanyAddress = "99 Business Center Road, Huai Khwang, Bangkok 10310";
-    private const string PrintCompanyTaxId = "0105559999999";
-    private const string PrintCompanyPhone = "02-555-0100";
-    private const string PrintCompanyEmail = "sales@bizcore.local";
     private readonly AccountingDbContext _context;
     private readonly PurchaseWorkflowEmailService _purchaseWorkflowEmailService;
+    private readonly CompanyProfileSettings _companyProfile;
 
-    public PurchaseOrdersController(AccountingDbContext context, PurchaseWorkflowEmailService purchaseWorkflowEmailService)
+    public PurchaseOrdersController(
+        AccountingDbContext context,
+        PurchaseWorkflowEmailService purchaseWorkflowEmailService,
+        IOptions<CompanyProfileSettings> companyProfileOptions)
     {
         _context = context;
         _purchaseWorkflowEmailService = purchaseWorkflowEmailService;
+        _companyProfile = companyProfileOptions.Value;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -459,11 +460,7 @@ public class PurchaseOrdersController : CrudControllerBase
             return NotFound();
         }
 
-        ViewData["PrintCompanyName"] = PrintCompanyName;
-        ViewData["PrintCompanyAddress"] = PrintCompanyAddress;
-        ViewData["PrintCompanyTaxId"] = PrintCompanyTaxId;
-        ViewData["PrintCompanyPhone"] = PrintCompanyPhone;
-        ViewData["PrintCompanyEmail"] = PrintCompanyEmail;
+        PopulatePrintCompanyViewData(_companyProfile);
         return View(order);
     }
 
@@ -924,13 +921,8 @@ public class PurchaseOrdersController : CrudControllerBase
                 : 0m;
 
             var gross = detail.Qty * detail.UnitPrice;
-            if (detail.DiscountAmount > gross)
-            {
-                ModelState.AddModelError($"Details[{i}].DiscountAmount", "Discount cannot exceed the line amount.");
-                continue;
-            }
-
-            detail.LineTotal = gross - detail.DiscountAmount;
+            detail.DiscountAmount = 0m;
+            detail.LineTotal = gross;
             detail.Allocations = NormalizeAllocations(detail.Allocations, detail.Qty, model.BranchId);
 
             var allocationTotal = 0m;
@@ -1016,11 +1008,15 @@ public class PurchaseOrdersController : CrudControllerBase
             }
 
             subtotal += gross;
-            discount += detail.DiscountAmount;
+        }
+
+        if (model.DiscountAmount > subtotal)
+        {
+            ModelState.AddModelError(nameof(model.DiscountAmount), "Header discount cannot exceed the subtotal.");
         }
 
         model.Subtotal = subtotal;
-        model.DiscountAmount = discount;
+        discount = model.DiscountAmount;
         model.VatType = model.VatType == "NoVAT" ? "NoVAT" : "VAT";
         var taxableAmount = subtotal - discount;
         model.VatAmount = model.VatType == "VAT"
@@ -1048,7 +1044,7 @@ public class PurchaseOrdersController : CrudControllerBase
             return "Submit is blocked because no PO lines exist.";
         }
 
-        if (order.PurchaseOrderDetails.Any(x => x.ItemId <= 0 || x.Qty <= 0 || x.UnitPrice < 0 || x.DiscountAmount < 0))
+        if (order.PurchaseOrderDetails.Any(x => x.ItemId <= 0 || x.Qty <= 0 || x.UnitPrice < 0))
         {
             return "Submit is blocked because one or more PO lines are incomplete.";
         }
@@ -1130,7 +1126,7 @@ public class PurchaseOrdersController : CrudControllerBase
     private static List<PurchaseOrderLineEditorViewModel> NormalizeDetails(IEnumerable<PurchaseOrderLineEditorViewModel>? details)
     {
         return (details ?? Enumerable.Empty<PurchaseOrderLineEditorViewModel>())
-            .Where(x => x.ItemId.HasValue || x.Qty > 0 || x.UnitPrice > 0 || x.DiscountAmount > 0 || !string.IsNullOrWhiteSpace(x.Remark))
+            .Where(x => x.ItemId.HasValue || x.Qty > 0 || x.UnitPrice > 0 || !string.IsNullOrWhiteSpace(x.Remark))
             .Select((x, index) =>
             {
                 x.LineNumber = index + 1;

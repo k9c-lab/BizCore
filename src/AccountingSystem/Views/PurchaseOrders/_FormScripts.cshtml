@@ -8,6 +8,7 @@
         const addButton = document.getElementById("addPOLine");
         const vatInput = document.getElementById("poVatAmount");
         const vatTypeSelect = document.getElementById("poVatType");
+        const headerDiscountInput = document.getElementById("poHeaderDiscount");
         const supplierIdInput = document.getElementById("SupplierId");
         const supplierSearch = document.getElementById("poSupplierSearch");
         const supplierResults = document.getElementById("poSupplierResults");
@@ -73,12 +74,7 @@
         };
 
         const setItemInfo = (row, item) => {
-            const serialFlag = row.querySelector(".js-serial-flag");
             const itemMeta = row.querySelector(".js-item-meta");
-
-            if (serialFlag) {
-                serialFlag.textContent = item?.IsSerialControlled ? "Yes" : "No";
-            }
 
             if (itemMeta) {
                 if (!item) {
@@ -86,10 +82,12 @@
                     return;
                 }
 
+                const nameText = `${item.ItemCode || "-"} - ${item.ItemName || "-"}`;
+                const serialText = ` | Serial: ${item.IsSerialControlled ? "Yes" : "No"}`;
                 const stockText = item.ItemType === "Product" && item.TrackStock
                     ? ` | Stock: ${money(item.CurrentStock)}`
                     : "";
-                itemMeta.textContent = `Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"}${stockText}`;
+                itemMeta.textContent = `${nameText} | Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"}${serialText}${stockText}`;
             }
         };
 
@@ -128,12 +126,11 @@
                     <input type="hidden" name="Details[${index}].ItemId" id="Details_${index}__ItemId" value="" class="js-item-id" />
                     <div class="search-dropdown">
                         <input type="text" class="form-control js-item-search" placeholder="Search item code, name, or part no." autocomplete="off" />
-                        <div id="poItemResults_${index}" class="search-dropdown-menu js-item-results" style="display:none;"></div>
+                        <div id="poItemResults_${index}" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                     </div>
                     <div class="table-meta js-item-meta">Select item from master data.</div>
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
                 </td>
-                <td><span class="js-serial-flag badge-soft">No</span></td>
                 <td>
                     <input type="number" step="0.01" min="0.01" name="Details[${index}].Qty" id="Details_${index}__Qty" value="1" class="form-control js-line-qty" />
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Qty" data-valmsg-replace="true"></span>
@@ -144,10 +141,9 @@
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].UnitPrice" data-valmsg-replace="true"></span>
                 </td>
                 <td>
-                    <input type="number" step="0.01" min="0" name="Details[${index}].DiscountAmount" id="Details_${index}__DiscountAmount" value="0" class="form-control js-line-discount" />
-                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
+                    <input type="hidden" name="Details[${index}].DiscountAmount" id="Details_${index}__DiscountAmount" value="0" class="js-line-discount" />
+                    <input type="number" step="0.01" name="Details[${index}].LineTotal" id="Details_${index}__LineTotal" value="0" class="form-control js-line-total" readonly />
                 </td>
-                <td><input type="number" step="0.01" name="Details[${index}].LineTotal" id="Details_${index}__LineTotal" value="0" class="form-control js-line-total" readonly /></td>
                 <td>
                     <div class="js-allocation-list"></div>
                     <button type="button" class="btn btn-sm btn-outline-primary mt-1 js-add-allocation">Add Branch</button>
@@ -204,25 +200,29 @@
             setItemInfo(row, item);
 
             const price = parseFloat(priceInput.value || "0");
-            const discount = parseFloat(discountInput.value || "0");
-            totalInput.value = Math.max((qty * price) - discount, 0).toFixed(2);
+            discountInput.value = "0";
+            totalInput.value = Math.max(qty * price, 0).toFixed(2);
         };
 
         const updateSummary = () => {
             let subtotal = 0;
-            let discount = 0;
             lineBody.querySelectorAll(".po-line-row").forEach(row => {
                 const qty = parseFloat(row.querySelector(".js-line-qty").value || "0");
                 const price = parseFloat(row.querySelector(".js-line-price").value || "0");
-                const disc = parseFloat(row.querySelector(".js-line-discount").value || "0");
                 subtotal += qty * price;
-                discount += disc;
             });
 
-            const taxableAmount = subtotal - discount;
+            const headerDiscount = Math.max(parseFloat(headerDiscountInput?.value || "0"), 0);
+            const appliedDiscount = Math.min(headerDiscount, subtotal);
+            if (headerDiscountInput) {
+                headerDiscountInput.value = appliedDiscount.toFixed(2);
+            }
+
+            const taxableAmount = subtotal - appliedDiscount;
             const vat = vatTypeSelect.value === "VAT" ? taxableAmount * 0.07 : 0;
             vatInput.value = vat.toFixed(2);
             document.getElementById("poSubtotal").textContent = subtotal.toFixed(2);
+            document.getElementById("poDiscount").textContent = appliedDiscount.toFixed(2);
             document.getElementById("poVatDisplay").textContent = vat.toFixed(2);
             document.getElementById("poTotal").textContent = (taxableAmount + vat).toFixed(2);
         };
@@ -314,6 +314,7 @@
         });
 
         vatTypeSelect.addEventListener("change", updateSummary);
+        headerDiscountInput?.addEventListener("input", updateSummary);
 
         document.addEventListener("click", event => {
             if (!event.target.closest(".search-dropdown")) {

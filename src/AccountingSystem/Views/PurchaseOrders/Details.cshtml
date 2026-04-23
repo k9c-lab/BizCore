@@ -51,7 +51,7 @@
         (Model.Status is "Draft" or "Rejected") &&
         Model.SupplierId > 0 &&
         Model.PurchaseOrderDetails.Any() &&
-        Model.PurchaseOrderDetails.All(x => x.ItemId > 0 && x.Qty > 0 && x.UnitPrice >= 0 && x.DiscountAmount >= 0);
+        Model.PurchaseOrderDetails.All(x => x.ItemId > 0 && x.Qty > 0 && x.UnitPrice >= 0);
     var submitBlockedReason = canSubmit
         ? string.Empty
         : !canSubmitPermission
@@ -327,7 +327,6 @@
                                 <th style="width: 10%;">Received</th>
                                 <th style="width: 10%;">Remaining</th>
                                 <th style="width: 12%;">Unit Price</th>
-                                <th style="width: 10%;">Discount</th>
                                 <th style="width: 12%;">Line Total</th>
                             </tr>
                         </thead>
@@ -344,14 +343,13 @@
                                 <td>@line.ReceivedQty.ToString("N2")</td>
                                 <td>@((line.Qty - line.ReceivedQty).ToString("N2"))</td>
                                 <td>@line.UnitPrice.ToString("N2")</td>
-                                <td>@line.DiscountAmount.ToString("N2")</td>
                                 <td>@line.LineTotal.ToString("N2")</td>
                             </tr>
                             @if (line.PurchaseOrderAllocations.Any())
                             {
                                 <tr>
                                     <td></td>
-                                    <td colspan="7">
+                                    <td colspan="6">
                                         <div class="table-meta mb-1">Delivery Allocation</div>
                                         <div class="d-flex flex-wrap gap-2">
                                             @foreach (var allocation in line.PurchaseOrderAllocations.OrderBy(x => x.Branch?.BranchCode))

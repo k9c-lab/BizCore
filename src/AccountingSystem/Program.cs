@@ -15,6 +15,7 @@ builder.Services.AddControllersWithViews(options =>
 });
 builder.Services.AddDbContext<AccountingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("AccountingDb")));
+builder.Services.Configure<CompanyProfileSettings>(builder.Configuration.GetSection("CompanyProfile"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<PasswordHashService>();
