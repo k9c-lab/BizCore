@@ -1,6 +1,6 @@
 @model BizCore.Models.ViewModels.InvoiceFormViewModel
 
-<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
 <input asp-for="QuotationId" type="hidden" />
 @if (!Model.CanAccessAllBranches)
@@ -50,7 +50,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Status</label>
-                <input type="text" class="form-control" value="@Model.Status" readonly />
+                <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
             </div>
             <div class="col-md-2">
                 <label asp-for="BranchId" class="form-label"></label>

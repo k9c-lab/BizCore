@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
+[Authorize]
 public class StockIssuesController : CrudControllerBase
 {
     private const string NumberPrefix = "SI";

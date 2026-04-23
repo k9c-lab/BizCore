@@ -9,10 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class UsersController : CrudControllerBase
 {
-    private static readonly string[] Roles = { "Admin", "BranchAdmin", "Sales", "Warehouse", "Viewer" };
+    private static readonly string[] Roles = { "Admin", "CentralAdmin", "BranchAdmin", "Sales", "Warehouse", "Executive", "Viewer" };
     private readonly AccountingDbContext _context;
     private readonly PasswordHashService _passwordHashService;
 

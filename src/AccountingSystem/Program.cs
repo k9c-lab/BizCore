@@ -15,7 +15,11 @@ builder.Services.AddControllersWithViews(options =>
 });
 builder.Services.AddDbContext<AccountingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("AccountingDb")));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<PasswordHashService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<PurchaseWorkflowEmailService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

@@ -54,6 +54,14 @@ public class QuotationHeader
     [Range(typeof(decimal), "0", "9999999999999999.99")]
     public decimal HeaderDiscountAmount { get; set; }
 
+    [Display(Name = "Header Discount Type")]
+    [StringLength(10)]
+    public string HeaderDiscountType { get; set; } = "Amount";
+
+    [Display(Name = "Header Discount %")]
+    [Range(typeof(decimal), "0", "100")]
+    public decimal HeaderDiscountPercent { get; set; }
+
     [Display(Name = "VAT Type")]
     [StringLength(10)]
     public string VatType { get; set; } = "NoVAT";

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Sales")]
+[Authorize]
 public class InvoicesController : CrudControllerBase
 {
     private const string NumberPrefix = "INV";

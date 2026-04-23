@@ -1,0 +1,68 @@
+@model BizCore.Models.ViewModels.RolePermissionPageViewModel
+
+@{
+    ViewData["Title"] = "Role Permissions";
+}
+
+@if (TempData["RolePermissionNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Administration</div>
+        <h1 class="page-title">Role Permissions</h1>
+        <p class="page-subtitle">Control what each role can do. Branch scope still follows each user's branch settings.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">Users</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form method="get" class="list-filter-bar mb-4">
+            <div class="list-filter-field">
+                <label class="form-label" for="role">Role</label>
+                <select id="role" name="role" asp-for="SelectedRole" asp-items="Model.RoleOptions" class="form-select" onchange="this.form.submit()"></select>
+            </div>
+            <div class="list-filter-actions">
+                <button type="submit" class="btn btn-primary">Load</button>
+            </div>
+        </form>
+
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="selectedRole" value="@Model.SelectedRole" />
+
+            <div class="form-shell">
+                @foreach (var module in Model.Modules)
+                {
+                    <div class="form-section">
+                        <div class="form-section-title">@module.Module</div>
+                        <div class="row g-2">
+                            @foreach (var permission in module.Permissions)
+                            {
+                                <div class="col-xl-4 col-md-6">
+                                    <label class="permission-option">
+                                        <input class="form-check-input" type="checkbox" name="permissionIds" value="@permission.PermissionId" checked="@permission.IsGranted" />
+                                        <span>
+                                            <strong>@permission.Code</strong>
+                                            <small>@permission.Name</small>
+                                        </span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary px-4">Save Permissions</button>
+                <a asp-action="Index" asp-route-role="@Model.SelectedRole" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>

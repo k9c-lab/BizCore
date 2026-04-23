@@ -1,11 +1,11 @@
 @model BizCore.Models.ViewModels.SupplierClaimFormViewModel
 
-<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="SerialId" type="hidden" />
 
 @if (Model.IsClaimBlocked)
 {
-    <div class="workflow-info mb-3">@Model.ClaimBlockMessage</div>
+    <div class="workflow-info workflow-info-danger mb-3">@Model.ClaimBlockMessage</div>
 }
 
 <div class="form-shell">

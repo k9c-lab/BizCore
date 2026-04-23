@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
-public class SerialInquiryController : Controller
+[Authorize]
+public class SerialInquiryController : CrudControllerBase
 {
     private readonly AccountingDbContext _context;
 
@@ -140,14 +140,12 @@ public class SerialInquiryController : Controller
 
     private bool CanAccessAllBranches()
     {
-        return !User.IsInRole("BranchAdmin")
-            && (string.Equals(User.FindFirst("CanAccessAllBranches")?.Value, "true", StringComparison.OrdinalIgnoreCase)
-                || User.IsInRole("Admin"));
+        return CurrentUserCanAccessAllBranches();
     }
 
-    private int? CurrentBranchId()
+    private new int? CurrentBranchId()
     {
-        return int.TryParse(User.FindFirst("BranchId")?.Value, out var branchId) ? branchId : null;
+        return base.CurrentBranchId();
     }
 
     private int? ResolveBranchId(int? requestedBranchId, bool canAccessAllBranches)

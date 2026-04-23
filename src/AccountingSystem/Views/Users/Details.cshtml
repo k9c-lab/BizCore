@@ -6,7 +6,7 @@
 
 @if (TempData["UserNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">

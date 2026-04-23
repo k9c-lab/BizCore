@@ -1,0 +1,56 @@
+@model string
+
+@{
+    var message = Model?.Trim() ?? string.Empty;
+    var lower = message.ToLowerInvariant();
+    var tone = "info";
+
+    if (!string.IsNullOrWhiteSpace(message))
+    {
+        var isDanger =
+            lower.Contains("blocked") ||
+            lower.Contains("failed") ||
+            lower.Contains("cannot") ||
+            lower.Contains("can't") ||
+            lower.Contains("invalid") ||
+            lower.Contains("required") ||
+            lower.Contains("not available") ||
+            lower.Contains("do not have permission") ||
+            lower.Contains("no changes were saved") ||
+            lower.Contains("not found") ||
+            lower.Contains("already") ||
+            lower.Contains("must ") ||
+            lower.StartsWith("only ");
+
+        var isSuccess =
+            lower.Contains("success") ||
+            lower.Contains("created") ||
+            lower.Contains("saved") ||
+            lower.Contains("updated") ||
+            lower.Contains("posted") ||
+            lower.Contains("submitted") ||
+            lower.Contains("approved") ||
+            lower.Contains("rejected") ||
+            lower.Contains("cancelled") ||
+            lower.Contains("assigned") ||
+            lower.Contains("closed") ||
+            lower.Contains("returned") ||
+            lower.Contains("linked") ||
+            lower.Contains("generated") ||
+            lower.Contains("restored");
+
+        var isWarning =
+            lower.Contains("select ") ||
+            lower.Contains("please ") ||
+            lower.Contains("start ") ||
+            lower.Contains("before ") ||
+            lower.Contains("after ");
+
+        tone = isDanger ? "danger" : isSuccess ? "success" : isWarning ? "warning" : "info";
+    }
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="workflow-info workflow-info-@tone mb-3">@message</div>
+}

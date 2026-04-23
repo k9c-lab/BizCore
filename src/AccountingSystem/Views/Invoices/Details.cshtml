@@ -46,7 +46,7 @@
 
 @if (TempData["InvoiceNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -90,7 +90,7 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@receivePaymentBlockedReason">Receive Payment</button>
         }
-        <a asp-action="Print" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.InvoiceId })', '_blank', 'noopener');">Print</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
@@ -153,7 +153,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Branch</div>

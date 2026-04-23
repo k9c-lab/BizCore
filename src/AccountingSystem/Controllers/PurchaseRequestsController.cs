@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -8,19 +9,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
+[Authorize]
 public class PurchaseRequestsController : CrudControllerBase
 {
     private const string NumberPrefix = "PR";
     private readonly AccountingDbContext _context;
+    private readonly PurchaseWorkflowEmailService _purchaseWorkflowEmailService;
 
-    public PurchaseRequestsController(AccountingDbContext context)
+    public PurchaseRequestsController(AccountingDbContext context, PurchaseWorkflowEmailService purchaseWorkflowEmailService)
     {
         _context = context;
+        _purchaseWorkflowEmailService = purchaseWorkflowEmailService;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
+        if (!CurrentUserHasPermission("PR.View"))
+        {
+            return Forbid();
+        }
+
         var query = _context.PurchaseRequestHeaders
             .AsNoTracking()
             .Include(x => x.Branch)
@@ -87,6 +95,11 @@ public class PurchaseRequestsController : CrudControllerBase
 
     public async Task<IActionResult> Create()
     {
+        if (!CurrentUserHasPermission("PR.Create"))
+        {
+            return Forbid();
+        }
+
         var model = new PurchaseRequestFormViewModel
         {
             PRNo = await GetNextPRNumberAsync(DateTime.Today),
@@ -101,6 +114,11 @@ public class PurchaseRequestsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PurchaseRequestFormViewModel model)
     {
+        if (!CurrentUserHasPermission("PR.Create"))
+        {
+            return Forbid();
+        }
+
         model.PRNo = await EnsurePRNumberAsync(model.PRNo, model.RequestDate);
         model.Status = "Draft";
         ModelState.Remove(nameof(PurchaseRequestFormViewModel.PRNo));
@@ -138,6 +156,11 @@ public class PurchaseRequestsController : CrudControllerBase
 
     public async Task<IActionResult> Edit(int? id)
     {
+        if (!CurrentUserHasPermission("PR.Edit"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -153,9 +176,9 @@ public class PurchaseRequestsController : CrudControllerBase
             return NotFound();
         }
 
-        if (header.Status != "Draft")
+        if (!CanEditRequest(header))
         {
-            TempData["PurchaseRequestNotice"] = $"Only Draft purchase requests can be edited. Current status is {header.Status}.";
+            TempData["PurchaseRequestNotice"] = $"Only Draft or Rejected purchase requests can be edited. Current status is {header.Status}.";
             return RedirectToAction(nameof(Details), new { id = header.PurchaseRequestId });
         }
 
@@ -195,6 +218,11 @@ public class PurchaseRequestsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, PurchaseRequestFormViewModel model)
     {
+        if (!CurrentUserHasPermission("PR.Edit"))
+        {
+            return Forbid();
+        }
+
         if (id != model.PurchaseRequestId)
         {
             return NotFound();
@@ -209,9 +237,9 @@ public class PurchaseRequestsController : CrudControllerBase
             return NotFound();
         }
 
-        if (existingHeader.Status != "Draft")
+        if (!CanEditRequest(existingHeader))
         {
-            TempData["PurchaseRequestNotice"] = $"Only Draft purchase requests can be edited. Current status is {existingHeader.Status}.";
+            TempData["PurchaseRequestNotice"] = $"Only Draft or Rejected purchase requests can be edited. Current status is {existingHeader.Status}.";
             return RedirectToAction(nameof(Details), new { id = existingHeader.PurchaseRequestId });
         }
 
@@ -247,6 +275,11 @@ public class PurchaseRequestsController : CrudControllerBase
 
     public async Task<IActionResult> Details(int? id)
     {
+        if (!CurrentUserHasPermission("PR.View"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -259,6 +292,7 @@ public class PurchaseRequestsController : CrudControllerBase
             .Include(x => x.UpdatedByUser)
             .Include(x => x.SubmittedByUser)
             .Include(x => x.ApprovedByUser)
+            .Include(x => x.RejectedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseRequestDetails)
                 .ThenInclude(x => x.Item)
@@ -279,6 +313,11 @@ public class PurchaseRequestsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(int id)
     {
+        if (!CurrentUserHasPermission("PR.Submit"))
+        {
+            return Forbid();
+        }
+
         var request = await _context.PurchaseRequestHeaders
             .Include(x => x.PurchaseRequestDetails)
             .FirstOrDefaultAsync(x => x.PurchaseRequestId == id);
@@ -299,18 +338,26 @@ public class PurchaseRequestsController : CrudControllerBase
         request.Status = "Submitted";
         request.SubmittedByUserId = CurrentUserId();
         request.SubmittedDate = now;
+        request.RejectedByUserId = null;
+        request.RejectedDate = null;
+        request.RejectReason = null;
         request.UpdatedDate = now;
         await _context.SaveChangesAsync();
+        await _purchaseWorkflowEmailService.NotifyPrSubmittedAsync(request.PurchaseRequestId);
 
         TempData["PurchaseRequestNotice"] = "Purchase request submitted successfully.";
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Approve(int id)
     {
+        if (!CurrentUserHasPermission("PR.Approve"))
+        {
+            return Forbid();
+        }
+
         var request = await _context.PurchaseRequestHeaders
             .Include(x => x.PurchaseRequestDetails)
             .FirstOrDefaultAsync(x => x.PurchaseRequestId == id);
@@ -331,6 +378,9 @@ public class PurchaseRequestsController : CrudControllerBase
         request.Status = "Approved";
         request.ApprovedByUserId = CurrentUserId();
         request.ApprovedDate = now;
+        request.RejectedByUserId = null;
+        request.RejectedDate = null;
+        request.RejectReason = null;
         request.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
@@ -340,8 +390,53 @@ public class PurchaseRequestsController : CrudControllerBase
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reject(int id, string? rejectReason)
+    {
+        if (!CurrentUserHasPermission("PR.Reject"))
+        {
+            return Forbid();
+        }
+
+        var request = await _context.PurchaseRequestHeaders
+            .Include(x => x.PurchaseRequestDetails)
+            .FirstOrDefaultAsync(x => x.PurchaseRequestId == id);
+
+        if (request is null || !CanAccessBranch(request.BranchId))
+        {
+            return NotFound();
+        }
+
+        var blockReason = GetRejectBlockedReason(request, rejectReason);
+        if (!string.IsNullOrWhiteSpace(blockReason))
+        {
+            TempData["PurchaseRequestNotice"] = blockReason;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var now = DateTime.UtcNow;
+        request.Status = "Rejected";
+        request.RejectedByUserId = CurrentUserId();
+        request.RejectedDate = now;
+        request.RejectReason = NormalizeReason(rejectReason);
+        request.ApprovedByUserId = null;
+        request.ApprovedDate = null;
+        request.UpdatedDate = now;
+        await _context.SaveChangesAsync();
+        await _purchaseWorkflowEmailService.NotifyPrRejectedAsync(request.PurchaseRequestId);
+
+        TempData["PurchaseRequestNotice"] = "Purchase request rejected and returned for correction.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
+        if (!CurrentUserHasPermission("PR.Cancel"))
+        {
+            return Forbid();
+        }
+
         var request = await _context.PurchaseRequestHeaders
             .Include(x => x.PurchaseOrderHeaders)
             .FirstOrDefaultAsync(x => x.PurchaseRequestId == id);
@@ -501,9 +596,9 @@ public class PurchaseRequestsController : CrudControllerBase
 
     private static string GetSubmitBlockedReason(PurchaseRequestHeader request)
     {
-        if (request.Status != "Draft")
+        if (request.Status is not ("Draft" or "Rejected"))
         {
-            return $"Submit is available only for Draft purchase requests. Current status is {request.Status}.";
+            return $"Submit is available only for Draft or Rejected purchase requests. Current status is {request.Status}.";
         }
 
         if (!request.PurchaseRequestDetails.Any())
@@ -546,9 +641,29 @@ public class PurchaseRequestsController : CrudControllerBase
             return "Cancelled purchase requests are read-only.";
         }
 
-        if (request.Status is not ("Draft" or "Submitted" or "Approved"))
+        if (request.Status is not ("Draft" or "Submitted" or "Approved" or "Rejected"))
         {
-            return $"Cancel PR is available only for Draft, Submitted, or Approved purchase requests. Current status is {request.Status}.";
+            return $"Cancel PR is available only for Draft, Submitted, Approved, or Rejected purchase requests. Current status is {request.Status}.";
+        }
+
+        return string.Empty;
+    }
+
+    private static bool CanEditRequest(PurchaseRequestHeader request)
+    {
+        return request.Status is "Draft" or "Rejected";
+    }
+
+    private static string GetRejectBlockedReason(PurchaseRequestHeader request, string? rejectReason)
+    {
+        if (request.Status != "Submitted")
+        {
+            return $"Reject is available only for Submitted purchase requests. Current status is {request.Status}.";
+        }
+
+        if (string.IsNullOrWhiteSpace(rejectReason))
+        {
+            return "Reject reason is required.";
         }
 
         return string.Empty;
@@ -556,12 +671,17 @@ public class PurchaseRequestsController : CrudControllerBase
 
     private static string? NormalizeCancelReason(string? cancelReason)
     {
-        if (string.IsNullOrWhiteSpace(cancelReason))
+        return NormalizeReason(cancelReason);
+    }
+
+    private static string? NormalizeReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
         {
             return null;
         }
 
-        var trimmed = cancelReason.Trim();
+        var trimmed = reason.Trim();
         return trimmed.Length <= 500 ? trimmed : trimmed[..500];
     }
 

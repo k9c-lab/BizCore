@@ -5,8 +5,27 @@
     var isDraft = Model.Status == "Draft";
     var isPosted = Model.Status == "Posted";
     var isCancelled = Model.Status == "Cancelled";
-    var canCancel = isDraft || isPosted;
-    var cancelBlockedReason = isCancelled
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var canEditPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Edit") || oldReceivingOperatorFallback;
+    var canPostPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Post") || oldReceivingOperatorFallback;
+    var canCancelPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Cancel") || oldReceivingOperatorFallback;
+    var canEdit = canEditPermission && isDraft;
+    var editBlockedReason = canEdit
+        ? string.Empty
+        : !canEditPermission
+            ? "You do not have permission to edit receiving documents."
+            : $"Edit Receiving is available only for Draft documents. Current status is {Model.Status}.";
+    var canPost = canPostPermission && isDraft;
+    var postBlockedReason = canPost
+        ? string.Empty
+        : !canPostPermission
+            ? "You do not have permission to post receiving documents."
+            : $"Post Receiving is available only for Draft documents. Current status is {Model.Status}.";
+    var canCancel = canCancelPermission && (isDraft || isPosted);
+    var cancelBlockedReason = !canCancelPermission
+        ? "You do not have permission to cancel receiving documents."
+        : isCancelled
         ? "Cancelled receiving documents are read-only."
         : $"Cancel Receiving is available only for Draft or Posted receiving documents. Current status is {Model.Status}.";
 }
@@ -20,16 +39,30 @@
     <div class="page-actions">
         @if (isDraft)
         {
-            <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-primary">Edit Draft</a>
-            <form asp-action="Post" asp-route-id="@Model.ReceivingId" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-success" onclick="return confirm('Post this receiving document? Stock and serial records will be updated.');">Post Receiving</button>
-            </form>
+            @if (canEdit)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-primary">Edit Draft</a>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit Draft</button>
+            }
+            @if (canPost)
+            {
+                <form asp-action="Post" asp-route-id="@Model.ReceivingId" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Post this receiving document? Stock and serial records will be updated.');">Post Receiving</button>
+                </form>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">Post Receiving</button>
+            }
             <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
         }
         else if (isPosted)
         {
-            <a asp-action="Print" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+            <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceivingId })', '_blank', 'noopener');">Print</button>
         }
         @if (canCancel)
         {
@@ -49,7 +82,7 @@
 
 @if (TempData["ReceivingNotice"] is string notice)
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card">
@@ -88,7 +121,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Branch</div>

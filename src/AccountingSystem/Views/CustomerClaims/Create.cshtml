@@ -17,7 +17,7 @@
 
 @if (Model.IsClaimBlocked)
 {
-    <div class="workflow-info mb-3">@Model.ClaimBlockMessage</div>
+    <div class="workflow-info workflow-info-danger mb-3">@Model.ClaimBlockMessage</div>
 }
 
 <form asp-action="Create" method="post">
@@ -26,7 +26,7 @@
 
     <div class="card content-card">
         <div class="card-body form-shell">
-            <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+            <div asp-validation-summary="All" class="form-alert"></div>
 
             <div class="form-section">
                 <div class="form-section-title">Claim Information</div>

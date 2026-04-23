@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Sales,Warehouse")]
+[Authorize]
 public class ReportsController : CrudControllerBase
 {
     private readonly AccountingDbContext _context;
@@ -19,6 +19,11 @@ public class ReportsController : CrudControllerBase
 
     public async Task<IActionResult> Index(DateTime? dateFrom, DateTime? dateTo, int? branchId)
     {
+        if (!CurrentUserHasPermission("Reports.View"))
+        {
+            return Forbid();
+        }
+
         var canAccessAllBranches = CurrentUserCanAccessAllBranches();
         var effectiveBranchId = canAccessAllBranches ? branchId : CurrentBranchId();
         var from = dateFrom?.Date ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);

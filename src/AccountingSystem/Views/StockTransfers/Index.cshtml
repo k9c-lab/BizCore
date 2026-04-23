@@ -21,7 +21,7 @@
 
 @if (TempData["StockTransferNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card table-card">

@@ -1,5 +1,140 @@
 # Session Notes
 
+## Latest Session Update - 2026-04-23 PR/PO Reject and Flexible Permissions
+- Added quotation percent discount support:
+  - new SQL script `database/039_quotation_discount_percent.sql`
+  - quotation now stores both discount type and discount percent
+  - supported for:
+    - line discount (`Amount` / `Percent`)
+    - header discount (`Amount` / `Percent`)
+  - quotation form, details, and print now show the saved discount style
+  - quotation still saves computed discount amount for total calculation and invoice conversion compatibility
+- Added PR/PO reject workflow and flexible permission foundation.
+- Added SQL script:
+  - `database/038_pr_po_reject_flexible_permissions.sql`
+- Added permission tables:
+  - `Permissions`
+  - `RolePermissions`
+- Added reject audit fields:
+  - `PurchaseRequestHeaders.RejectedByUserId`
+  - `PurchaseRequestHeaders.RejectedDate`
+  - `PurchaseRequestHeaders.RejectReason`
+  - `PurchaseOrderHeaders.RejectedByUserId`
+  - `PurchaseOrderHeaders.RejectedDate`
+  - `PurchaseOrderHeaders.RejectReason`
+- Added permission claims at login:
+  - loaded from `RolePermissions`
+  - existing role fallback remains so old roles still work before/while permissions are being phased in
+- Added starting permissions:
+  - `Sales.Menu`
+  - `Sales.Quotations.Menu`
+  - `Sales.Invoices.Menu`
+  - `Sales.Payments.Menu`
+  - `Sales.Receipts.Menu`
+  - `Purchasing.Menu`
+  - `Purchasing.PR.Menu`
+  - `Purchasing.PO.Menu`
+  - `Purchasing.Receiving.Menu`
+  - `Inventory.Menu`
+  - `Inventory.StockInquiry.Menu`
+  - `Inventory.SerialInquiry.Menu`
+  - `Inventory.StockLedger.Menu`
+  - `Inventory.StockAudit.Menu`
+  - `Inventory.StockTransfers.Menu`
+  - `Inventory.StockIssues.Menu`
+  - `Warranty.Menu`
+  - `Warranty.CustomerClaims.Menu`
+  - `Warranty.SupplierClaims.Menu`
+  - `Reports.Menu`
+  - `MasterData.Menu`
+  - `MasterData.Branches.Menu`
+  - `MasterData.Customers.Menu`
+  - `MasterData.Suppliers.Menu`
+  - `MasterData.Salespersons.Menu`
+  - `MasterData.Items.Menu`
+  - `MasterData.Users.Menu`
+  - `MasterData.RolePermissions.Menu`
+  - `PR.View`
+  - `PR.Create`
+  - `PR.Edit`
+  - `PR.Submit`
+  - `PR.Approve`
+  - `PR.Reject`
+  - `PR.Cancel`
+  - `PO.View`
+  - `PO.Create`
+  - `PO.Edit`
+  - `PO.Approve`
+  - `PO.Reject`
+  - `PO.Cancel`
+  - `PO.Receive`
+  - `Receiving.View`
+  - `Receiving.Create`
+  - `Receiving.Edit`
+  - `Receiving.Post`
+  - `Receiving.Cancel`
+  - `Reports.View`
+- Default role-permission intent:
+  - BranchAdmin/Warehouse can create/edit/submit/cancel PR in their branch scope
+  - CentralAdmin can view/approve/reject PR, create/edit/cancel PO, and view reports across allowed branches
+  - BranchAdmin/Warehouse can create/edit/post/cancel Receiving in their branch scope
+  - CentralAdmin/Executive can view Receiving documents, but cannot post/cancel by default
+  - Admin can do all PR/PO permissions as super admin fallback
+  - Executive can view PR/PO, approve/reject PO, and view reports
+- PR reject behavior:
+  - `Submitted` PR can be rejected with required reason
+  - rejected PR can be edited and submitted again
+  - resubmit clears previous reject audit fields
+- PO reject behavior:
+  - `Draft` or `Rejected` PO can be submitted for approval
+  - `Submitted` PO can be approved or rejected
+  - `Submitted` PO can be rejected with required reason
+  - rejected PO can be edited
+  - saving a rejected PO moves it back to `Draft` and clears previous reject audit fields
+  - approved PO can proceed to Receiving
+- Updated PR/PO Details and Index pages:
+  - added Reject actions
+  - added PO Submit actions
+  - added reject reason prompt
+  - added rejected status filters
+  - added reject audit to Document History
+- Added Role Permissions management UI:
+  - `RolePermissionsController`
+  - `Views/RolePermissions/Index.cshtml`
+  - Admin can choose a role and check/uncheck permissions
+  - added `CentralAdmin` role for central purchasing/admin team
+  - added `Executive` to User Management role options
+  - added Role Permissions link under Master Data/System area
+- Added menu-level permissions:
+  - sidebar now supports parent and child menu permissions
+  - child menu permission can show its parent group automatically
+  - fallback role behavior remains when no `.Menu` permission claims exist
+  - menu access is intentionally separate from workflow/action permissions for this phase
+- Added purchase workflow email notification foundation:
+  - SMTP settings in `appsettings.json` under `Email`
+  - email sending is skipped safely when `Email.Enabled = false`
+  - notification emails added for:
+    - PR rejected -> BranchAdmin of the same branch
+    - PR submitted -> CentralAdmin
+    - PO submitted -> Executive
+    - PO rejected -> CentralAdmin
+- Updated Executive access:
+  - Executive can access Sales menu group
+  - Executive can open Quotations, Invoices, Payments, and Receipts
+  - menu seed added in `038_pr_po_reject_flexible_permissions.sql`
+- Required next DB script:
+  - run `database/038_pr_po_reject_flexible_permissions.sql`
+- Important login note:
+  - users should log out and log in again after running script `038` so permission claims are refreshed.
+- Follow-up PO from PR branch fix:
+  - `PurchaseOrders/Create` now sets PO header `BranchId` from selected PR when all selected PR sources are from one branch
+  - delivery allocations were already copied from PR branch lines; this fixes the visible/header branch not following the PR source
+- Follow-up Receiving permission phase:
+  - added permission checks to `ReceivingsController` for View/Create/Edit/Post/Cancel
+  - updated PO Receive Goods buttons to require `Receiving.Create` or legacy `PO.Receive`
+  - updated Receivings list/details buttons to respect Receiving permissions
+  - sidebar now shows Receivings for users with `Receiving.View`
+
 ## Project
 - App name: `BizCore`
 - App path: `src/AccountingSystem`
@@ -1179,6 +1314,46 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - Reports now includes:
     - sales chart from displayed daily report rows
     - movement mix horizontal bars
-  - Build verification:
-    - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreChartsBuild`
-    - result: 0 warnings, 0 errors
+- Build verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreChartsBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-23 Executive Full Screen Access
+- Updated `Executive` role to access all screens/modules in code without waiting for additional permission seed updates.
+- Changes:
+  - `CrudControllerBase`
+    - `Executive` now counts as all-branch access
+    - `Executive` now bypasses permission checks the same way `Admin` does for screen access
+  - `_Layout.cshtml`
+    - `Executive` now sees all menu sections including Inventory, Warranty, and Master Data
+  - Added `Executive` to controller `[Authorize]` roles for:
+    - Branches
+    - Customers
+    - Customer Claims
+    - Items
+    - Role Permissions
+    - Salespersons
+    - Serial Inquiry
+    - Stock Audit
+    - Stock Inquiry
+    - Stock Issues
+    - Stock Ledger
+    - Stock Transfers
+    - Supplier Claims
+    - Suppliers
+    - Users
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreExecutiveAccessBuild`
+
+## 2026-04-23 Menu-Permission-Driven Access
+- Refactored screen access to use `*.Menu` permissions as the primary gate for menu visibility and direct URL access.
+- New approach:
+  - sidebar visibility now checks permission claims only (plus `Admin`)
+  - `CrudControllerBase` maps controller names to menu permission codes and returns `Forbid()` when a user hits a module URL without the matching menu permission
+  - workflow permissions for PR / PO / Receiving remain unchanged and still control submit / approve / reject / post / cancel actions
+- Controller authorization:
+  - replaced many role-specific `[Authorize(Roles = ...)]` attributes with `[Authorize]`
+  - inventory read-only controllers now inherit `CrudControllerBase` so they use the same menu-permission URL protection
+- Result:
+  - role no longer decides which menu is shown
+  - permissions decide which modules are visible and directly accessible

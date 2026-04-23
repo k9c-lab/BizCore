@@ -26,6 +26,14 @@ public class QuotationLineEditorViewModel
     [Display(Name = "Discount")]
     public decimal DiscountAmount { get; set; }
 
+    [Display(Name = "Discount Type")]
+    [StringLength(10)]
+    public string DiscountType { get; set; } = "Amount";
+
+    [Range(typeof(decimal), "0", "100")]
+    [Display(Name = "Discount %")]
+    public decimal DiscountPercent { get; set; }
+
     [Display(Name = "Line Total")]
     public decimal LineTotal { get; set; }
 }

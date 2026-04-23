@@ -65,6 +65,22 @@ public class AccountController : Controller
             new("CanAccessAllBranches", user.CanAccessAllBranches ? "true" : "false")
         };
 
+        try
+        {
+            var permissions = await _context.RolePermissions
+                .AsNoTracking()
+                .Include(x => x.Permission)
+                .Where(x => x.RoleName == user.Role && x.Permission != null)
+                .Select(x => x.Permission!.Code)
+                .ToListAsync();
+
+            claims.AddRange(permissions.Select(x => new Claim("Permission", x)));
+        }
+        catch (Exception ex) when (ex is DbUpdateException || ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException)
+        {
+            // Permission tables are additive. Existing role-based login still works before the DB script is applied.
+        }
+
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
         var authProperties = new AuthenticationProperties

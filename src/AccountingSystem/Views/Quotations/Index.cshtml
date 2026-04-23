@@ -82,11 +82,11 @@
                             <td class="fw-semibold">@quotation.Customer?.CustomerName</td>
                             <td>@quotation.Salesperson?.SalespersonName</td>
                             <td>@quotation.TotalAmount.ToString("N2")</td>
-                            <td><span class="status-pill active">@quotation.Status</span></td>
+                            <td>@await Html.PartialAsync("_StatusPill", quotation.Status)</td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <a asp-action="Print" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = quotation.QuotationHeaderId })', '_blank', 'noopener');">Print</button>
                                     @if (quotation.Status == "Draft")
                                     {
                                         <a asp-action="Edit" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-primary">Edit</a>

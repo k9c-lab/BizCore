@@ -1,6 +1,6 @@
 @model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
 
-<div asp-validation-summary="ModelOnly" class="form-alert"></div>
+<div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="Status" type="hidden" />
 
 <div class="form-shell">
@@ -57,7 +57,7 @@
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
                         <span class="quotation-info-label">Current Status</span>
-                        <span class="quotation-info-value">@Model.Status</span>
+                        <span class="quotation-info-value">@await Html.PartialAsync("_StatusPill", Model.Status)</span>
                     </div>
                     <div class="quotation-info-field">
                         <span class="quotation-info-label">Next Step</span>

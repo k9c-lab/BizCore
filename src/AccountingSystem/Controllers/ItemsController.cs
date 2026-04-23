@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class ItemsController : CrudControllerBase
 {
     private static readonly string[] ItemTypes = { "Product", "Service", "Spare Part" };

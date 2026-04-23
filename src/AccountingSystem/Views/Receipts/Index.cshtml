@@ -78,7 +78,7 @@
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <a asp-action="Print" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = receipt.ReceiptId })', '_blank', 'noopener');">Print</button>
                                     @if (canCancel)
                                     {
                                         <form asp-action="Cancel" asp-route-id="@receipt.ReceiptId" method="post" class="d-inline">

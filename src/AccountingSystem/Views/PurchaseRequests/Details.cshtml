@@ -13,41 +13,68 @@
         .ToList();
     var hasPO = linkedPOs.Any();
     var linkedPO = linkedPOs.FirstOrDefault();
-    var canEdit = Model.Status == "Draft";
-    var editBlockedReason = canEdit ? string.Empty : $"Edit PR is available only for Draft purchase requests. Current status is {Model.Status}.";
-    var canSubmit = Model.Status == "Draft" && Model.PurchaseRequestDetails.Any();
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldPrOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var oldCentralAdminFallback = !hasPermissionClaims && User.IsInRole("CentralAdmin");
+    var canViewPOCreate = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Create") || oldCentralAdminFallback;
+    var canEditPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Edit") || oldPrOperatorFallback;
+    var canSubmitPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Submit") || oldPrOperatorFallback;
+    var canApprovePermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Approve") || oldCentralAdminFallback;
+    var canRejectPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Reject") || oldCentralAdminFallback;
+    var canCancelPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Cancel") || oldPrOperatorFallback;
+    var canEdit = canEditPermission && (Model.Status is "Draft" or "Rejected");
+    var editBlockedReason = canEdit
+        ? string.Empty
+        : !canEditPermission
+            ? "You do not have permission to edit purchase requests."
+            : $"Edit PR is available only for Draft or Rejected purchase requests. Current status is {Model.Status}.";
+    var canSubmit = canSubmitPermission && (Model.Status is "Draft" or "Rejected") && Model.PurchaseRequestDetails.Any();
     var submitBlockedReason = canSubmit
         ? string.Empty
-        : Model.Status != "Draft"
-            ? $"Submit is available only for Draft purchase requests. Current status is {Model.Status}."
-            : "Submit is blocked because no PR lines exist.";
-    var canApprove = User.IsInRole("Admin") && Model.Status == "Submitted";
+        : !canSubmitPermission
+            ? "You do not have permission to submit purchase requests."
+            : Model.Status is not ("Draft" or "Rejected")
+                ? $"Submit is available only for Draft or Rejected purchase requests. Current status is {Model.Status}."
+                : "Submit is blocked because no PR lines exist.";
+    var canApprove = canApprovePermission && Model.Status == "Submitted";
     var approveBlockedReason = canApprove
         ? string.Empty
-        : Model.Status != "Submitted"
-            ? $"Approve is available only for Submitted purchase requests. Current status is {Model.Status}."
-            : "Only Admin can approve purchase requests.";
-    var canCreatePO = User.IsInRole("Admin") && Model.Status == "Approved" && !hasPO;
+        : !canApprovePermission
+            ? "You do not have permission to approve purchase requests."
+            : Model.Status != "Submitted"
+                ? $"Approve is available only for Submitted purchase requests. Current status is {Model.Status}."
+                : "Approve is blocked.";
+    var canReject = canRejectPermission && Model.Status == "Submitted";
+    var rejectBlockedReason = canReject
+        ? string.Empty
+        : !canRejectPermission
+            ? "You do not have permission to reject purchase requests."
+            : Model.Status != "Submitted"
+                ? $"Reject is available only for Submitted purchase requests. Current status is {Model.Status}."
+                : "Reject is blocked.";
+    var canCreatePO = canViewPOCreate && Model.Status == "Approved" && !hasPO;
     var createPOBlockedReason = canCreatePO
         ? string.Empty
         : hasPO
             ? "Create PO is blocked because this PR already has a PO."
             : Model.Status != "Approved"
                 ? "Create PO is available only after PR approval."
-                : "Only Admin can create a PO from this PR.";
-    var canCancel = (Model.Status == "Draft" || Model.Status == "Submitted" || Model.Status == "Approved") && !hasPO;
+                : "You do not have permission to create a PO from this PR.";
+    var canCancel = canCancelPermission && (Model.Status == "Draft" || Model.Status == "Submitted" || Model.Status == "Approved" || Model.Status == "Rejected") && !hasPO;
     var cancelBlockedReason = canCancel
         ? string.Empty
-        : hasPO
+        : !canCancelPermission
+            ? "You do not have permission to cancel purchase requests."
+            : hasPO
             ? "Cancel PR is blocked because a purchase order has already been created."
             : Model.Status == "Cancelled"
                 ? "Cancelled purchase requests are read-only."
-                : $"Cancel PR is available only for Draft, Submitted, or Approved purchase requests. Current status is {Model.Status}.";
+                : $"Cancel PR is available only for Draft, Submitted, Approved, or Rejected purchase requests. Current status is {Model.Status}.";
 }
 
 @if (TempData["PurchaseRequestNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -87,6 +114,18 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
         }
+        @if (canReject)
+        {
+            <form asp-action="Reject" asp-route-id="@Model.PurchaseRequestId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="rejectReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for rejecting this purchase request:'); if (reason === null) return false; if (!reason.trim()) { alert('Reject reason is required.'); return false; } this.form.rejectReason.value = reason; return confirm('Reject this purchase request and return it for correction?');">Reject</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
+        }
         @if (canCreatePO)
         {
             <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-purchaseRequestId="@Model.PurchaseRequestId" class="btn btn-success">Create PO</a>
@@ -119,6 +158,7 @@
     @if (!canEdit) { <div>@editBlockedReason</div> }
     @if (!canSubmit) { <div>@submitBlockedReason</div> }
     @if (!canApprove) { <div>@approveBlockedReason</div> }
+    @if (!canReject) { <div>@rejectBlockedReason</div> }
     @if (!canCreatePO && linkedPO is null) { <div>@createPOBlockedReason</div> }
     @if (!canCancel) { <div>@cancelBlockedReason</div> }
 </div>
@@ -143,7 +183,7 @@
                     </div>
                     <div class="col-lg-3 col-md-6">
                         <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-md-6">
                         <div class="detail-label">Branch</div>
@@ -233,6 +273,11 @@
                         <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
+                        <span class="document-history-label">Rejected</span>
+                        <span class="document-history-value">@(Model.RejectedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.RejectedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
                         <span class="document-history-label">Cancelled</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
@@ -243,6 +288,13 @@
                     <div class="document-history-reason">
                         <span class="document-history-label">Cancel Reason</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
+                }
+                @if (Model.Status == "Rejected")
+                {
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Reject Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.RejectReason) ? "-" : Model.RejectReason)</span>
                     </div>
                 }
             </div>

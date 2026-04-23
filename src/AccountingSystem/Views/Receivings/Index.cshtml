@@ -6,6 +6,10 @@
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var canEditReceiving = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Edit") || oldReceivingOperatorFallback;
+    var canCancelReceiving = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Cancel") || oldReceivingOperatorFallback;
 }
 
 <div class="page-header">
@@ -22,7 +26,7 @@
 
 @if (TempData["ReceivingNotice"] is string notice)
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card table-card">
@@ -82,37 +86,45 @@
                         var isDraft = receiving.Status == "Draft";
                         var isPosted = receiving.Status == "Posted";
                         var isCancelled = receiving.Status == "Cancelled";
-                        var statusClass = isDraft ? "draft" : isPosted ? "active" : "inactive";
                         <tr>
                             <td><span class="code-chip">@receiving.ReceivingNo</span></td>
                             <td>@receiving.ReceiveDate.ToString("dd MMM yyyy")</td>
                             <td>@receiving.PurchaseOrderHeader?.PONo</td>
                             <td class="fw-semibold">@receiving.Supplier?.SupplierName</td>
                             <td>@(receiving.Branch?.BranchName ?? "-")</td>
-                            <td><span class="status-pill @statusClass">@receiving.Status</span></td>
+                            <td>@await Html.PartialAsync("_StatusPill", receiving.Status)</td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@receiving.ReceivingId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    @if (isDraft)
+                                    @if (isDraft && canEditReceiving)
                                     {
                                         <a asp-action="Edit" asp-route-id="@receiving.ReceivingId" class="btn btn-sm btn-outline-primary">Edit Draft</a>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
                                     }
+                                    else if (isDraft)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="You do not have permission to edit receiving documents.">Edit Draft</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
+                                    }
                                     else if (isPosted)
                                     {
-                                        <a asp-action="Print" asp-route-id="@receiving.ReceivingId" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = receiving.ReceivingId })', '_blank', 'noopener');">Print</button>
                                     }
                                     else
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
                                     }
-                                    @if (isDraft || isPosted)
+                                    @if (canCancelReceiving && (isDraft || isPosted))
                                     {
                                         <form asp-action="Cancel" asp-route-id="@receiving.ReceivingId" method="post" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="cancelReason" />
                                             <button type="submit" class="btn btn-sm btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this receiving document (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this receiving document?');">Cancel</button>
                                         </form>
+                                    }
+                                    else if (isDraft || isPosted)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="You do not have permission to cancel receiving documents.">Cancel</button>
                                     }
                                     else
                                     {

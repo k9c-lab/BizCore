@@ -1,0 +1,27 @@
+@model string
+
+@{
+    var status = string.IsNullOrWhiteSpace(Model) ? "-" : Model.Trim();
+    var normalized = status.Replace(" ", string.Empty, StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
+    var toneClass = normalized switch
+    {
+        "draft" => "status-pill-draft",
+        "submitted" => "status-pill-submitted",
+        "approved" => "status-pill-approved",
+        "issued" => "status-pill-issued",
+        "posted" => "status-pill-posted",
+        "paid" => "status-pill-paid",
+        "converted" => "status-pill-converted",
+        "convertedtopo" => "status-pill-converted",
+        "partiallypaid" => "status-pill-partial",
+        "partiallyreceived" => "status-pill-partial",
+        "fullyreceived" => "status-pill-complete",
+        "completed" => "status-pill-complete",
+        "rejected" => "status-pill-rejected",
+        "cancelled" => "status-pill-cancelled",
+        "inactive" => "status-pill-cancelled",
+        _ => "status-pill-default"
+    };
+}
+
+<span class="status-pill @toneClass">@status</span>

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class CustomersController : CrudControllerBase
 {
     private const string CodePrefix = "CUS";

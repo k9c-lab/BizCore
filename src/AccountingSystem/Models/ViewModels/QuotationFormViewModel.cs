@@ -60,6 +60,16 @@ public class QuotationFormViewModel
 
     [Range(typeof(decimal), "0", "9999999999999999.99")]
     public decimal HeaderDiscountAmount { get; set; }
+
+    [Required]
+    [Display(Name = "Header Discount Type")]
+    [StringLength(10)]
+    public string HeaderDiscountType { get; set; } = "Amount";
+
+    [Range(typeof(decimal), "0", "100")]
+    [Display(Name = "Header Discount %")]
+    public decimal HeaderDiscountPercent { get; set; }
+
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
@@ -69,6 +79,7 @@ public class QuotationFormViewModel
     public IEnumerable<SelectListItem> SalespersonOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> DiscountTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> StatusOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<QuotationItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<QuotationItemLookupViewModel>();

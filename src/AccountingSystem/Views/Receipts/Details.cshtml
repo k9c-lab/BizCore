@@ -17,7 +17,7 @@
 
 @if (TempData["ReceiptNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -31,7 +31,7 @@
         {
             <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">View Payment</a>
         }
-        <a asp-action="Print" asp-route-id="@Model.ReceiptId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId })', '_blank', 'noopener');">Print</button>
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline">
@@ -49,7 +49,7 @@
 
 @if (!canCancel)
 {
-    <div class="workflow-info mb-3">@cancelBlockedReason</div>
+    <div class="workflow-info workflow-info-danger mb-3">@cancelBlockedReason</div>
 }
 
 <div class="card content-card">

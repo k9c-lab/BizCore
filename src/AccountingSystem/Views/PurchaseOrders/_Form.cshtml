@@ -123,14 +123,14 @@
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
                         <span class="quotation-info-label">Current Status</span>
-                        <span class="quotation-info-value">@Model.Status</span>
+                        <span class="quotation-info-value">@await Html.PartialAsync("_StatusPill", Model.Status)</span>
                     </div>
                     <div class="quotation-info-field">
                         <span class="quotation-info-label">Save Action</span>
                         <span class="quotation-info-value">Save Draft</span>
                     </div>
                 </div>
-                <div class="table-meta">Approval, cancellation, and receiving are handled from the PO details screen.</div>
+                <div class="table-meta">Submit, approval, rejection, cancellation, and receiving are handled from the PO details screen.</div>
             </div>
         </div>
     </div>

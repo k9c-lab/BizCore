@@ -12,9 +12,11 @@
     var appliedAmount = allocations.Sum(x => x.AppliedAmount);
     var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
     var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
+    var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalReceivedAmount);
+    var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -26,20 +28,30 @@
             margin: 0;
             font-family: "Segoe UI", Tahoma, sans-serif;
             color: #111827;
-            background: #fff;
+            background: #e5e7eb;
             font-size: 11.5px;
             line-height: 1.35;
         }
+        .print-page {
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
         .print-shell {
-            width: 100%;
-            min-height: calc(297mm - 28mm);
+            width: 210mm;
+            min-height: 297mm;
             display: flex;
             flex-direction: column;
+            background: #fff;
+            padding: 14mm;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
         }
         .screen-actions {
             display: flex;
             justify-content: flex-end;
-            margin: 0 0 10px;
+            margin: 0 0 14px;
         }
         .screen-actions button {
             border: 1px solid #cbd5e1;
@@ -48,13 +60,15 @@
             border-radius: 6px;
             padding: 6px 10px;
             font: inherit;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
         }
         .print-header {
             display: flex;
             justify-content: space-between;
             gap: 24px;
             padding-bottom: 14px;
-            border-bottom: 2px solid #d1d5db;
+            border-bottom: 2px solid #1d4ed8;
         }
         .company-block { max-width: 58%; }
         .company-name {
@@ -62,52 +76,73 @@
             font-size: 20px;
             font-weight: 700;
             letter-spacing: 0.02em;
+            color: #0f172a;
         }
-        .company-line, .meta-label, .section-label, .summary-label, .signature-label {
-            color: #6b7280;
+        .company-line,
+        .meta-label,
+        .section-label,
+        .summary-label,
+        .signature-label {
+            color: #374151;
         }
         .company-meta-grid {
             display: grid;
-            gap: 2px;
+            gap: 3px;
             margin-top: 8px;
+        }
+        .company-line {
+            color: #111827;
         }
         .document-block {
             min-width: 280px;
             text-align: right;
         }
-        .document-title {
+        .document-title-th {
             margin: 0;
-            font-size: 23px;
+            font-size: 24px;
             font-weight: 700;
+            color: #1d4ed8;
+        }
+        .document-title-en {
+            margin: 2px 0 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+            letter-spacing: 0.04em;
         }
         .document-meta {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
         }
         .document-meta td {
             padding: 2px 0 2px 16px;
             vertical-align: top;
+            color: #111827;
         }
-        .document-meta td:first-child { white-space: nowrap; }
-        .print-section { margin-top: 18px; }
+        .document-meta td:first-child {
+            white-space: nowrap;
+        }
+        .print-section { margin-top: 16px; }
         .party-section {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 12px 14px;
+            padding: 0 0 10px;
+            border-bottom: 1px solid #d1d5db;
         }
         .party-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
-            gap: 12px 20px;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+            gap: 8px 20px;
         }
         .party-name {
             font-size: 14px;
             font-weight: 700;
-            margin-top: 2px;
+            margin-top: 1px;
+            color: #111827;
         }
-        .party-value, .remark-value, .signature-date {
+        .party-value,
+        .remark-value,
+        .signature-date {
             white-space: pre-wrap;
+            color: #111827;
         }
         .reference-grid {
             display: grid;
@@ -124,6 +159,7 @@
             margin-top: 3px;
             font-weight: 700;
             font-size: 13px;
+            color: #111827;
         }
         .line-table {
             width: 100%;
@@ -136,7 +172,8 @@
             vertical-align: top;
         }
         .line-table th {
-            background: #f3f4f6;
+            background: #e0ecff;
+            color: #1e3a8a;
             font-weight: 700;
             text-align: center;
             font-size: 11px;
@@ -147,12 +184,13 @@
         .col-price { width: 100px; text-align: right; }
         .col-amount { width: 110px; text-align: right; }
         .invoice-row td {
-            background: #f9fafb;
+            background: #f8fbff;
+            color: #1e3a8a;
             font-weight: 700;
         }
         .item-code {
             display: block;
-            color: #6b7280;
+            color: #4b5563;
             font-size: 10.5px;
             margin-top: 2px;
         }
@@ -163,6 +201,13 @@
             gap: 28px;
             margin-top: 14px;
         }
+        .amount-text {
+            flex: 1 1 auto;
+            padding-right: 18px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1f2937;
+        }
         .summary-table {
             min-width: 300px;
             border-collapse: collapse;
@@ -172,26 +217,25 @@
         }
         .summary-table td:first-child {
             text-align: left;
-            color: #4b5563;
         }
         .summary-table td:last-child {
             text-align: right;
             min-width: 120px;
+            color: #111827;
         }
         .summary-total td {
             padding-top: 8px;
-            border-top: 2px solid #9ca3af;
+            border-top: 2px solid #1d4ed8;
             font-weight: 700;
             font-size: 14px;
+            color: #0f172a;
         }
         .payment-summary {
             min-width: 260px;
         }
         .remark-box {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 14px;
-            min-height: 72px;
+            white-space: pre-wrap;
+            color: #374151;
         }
         .signature-grid {
             display: grid;
@@ -200,7 +244,7 @@
             margin-top: auto;
             padding-top: 28px;
         }
-        .signature-box { text-align: center; }
+        .signature-box { text-align: center; color: #111827; }
         .signature-line {
             margin: 44px auto 8px;
             width: 88%;
@@ -210,79 +254,93 @@
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                background: #fff;
+            }
+            .print-page {
+                min-height: auto;
+                padding: 0;
+                display: block;
+            }
+            .print-shell {
+                width: 100%;
+                min-height: calc(297mm - 28mm);
+                padding: 0;
+                box-shadow: none;
             }
             .screen-actions { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="print-shell">
-        <div class="screen-actions">
-            <button type="button" onclick="window.print()">Print</button>
-        </div>
+    <div class="print-page">
+        <div class="print-shell">
+            <div class="screen-actions">
+                <button type="button" onclick="window.print()">Print</button>
+            </div>
 
-        <header class="print-header">
+            <header class="print-header">
             <div class="company-block">
                 <h1 class="company-name">@companyName</h1>
                 <div class="company-meta-grid">
                     <div class="company-line">@companyAddress</div>
-                    <div class="company-line">Tax ID: @companyTaxId</div>
-                    <div class="company-line">Phone: @companyPhone</div>
+                    <div class="company-line">เลขประจำตัวผู้เสียภาษี: @companyTaxId</div>
+                    <div class="company-line">โทร: @companyPhone</div>
                     <div class="company-line">Email: @companyEmail</div>
                 </div>
             </div>
             <div class="document-block">
-                <h2 class="document-title">Receipt</h2>
+                <h2 class="document-title-th">ใบเสร็จรับเงิน</h2>
+                <div class="document-title-en">Receipt</div>
                 <table class="document-meta">
-                    <tr><td class="meta-label">Receipt No.</td><td>@Model.ReceiptNo</td></tr>
-                    <tr><td class="meta-label">Receipt Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
-                    <tr><td class="meta-label">Payment No.</td><td>@(payment?.PaymentNo ?? "-")</td></tr>
-                    <tr><td class="meta-label">Reference No.</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
+                    <tr><td class="meta-label">เลขที่เอกสาร</td><td>@Model.ReceiptNo</td></tr>
+                    <tr><td class="meta-label">วันที่เอกสาร</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
+                    <tr><td class="meta-label">เลขที่รับชำระ</td><td>@(payment?.PaymentNo ?? "-")</td></tr>
+                    <tr><td class="meta-label">เลขที่อ้างอิง</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
                 </table>
             </div>
-        </header>
+            </header>
 
-        <section class="print-section party-section">
+            <section class="print-section party-section">
             <div class="party-grid">
                 <div>
-                    <div class="section-label">Customer Name</div>
+                    <div class="section-label">ลูกค้า</div>
                     <div class="party-name">@Model.Customer?.CustomerName</div>
                 </div>
                 <div>
-                    <div class="section-label">Tax ID</div>
+                    <div class="section-label">เลขประจำตัวผู้เสียภาษี</div>
                     <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</div>
                 </div>
                 <div style="grid-column: 1 / -1;">
-                    <div class="section-label">Billing Address</div>
+                    <div class="section-label">ที่อยู่</div>
                     <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</div>
                 </div>
             </div>
-        </section>
+            </section>
 
-        <section class="print-section reference-grid">
+            <section class="print-section reference-grid">
             <div class="reference-box">
-                <div class="section-label">Payment Method</div>
+                <div class="section-label">วิธีชำระเงิน</div>
                 <div class="reference-value">@(payment?.PaymentMethod ?? "-")</div>
             </div>
             <div class="reference-box">
-                <div class="section-label">Payment Date</div>
+                <div class="section-label">วันที่รับชำระ</div>
                 <div class="reference-value">@(payment?.PaymentDate.ToString("dd/MM/yyyy") ?? "-")</div>
             </div>
             <div class="reference-box">
-                <div class="section-label">Payment Amount</div>
+                <div class="section-label">ยอดรับชำระ</div>
                 <div class="reference-value">@((payment?.Amount ?? 0m).ToString("N2"))</div>
             </div>
-        </section>
+            </section>
 
-        <section class="print-section">
+            <section class="print-section">
             <table class="line-table">
                 <thead>
                     <tr>
-                        <th class="col-no">No</th>
-                        <th class="col-description">Description</th>
-                        <th class="col-qty">Qty</th>
-                        <th class="col-price">Unit Price</th>
-                        <th class="col-amount">Amount</th>
+                        <th class="col-no">ลำดับ</th>
+                        <th class="col-description">รายการ</th>
+                        <th class="col-qty">จำนวน</th>
+                        <th class="col-price">ราคาต่อหน่วย</th>
+                        <th class="col-amount">จำนวนเงิน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -298,7 +356,7 @@
                     }
 
                     <tr class="invoice-row">
-                        <td colspan="5">Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
+                        <td colspan="5">ใบกำกับสินค้า: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
                     </tr>
                     foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
                     {
@@ -319,42 +377,44 @@
             </table>
 
             <div class="summary-wrap">
+                <div class="amount-text">@totalAmountText</div>
                 <table class="summary-table payment-summary">
-                    <tr><td class="summary-label">Invoice Total</td><td>@invoiceTotal.ToString("N2")</td></tr>
-                    <tr><td class="summary-label">Paid To Date</td><td>@((invoiceTotal - remainingBalance).ToString("N2"))</td></tr>
-                    <tr class="summary-total"><td>Remaining Balance</td><td>@remainingBalance.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">ยอดรวมใบกำกับสินค้า</td><td>@invoiceTotal.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">ชำระแล้วสะสม</td><td>@((invoiceTotal - remainingBalance).ToString("N2"))</td></tr>
+                    <tr class="summary-total"><td>ยอดคงเหลือ</td><td>@remainingBalance.ToString("N2")</td></tr>
                 </table>
                 <table class="summary-table">
-                    <tr><td class="summary-label">Payment Method</td><td>@(payment?.PaymentMethod ?? "-")</td></tr>
-                    <tr><td class="summary-label">Payment Reference</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
-                    <tr><td class="summary-label">Receipt Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
-                    <tr class="summary-total"><td>This Receipt Paid</td><td>@appliedAmount.ToString("N2")</td></tr>
-                    <tr><td class="summary-label">Receipt Amount</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">วิธีชำระเงิน</td><td>@(payment?.PaymentMethod ?? "-")</td></tr>
+                    <tr><td class="summary-label">เลขที่อ้างอิงการชำระ</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
+                    <tr><td class="summary-label">วันที่ใบเสร็จ</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
+                    <tr class="summary-total"><td>รับชำระครั้งนี้</td><td>@appliedAmount.ToString("N2")</td></tr>
+                    <tr><td class="summary-label">ยอดตามใบเสร็จ</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
                 </table>
             </div>
-        </section>
+            </section>
 
-        <section class="print-section">
-            <div class="remark-box">
-                <div class="section-label">Remark</div>
-                <div class="remark-value">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
-            </div>
-        </section>
+            @if (hasRemark)
+            {
+                <section class="print-section">
+                    <div class="remark-box">@Model.Remark</div>
+                </section>
+            }
 
-        <section class="signature-grid">
+            <section class="signature-grid">
             <div class="signature-box">
-                <div class="signature-label">Received By</div>
+                <div class="signature-label">ผู้รับเงิน</div>
                 <div class="signature-line"></div>
                 <div>............................................................</div>
-                <div class="signature-date">Date ........ / ........ / ........</div>
+                <div class="signature-date">วันที่ ........ / ........ / ........</div>
             </div>
             <div class="signature-box">
-                <div class="signature-label">Authorized Signature</div>
+                <div class="signature-label">ผู้มีอำนาจลงนาม</div>
                 <div class="signature-line"></div>
                 <div>............................................................</div>
-                <div class="signature-date">Date ........ / ........ / ........</div>
+                <div class="signature-date">วันที่ ........ / ........ / ........</div>
             </div>
-        </section>
+            </section>
+        </div>
     </div>
     <script>
         window.addEventListener("load", () => {

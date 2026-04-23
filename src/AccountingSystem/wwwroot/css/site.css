@@ -410,6 +410,8 @@ a {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
+  border: 1px solid transparent;
+  line-height: 1.2;
 }
 
 .status-pill.active {
@@ -425,6 +427,58 @@ a {
 .status-pill.draft {
   background: #fffbeb;
   color: #92400e;
+}
+
+.status-pill-default {
+  background: #f2f4f7;
+  border-color: #d0d5dd;
+  color: #344054;
+}
+
+.status-pill-draft {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.status-pill-submitted,
+.status-pill-issued {
+  background: #eff8ff;
+  border-color: #b2ddff;
+  color: #175cd3;
+}
+
+.status-pill-approved,
+.status-pill-posted,
+.status-pill-paid {
+  background: #ecfdf3;
+  border-color: #abefc6;
+  color: #067647;
+}
+
+.status-pill-partial,
+.status-pill-converted {
+  background: #f5f3ff;
+  border-color: #d9d6fe;
+  color: #6d28d9;
+}
+
+.status-pill-complete {
+  background: #ecfdf3;
+  border-color: #6ce9a6;
+  color: #05603a;
+}
+
+.status-pill-rejected {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.status-pill-cancelled {
+  background: #f2f4f7;
+  border-color: #d0d5dd;
+  color: #475467;
 }
 
 .table-actions {
@@ -924,6 +978,65 @@ a {
   row-gap: 0.65rem;
 }
 
+.quotation-header-stack {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.quotation-header-card {
+  padding: 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.quotation-header-card-title {
+  margin-bottom: 0.75rem;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quotation-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.quotation-summary-chip {
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.quotation-summary-chip span {
+  display: block;
+  color: var(--muted-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.quotation-summary-chip strong {
+  display: block;
+  margin-top: 0.22rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #101828;
+}
+
+.quotation-summary-chip.is-total {
+  border-color: rgba(37, 99, 235, 0.16);
+  background: rgba(219, 234, 254, 0.55);
+}
+
 .readonly-detail {
   display: flex;
   align-items: center;
@@ -937,6 +1050,13 @@ a {
   align-items: flex-start;
   min-height: 4.5rem;
   white-space: pre-wrap;
+}
+
+.readonly-detail-status {
+  min-height: 2.55rem;
+  padding: 0.2rem 0;
+  display: flex;
+  align-items: center;
 }
 
 .quotation-expiry-group {
@@ -1295,6 +1415,30 @@ textarea.form-control {
   font-size: 0.86rem;
 }
 
+.workflow-info-success {
+  border-color: rgba(6, 118, 71, 0.18);
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.workflow-info-danger {
+  border-color: rgba(180, 35, 24, 0.16);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.workflow-info-warning {
+  border-color: rgba(194, 65, 12, 0.18);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.workflow-info-info {
+  border-color: rgba(100, 116, 139, 0.22);
+  background: #f8fafc;
+  color: #475569;
+}
+
 .workflow-info div + div {
   margin-top: 0.25rem;
 }
@@ -1485,6 +1629,10 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 
+  .quotation-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .invoice-entry-grid,
   .invoice-entry-detail-grid,
   .invoice-line-detail-shell {
@@ -1561,4 +1709,40 @@ textarea.form-control {
   .quotation-summary-stack {
     width: 100%;
   }
+
+  .quotation-summary-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.permission-option {
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #dce6f1;
+  border-radius: 8px;
+  display: flex;
+  gap: 0.65rem;
+  min-height: 82px;
+  padding: 0.85rem;
+  width: 100%;
+}
+
+.permission-option input {
+  margin-top: 0.25rem;
+}
+
+.permission-option strong,
+.permission-option small {
+  display: block;
+}
+
+.permission-option strong {
+  color: #16345f;
+  font-size: 0.95rem;
+}
+
+.permission-option small {
+  color: #64748b;
+  line-height: 1.35;
+  margin-top: 0.15rem;
 }

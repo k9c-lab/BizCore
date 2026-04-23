@@ -6,6 +6,14 @@
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldPrOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var oldCentralAdminFallback = !hasPermissionClaims && User.IsInRole("CentralAdmin");
+    var canCreatePR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Create") || oldPrOperatorFallback;
+    var canSubmitPR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Submit") || oldPrOperatorFallback;
+    var canApprovePR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Approve") || oldCentralAdminFallback;
+    var canRejectPR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Reject") || oldCentralAdminFallback;
+    var canCreatePOPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Create") || oldCentralAdminFallback;
 }
 
 <div class="page-header">
@@ -15,18 +23,21 @@
         <p class="page-subtitle">Branch item requests before central admin creates supplier purchase orders.</p>
     </div>
     <div class="page-actions">
-        @if (User.IsInRole("Admin"))
+        @if (canCreatePOPermission)
         {
             <form asp-controller="PurchaseOrders" asp-action="Create" method="get" id="createPOFromPRsForm" class="d-inline"></form>
             <button type="submit" form="createPOFromPRsForm" class="btn btn-outline-success">Create PO from Selected PRs</button>
         }
-        <a asp-action="Create" class="btn btn-primary px-4">New PR</a>
+        @if (canCreatePR)
+        {
+            <a asp-action="Create" class="btn btn-primary px-4">New PR</a>
+        }
     </div>
 </div>
 
 @if (TempData["PurchaseRequestNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card table-card">
@@ -50,6 +61,7 @@
                     <option value="Draft" selected="@(status == "Draft")">Draft</option>
                     <option value="Submitted" selected="@(status == "Submitted")">Submitted</option>
                     <option value="Approved" selected="@(status == "Approved")">Approved</option>
+                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
                     <option value="ConvertedToPO" selected="@(status == "ConvertedToPO")">Converted To PO</option>
                     <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
                 </select>
@@ -72,7 +84,7 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        @if (User.IsInRole("Admin"))
+                        @if (canCreatePOPermission)
                         {
                             <th style="width: 42px;">Select</th>
                         }
@@ -90,24 +102,32 @@
                 {
                     @foreach (var pr in Model)
                     {
-                        var canSubmit = pr.Status == "Draft" && pr.PurchaseRequestDetails.Any();
-                        var submitBlockedReason = pr.Status == "Draft"
+                        var canSubmit = canSubmitPR && (pr.Status is "Draft" or "Rejected") && pr.PurchaseRequestDetails.Any();
+                        var submitBlockedReason = pr.Status is "Draft" or "Rejected"
                             ? "Submit is blocked because no PR lines exist."
-                            : $"Submit is available only for Draft purchase requests. Current status is {pr.Status}.";
-                        var canApprove = User.IsInRole("Admin") && pr.Status == "Submitted";
-                        var approveBlockedReason = pr.Status == "Submitted"
-                            ? "Only Admin can approve purchase requests."
+                            : $"Submit is available only for Draft or Rejected purchase requests. Current status is {pr.Status}.";
+                        var canApprove = canApprovePR && pr.Status == "Submitted";
+                        var approveBlockedReason = !canApprovePR
+                            ? "You do not have permission to approve purchase requests."
+                            : pr.Status == "Submitted"
+                                ? "Approve is blocked."
                             : $"Approve is available only for Submitted purchase requests. Current status is {pr.Status}.";
+                        var canReject = canRejectPR && pr.Status == "Submitted";
+                        var rejectBlockedReason = !canRejectPR
+                            ? "You do not have permission to reject purchase requests."
+                            : pr.Status == "Submitted"
+                                ? "Reject is blocked."
+                                : $"Reject is available only for Submitted purchase requests. Current status is {pr.Status}.";
                         var hasPO = pr.PurchaseOrderHeaders.Any() ||
                             pr.PurchaseRequestDetails.Any(d => d.PurchaseOrderAllocationSources.Any());
-                        var canCreatePO = User.IsInRole("Admin") && pr.Status == "Approved" && !hasPO;
+                        var canCreatePO = canCreatePOPermission && pr.Status == "Approved" && !hasPO;
                         var createPOBlockedReason = hasPO
                             ? "Create PO is blocked because this PR already has a PO."
                             : pr.Status == "Approved"
-                                ? "Only Admin can create a PO from this PR."
+                                ? "You do not have permission to create a PO from this PR."
                                 : "Create PO is available only after PR approval.";
                         <tr>
-                            @if (User.IsInRole("Admin"))
+                            @if (canCreatePOPermission)
                             {
                                 <td>
                                     <input type="checkbox" class="form-check-input" form="createPOFromPRsForm" name="purchaseRequestIds" value="@pr.PurchaseRequestId" disabled="@(!canCreatePO)" title="@(canCreatePO ? "Include this PR in PO creation." : createPOBlockedReason)" />
@@ -118,7 +138,7 @@
                             <td>@(pr.Branch?.BranchName ?? "-")</td>
                             <td>@pr.PurchaseRequestDetails.Count</td>
                             <td>@pr.PurchaseRequestDetails.Sum(x => x.RequestedQty).ToString("N2")</td>
-                            <td><span class="status-pill active">@pr.Status</span></td>
+                            <td>@await Html.PartialAsync("_StatusPill", pr.Status)</td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-secondary">View</a>
@@ -144,6 +164,18 @@
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
                                     }
+                                    @if (canReject)
+                                    {
+                                        <form asp-action="Reject" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="rejectReason" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="const reason = prompt('Reason for rejecting this purchase request:'); if (reason === null) return false; if (!reason.trim()) { alert('Reject reason is required.'); return false; } this.form.rejectReason.value = reason; return confirm('Reject this purchase request and return it for correction?');">Reject</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
+                                    }
                                     @if (canCreatePO)
                                     {
                                         <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-purchaseRequestId="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-success">Create PO</a>
@@ -159,7 +191,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="@(User.IsInRole("Admin") ? 8 : 7)" class="table-empty">No purchase requests yet. Start with a branch request.</td></tr>
+                    <tr><td colspan="@(canCreatePOPermission ? 8 : 7)" class="table-empty">No purchase requests yet. Start with a branch request.</td></tr>
                 }
                 </tbody>
             </table>

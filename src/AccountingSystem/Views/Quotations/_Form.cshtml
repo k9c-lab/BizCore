@@ -9,75 +9,121 @@
 <div class="form-shell">
     <div class="form-section quotation-header-section">
         <div class="form-section-title">Quotation Header</div>
-        <div class="row g-2 quotation-header-grid">
-            <div class="col-lg-3 col-md-6">
-                <label asp-for="QuotationNumber" class="form-label"></label>
-                <input asp-for="QuotationNumber" class="form-control" readonly />
-                <div class="form-text">Auto-generated monthly quotation number.</div>
-                <span asp-validation-for="QuotationNumber" class="text-danger"></span>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <label asp-for="QuotationDate" class="form-label"></label>
-                <input asp-for="QuotationDate" class="form-control" />
-                <span asp-validation-for="QuotationDate" class="text-danger"></span>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <label asp-for="ReferenceNo" class="form-label"></label>
-                <input asp-for="ReferenceNo" class="form-control" />
-                <span asp-validation-for="ReferenceNo" class="text-danger"></span>
-            </div>
-            <div class="col-lg-4 col-md-8">
-                <label class="form-label">Expiry Date</label>
-                <div class="quotation-expiry-group">
-                    <input asp-for="ExpiryDate" class="form-control" />
-                    <label class="quotation-inline-check" for="quotationNoExpiry">
-                        <input class="form-check-input" type="checkbox" id="quotationNoExpiry" @(Model.ExpiryDate.HasValue ? null : "checked") />
-                        <span>No Expiry</span>
-                    </label>
+        <div class="quotation-header-stack">
+            <div class="quotation-header-card">
+                <div class="quotation-header-card-title">Document Info</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="QuotationNumber" class="form-label"></label>
+                        <input asp-for="QuotationNumber" class="form-control" readonly />
+                        <div class="form-text">Auto-generated monthly quotation number.</div>
+                        <span asp-validation-for="QuotationNumber" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="QuotationDate" class="form-label"></label>
+                        <input asp-for="QuotationDate" class="form-control" />
+                        <span asp-validation-for="QuotationDate" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="ReferenceNo" class="form-label"></label>
+                        <input asp-for="ReferenceNo" class="form-control" />
+                        <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-8 col-md-7">
+                        <label class="form-label">Expiry Date</label>
+                        <div class="quotation-expiry-group">
+                            <input asp-for="ExpiryDate" class="form-control" />
+                            <label class="quotation-inline-check" for="quotationNoExpiry">
+                                <input class="form-check-input" type="checkbox" id="quotationNoExpiry" @(Model.ExpiryDate.HasValue ? null : "checked") />
+                                <span>No Expiry</span>
+                            </label>
+                        </div>
+                        <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-5">
+                        <label asp-for="Status" class="form-label"></label>
+                        <input asp-for="Status" type="hidden" />
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
                 </div>
-                <span asp-validation-for="ExpiryDate" class="text-danger"></span>
             </div>
-            <div class="col-lg-2 col-md-4">
-                <label asp-for="Status" class="form-label"></label>
-                <input asp-for="Status" type="hidden" />
-                <input type="text" class="form-control" value="@Model.Status" readonly />
-                <span asp-validation-for="Status" class="text-danger"></span>
+
+            <div class="quotation-header-card">
+                <div class="quotation-header-card-title">Pricing & Approval Rules</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="BranchId" class="form-label"></label>
+                        @if (Model.CanAccessAllBranches)
+                        {
+                            <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
+                                <option value="">Select branch</option>
+                            </select>
+                        }
+                        else
+                        {
+                            <div class="form-control readonly-detail">@Model.BranchName</div>
+                        }
+                        <span asp-validation-for="BranchId" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="DiscountMode" class="form-label"></label>
+                        <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
+                        <span asp-validation-for="DiscountMode" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="VatType" class="form-label"></label>
+                        <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="VatType"></select>
+                        <span asp-validation-for="VatType" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="HeaderDiscountType" class="form-label"></label>
+                        <select asp-for="HeaderDiscountType" asp-items="Model.DiscountTypeOptions" class="form-select" id="HeaderDiscountType"></select>
+                        <span asp-validation-for="HeaderDiscountType" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="HeaderDiscountPercent" class="form-label"></label>
+                        <input asp-for="HeaderDiscountPercent" class="form-control" id="HeaderDiscountPercent" />
+                        <div class="form-text" id="quotationHeaderDiscountPercentHelp">Used when header discount type is Percent.</div>
+                        <span asp-validation-for="HeaderDiscountPercent" class="text-danger"></span>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <label asp-for="HeaderDiscountAmount" class="form-label"></label>
+                        <input asp-for="HeaderDiscountAmount" class="form-control" id="HeaderDiscountAmount" />
+                        <div class="form-text" id="quotationHeaderDiscountHelp">Used only in header discount mode.</div>
+                        <span asp-validation-for="HeaderDiscountAmount" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="quotation-summary-strip">
+                    <div class="quotation-summary-chip">
+                        <span>Subtotal</span>
+                        <strong id="quotationHeaderSubtotal">@Model.Subtotal.ToString("N2")</strong>
+                    </div>
+                    <div class="quotation-summary-chip">
+                        <span>Discount</span>
+                        <strong id="quotationHeaderDiscount">@Model.DiscountAmount.ToString("N2")</strong>
+                    </div>
+                    <div class="quotation-summary-chip">
+                        <span>VAT</span>
+                        <strong id="quotationHeaderVat">@Model.VatAmount.ToString("N2")</strong>
+                    </div>
+                    <div class="quotation-summary-chip is-total">
+                        <span>Total</span>
+                        <strong id="quotationHeaderTotal">@Model.TotalAmount.ToString("N2")</strong>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <label asp-for="DiscountMode" class="form-label"></label>
-                <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
-                <span asp-validation-for="DiscountMode" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="VatType" class="form-label"></label>
-                <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="VatType"></select>
-                <span asp-validation-for="VatType" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="BranchId" class="form-label"></label>
-                @if (Model.CanAccessAllBranches)
-                {
-                    <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
-                        <option value="">Select branch</option>
-                    </select>
-                }
-                else
-                {
-                    <div class="form-control readonly-detail">@Model.BranchName</div>
-                }
-                <span asp-validation-for="BranchId" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="HeaderDiscountAmount" class="form-label"></label>
-                <input asp-for="HeaderDiscountAmount" class="form-control" id="HeaderDiscountAmount" />
-                <div class="form-text" id="quotationHeaderDiscountHelp">Used only in header discount mode.</div>
-                <span asp-validation-for="HeaderDiscountAmount" class="text-danger"></span>
-            </div>
-            <div class="col-12">
-                <label asp-for="Remarks" class="form-label"></label>
-                <textarea asp-for="Remarks" class="form-control" rows="3"></textarea>
-                <div class="form-text">Internal notes or customer-facing quotation notes.</div>
-                <span asp-validation-for="Remarks" class="text-danger"></span>
+
+            <div class="quotation-header-card">
+                <div class="quotation-header-card-title">Remarks</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-12">
+                        <label asp-for="Remarks" class="form-label"></label>
+                        <textarea asp-for="Remarks" class="form-control" rows="3"></textarea>
+                        <div class="form-text">Internal notes or customer-facing quotation notes.</div>
+                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -166,6 +212,8 @@
                         <th style="width: 24%;">Item</th>
                         <th style="width: 10%;">Qty</th>
                         <th style="width: 12%;">Unit Price</th>
+                        <th style="width: 11%;">Disc. Type</th>
+                        <th style="width: 11%;">Disc. %</th>
                         <th style="width: 12%;">Discount</th>
                         <th style="width: 12%;">Line Total</th>
                         <th style="width: 10%;" class="text-end">Action</th>
@@ -210,6 +258,19 @@
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].UnitPrice" data-valmsg-replace="true"></span>
                         </td>
                         <td>
+                            <select name="Details[@i].DiscountType" class="form-select js-line-discount-type">
+                                @foreach (var option in Model.DiscountTypeOptions)
+                                {
+                                    <option value="@option.Value" selected="@(option.Value == Model.Details[i].DiscountType)">@option.Text</option>
+                                }
+                            </select>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountType" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0" max="100" name="Details[@i].DiscountPercent" id="Details_@(i)__DiscountPercent" value="@Model.Details[i].DiscountPercent.ToString("0.####")" class="form-control js-line-discount-percent" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountPercent" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
                             <input type="number" step="0.01" min="0" name="Details[@i].DiscountAmount" id="Details_@(i)__DiscountAmount" value="@Model.Details[i].DiscountAmount.ToString("0.##")" class="form-control js-line-discount" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountAmount" data-valmsg-replace="true"></span>
                         </td>
@@ -221,7 +282,7 @@
                         </td>
                     </tr>
                     <tr class="quotation-line-row quotation-line-row-detail">
-                        <td colspan="6">
+                        <td colspan="8">
                             <label class="form-label">Description</label>
                             <textarea name="Details[@i].Description" id="Details_@(i)__Description" class="form-control js-line-description" rows="3">@Model.Details[i].Description</textarea>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Description" data-valmsg-replace="true"></span>

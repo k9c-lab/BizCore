@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Sales")]
+[Authorize]
 public class QuotationsController : CrudControllerBase
 {
     private const string NumberPrefix = "QT";
@@ -154,6 +154,8 @@ public class QuotationsController : CrudControllerBase
             DiscountAmount = model.DiscountAmount,
             DiscountMode = model.DiscountMode,
             HeaderDiscountAmount = model.HeaderDiscountAmount,
+            HeaderDiscountType = model.HeaderDiscountType,
+            HeaderDiscountPercent = model.HeaderDiscountPercent,
             VatType = model.VatType,
             VatAmount = model.VatAmount,
             TotalAmount = model.TotalAmount,
@@ -215,6 +217,8 @@ public class QuotationsController : CrudControllerBase
             DiscountAmount = header.DiscountAmount,
             DiscountMode = header.DiscountMode,
             HeaderDiscountAmount = header.HeaderDiscountAmount,
+            HeaderDiscountType = header.HeaderDiscountType,
+            HeaderDiscountPercent = header.HeaderDiscountPercent,
             VatAmount = header.VatAmount,
             TotalAmount = header.TotalAmount,
             Details = header.QuotationDetails
@@ -228,6 +232,8 @@ public class QuotationsController : CrudControllerBase
                     Quantity = x.Quantity,
                     UnitPrice = x.UnitPrice,
                     DiscountAmount = x.DiscountAmount,
+                    DiscountType = x.DiscountType,
+                    DiscountPercent = x.DiscountPercent,
                     LineTotal = x.LineTotal
                 })
                 .ToList()
@@ -286,6 +292,8 @@ public class QuotationsController : CrudControllerBase
         header.DiscountAmount = model.DiscountAmount;
         header.DiscountMode = model.DiscountMode;
         header.HeaderDiscountAmount = model.HeaderDiscountAmount;
+        header.HeaderDiscountType = model.HeaderDiscountType;
+        header.HeaderDiscountPercent = model.HeaderDiscountPercent;
         header.VatAmount = model.VatAmount;
         header.TotalAmount = model.TotalAmount;
         header.UpdatedDate = DateTime.UtcNow;
@@ -596,6 +604,12 @@ public class QuotationsController : CrudControllerBase
             new SelectListItem("Header", "Header")
         };
 
+        model.DiscountTypeOptions = new[]
+        {
+            new SelectListItem("Amount", "Amount"),
+            new SelectListItem("Percent", "Percent")
+        };
+
         model.VatTypeOptions = new[]
         {
             new SelectListItem("VAT", "VAT"),
@@ -661,6 +675,11 @@ public class QuotationsController : CrudControllerBase
             ModelState.AddModelError(nameof(model.DiscountMode), "Discount mode must be Line or Header.");
         }
 
+        if (model.HeaderDiscountType is not ("Amount" or "Percent"))
+        {
+            ModelState.AddModelError(nameof(model.HeaderDiscountType), "Header discount type must be Amount or Percent.");
+        }
+
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
         var itemMap = await _context.Items
             .AsNoTracking()
@@ -695,6 +714,30 @@ public class QuotationsController : CrudControllerBase
             if (!useLineDiscount)
             {
                 detail.DiscountAmount = 0m;
+                detail.DiscountPercent = 0m;
+            }
+
+            if (detail.DiscountType is not ("Amount" or "Percent"))
+            {
+                ModelState.AddModelError($"Details[{i}].DiscountType", "Discount type must be Amount or Percent.");
+                continue;
+            }
+
+            if (detail.DiscountPercent < 0 || detail.DiscountPercent > 100)
+            {
+                ModelState.AddModelError($"Details[{i}].DiscountPercent", "Discount percent must be between 0 and 100.");
+                continue;
+            }
+
+            if (useLineDiscount && detail.DiscountType == "Percent")
+            {
+                detail.DiscountAmount = Math.Round(gross * (detail.DiscountPercent / 100m), 2, MidpointRounding.AwayFromZero);
+            }
+            else if (useLineDiscount && detail.DiscountType == "Amount")
+            {
+                detail.DiscountPercent = gross <= 0
+                    ? 0m
+                    : Math.Round((detail.DiscountAmount / gross) * 100m, 4, MidpointRounding.AwayFromZero);
             }
 
             if (detail.DiscountAmount > gross)
@@ -718,6 +761,23 @@ public class QuotationsController : CrudControllerBase
         if (useLineDiscount)
         {
             model.HeaderDiscountAmount = 0m;
+            model.HeaderDiscountPercent = 0m;
+        }
+
+        if (!useLineDiscount && model.HeaderDiscountPercent > 100)
+        {
+            ModelState.AddModelError(nameof(model.HeaderDiscountPercent), "Header discount percent must be between 0 and 100.");
+        }
+
+        if (!useLineDiscount && model.HeaderDiscountType == "Percent")
+        {
+            model.HeaderDiscountAmount = Math.Round(subtotal * (model.HeaderDiscountPercent / 100m), 2, MidpointRounding.AwayFromZero);
+        }
+        else if (!useLineDiscount && model.HeaderDiscountType == "Amount")
+        {
+            model.HeaderDiscountPercent = subtotal <= 0
+                ? 0m
+                : Math.Round((model.HeaderDiscountAmount / subtotal) * 100m, 4, MidpointRounding.AwayFromZero);
         }
 
         if (!useLineDiscount && model.HeaderDiscountAmount > subtotal)
@@ -775,7 +835,8 @@ public class QuotationsController : CrudControllerBase
                 !string.IsNullOrWhiteSpace(x.Description) ||
                 x.Quantity > 0 ||
                 x.UnitPrice > 0 ||
-                x.DiscountAmount > 0)
+                x.DiscountAmount > 0 ||
+                x.DiscountPercent > 0)
             .Select((x, index) =>
             {
                 x.LineNumber = index + 1;
@@ -793,6 +854,8 @@ public class QuotationsController : CrudControllerBase
             Description = detail.Description?.Trim(),
             Quantity = detail.Quantity,
             UnitPrice = detail.UnitPrice,
+            DiscountType = detail.DiscountType,
+            DiscountPercent = detail.DiscountPercent,
             DiscountAmount = detail.DiscountAmount,
             LineTotal = detail.LineTotal
         };

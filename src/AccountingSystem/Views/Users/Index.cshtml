@@ -9,7 +9,7 @@
 
 @if (TempData["UserNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -20,6 +20,7 @@
     </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary">New User</a>
+        <a asp-controller="RolePermissions" asp-action="Index" class="btn btn-outline-secondary">Role Permissions</a>
     </div>
 </div>
 
@@ -43,8 +44,11 @@
                 <select id="role" name="role" class="form-select">
                     <option value="">All</option>
                     <option value="Admin" selected="@(role == "Admin")">Admin</option>
+                    <option value="CentralAdmin" selected="@(role == "CentralAdmin")">Central Admin</option>
                     <option value="Sales" selected="@(role == "Sales")">Sales</option>
                     <option value="Warehouse" selected="@(role == "Warehouse")">Warehouse</option>
+                    <option value="BranchAdmin" selected="@(role == "BranchAdmin")">Branch Admin</option>
+                    <option value="Executive" selected="@(role == "Executive")">Executive</option>
                     <option value="Viewer" selected="@(role == "Viewer")">Viewer</option>
                 </select>
             </div>

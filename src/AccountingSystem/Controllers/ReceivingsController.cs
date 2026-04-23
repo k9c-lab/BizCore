@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
+[Authorize]
 public class ReceivingsController : CrudControllerBase
 {
     private const string NumberPrefix = "GR";
@@ -26,6 +26,11 @@ public class ReceivingsController : CrudControllerBase
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
+        if (!CurrentUserHasPermission("Receiving.View"))
+        {
+            return Forbid();
+        }
+
         var query = _context.ReceivingHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
@@ -82,6 +87,11 @@ public class ReceivingsController : CrudControllerBase
 
     public async Task<IActionResult> Create(int? purchaseOrderId, int? branchId)
     {
+        if (!CurrentUserHasPermission("Receiving.Create"))
+        {
+            return Forbid();
+        }
+
         var model = new ReceivingFormViewModel
         {
             ReceivingNo = await GetNextReceivingNumberAsync(DateTime.Today),
@@ -106,9 +116,18 @@ public class ReceivingsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(ReceivingFormViewModel model, string command)
     {
+        if (!CurrentUserHasPermission("Receiving.Create"))
+        {
+            return Forbid();
+        }
+
         model.ReceivingNo = await EnsureReceivingNumberAsync(model.ReceivingNo, model.ReceiveDate);
         ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
         var saveDraft = IsSaveDraftCommand(command);
+        if (!saveDraft && !CurrentUserHasPermission("Receiving.Post"))
+        {
+            return Forbid();
+        }
 
         EnsureBranchFromPostedAllocation(model);
         await PopulateLookupsAsync(model);
@@ -163,6 +182,11 @@ public class ReceivingsController : CrudControllerBase
 
     public async Task<IActionResult> Edit(int? id)
     {
+        if (!CurrentUserHasPermission("Receiving.Edit"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -188,6 +212,11 @@ public class ReceivingsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, ReceivingFormViewModel model, string command)
     {
+        if (!CurrentUserHasPermission("Receiving.Edit"))
+        {
+            return Forbid();
+        }
+
         var receiving = await GetReceivingForEditAsync(id);
         if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
@@ -204,6 +233,10 @@ public class ReceivingsController : CrudControllerBase
         model.ReceivingNo = await EnsureReceivingNumberAsync(model.ReceivingNo, model.ReceiveDate);
         ModelState.Remove(nameof(ReceivingFormViewModel.ReceivingNo));
         var saveDraft = IsSaveDraftCommand(command);
+        if (!saveDraft && !CurrentUserHasPermission("Receiving.Post"))
+        {
+            return Forbid();
+        }
 
         EnsureBranchFromPostedAllocation(model);
         await PopulateLookupsAsync(model);
@@ -252,6 +285,11 @@ public class ReceivingsController : CrudControllerBase
 
     public async Task<IActionResult> Details(int? id)
     {
+        if (!CurrentUserHasPermission("Receiving.View"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -281,6 +319,11 @@ public class ReceivingsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Post(int id)
     {
+        if (!CurrentUserHasPermission("Receiving.Post"))
+        {
+            return Forbid();
+        }
+
         var receiving = await GetReceivingForEditAsync(id);
         if (receiving is null || !CanAccessBranch(receiving.BranchId))
         {
@@ -330,6 +373,11 @@ public class ReceivingsController : CrudControllerBase
 
     public async Task<IActionResult> Print(int? id)
     {
+        if (!CurrentUserHasPermission("Receiving.View"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -375,6 +423,11 @@ public class ReceivingsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
+        if (!CurrentUserHasPermission("Receiving.Cancel"))
+        {
+            return Forbid();
+        }
+
         var receiving = await _context.ReceivingHeaders
             .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.Item)

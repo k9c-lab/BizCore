@@ -3,6 +3,11 @@
 @{
     ViewData["Title"] = "Quotation Details";
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+    var headerDiscountDisplay = Model.DiscountMode == "Header"
+        ? Model.HeaderDiscountType == "Percent"
+            ? $"{Model.HeaderDiscountPercent:N2}% ({Model.HeaderDiscountAmount:N2})"
+            : Model.HeaderDiscountAmount.ToString("N2")
+        : "-";
     var canApprove = Model.Status == "Draft";
     var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"Only Draft quotations can be approved. Current status is {Model.Status}.";
     var canConvert = Model.Status == "Approved";
@@ -11,7 +16,7 @@
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -33,7 +38,7 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
         }
-        <a asp-action="Print" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.QuotationHeaderId })', '_blank', 'noopener');">Print</button>
         @if (canConvert)
         {
             <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
@@ -68,42 +73,89 @@
         <div class="form-shell">
             <div class="form-section quotation-header-section">
                 <div class="form-section-title">Quotation Header</div>
-                <div class="row g-2 quotation-header-grid">
-                    <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Quotation No.</div>
-                        <div class="form-control readonly-detail">@Model.QuotationNumber</div>
+                <div class="quotation-header-stack">
+                    <div class="quotation-header-card">
+                        <div class="quotation-header-card-title">Document Info</div>
+                        <div class="row g-2 quotation-header-grid">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Quotation No.</div>
+                                <div class="form-control readonly-detail">@Model.QuotationNumber</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Quotation Date</div>
+                                <div class="form-control readonly-detail">@Model.QuotationDate.ToString("dd MMM yyyy")</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Reference No.</div>
+                                <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
+                            </div>
+                            <div class="col-lg-8 col-md-7">
+                                <div class="detail-label">Expiry Date</div>
+                                <div class="form-control readonly-detail">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "No expiry")</div>
+                            </div>
+                            <div class="col-lg-4 col-md-5">
+                                <div class="detail-label">Status</div>
+                                <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Quotation Date</div>
-                        <div class="form-control readonly-detail">@Model.QuotationDate.ToString("dd MMM yyyy")</div>
+
+                    <div class="quotation-header-card">
+                        <div class="quotation-header-card-title">Pricing & Approval Rules</div>
+                        <div class="row g-2 quotation-header-grid">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Branch</div>
+                                <div class="form-control readonly-detail">@Model.Branch?.BranchName</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Discount Mode</div>
+                                <div class="form-control readonly-detail">@Model.DiscountMode</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">VAT Type</div>
+                                <div class="form-control readonly-detail">@Model.VatType</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Header Discount Type</div>
+                                <div class="form-control readonly-detail">@Model.HeaderDiscountType</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Header Discount</div>
+                                <div class="form-control readonly-detail">@headerDiscountDisplay</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Applied Discount</div>
+                                <div class="form-control readonly-detail">@appliedDiscount.ToString("N2")</div>
+                            </div>
+                        </div>
+                        <div class="quotation-summary-strip">
+                            <div class="quotation-summary-chip">
+                                <span>Subtotal</span>
+                                <strong>@Model.Subtotal.ToString("N2")</strong>
+                            </div>
+                            <div class="quotation-summary-chip">
+                                <span>Discount</span>
+                                <strong>@appliedDiscount.ToString("N2")</strong>
+                            </div>
+                            <div class="quotation-summary-chip">
+                                <span>VAT</span>
+                                <strong>@Model.VatAmount.ToString("N2")</strong>
+                            </div>
+                            <div class="quotation-summary-chip is-total">
+                                <span>Total</span>
+                                <strong>@Model.TotalAmount.ToString("N2")</strong>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Reference No.</div>
-                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
-                    </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Expiry Date</div>
-                        <div class="form-control readonly-detail">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "No expiry")</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-label">Discount Mode</div>
-                        <div class="form-control readonly-detail">@Model.DiscountMode</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-label">VAT Type</div>
-                        <div class="form-control readonly-detail">@Model.VatType</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-label">Header Discount</div>
-                        <div class="form-control readonly-detail">@Model.HeaderDiscountAmount.ToString("N2")</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
-                    </div>
-                    <div class="col-12">
-                        <div class="detail-label">Remarks</div>
-                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
+
+                    <div class="quotation-header-card">
+                        <div class="quotation-header-card-title">Remarks</div>
+                        <div class="row g-2 quotation-header-grid">
+                            <div class="col-12">
+                                <div class="detail-label">Remarks</div>
+                                <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -177,6 +229,7 @@
                                 <th>Description</th>
                                 <th style="width: 10%;">Qty</th>
                                 <th style="width: 12%;">Unit Price</th>
+                                <th style="width: 14%;">Disc. Type</th>
                                 <th style="width: 12%;">Discount</th>
                                 <th style="width: 12%;">Line Total</th>
                             </tr>
@@ -193,6 +246,7 @@
                                 <td class="quote-notes">@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
                                 <td>@line.Quantity.ToString("N2")</td>
                                 <td>@line.UnitPrice.ToString("N2")</td>
+                                <td>@(line.DiscountType == "Percent" ? $"{line.DiscountPercent:N2}% ({line.DiscountAmount:N2})" : line.DiscountType)</td>
                                 <td>@line.DiscountAmount.ToString("N2")</td>
                                 <td>@line.LineTotal.ToString("N2")</td>
                             </tr>

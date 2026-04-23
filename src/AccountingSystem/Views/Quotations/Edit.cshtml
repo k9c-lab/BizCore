@@ -46,8 +46,10 @@
             const lineBody = document.getElementById("quotationLineBody");
             const addButton = document.getElementById("addQuotationLine");
             const discountModeInput = document.getElementById("DiscountMode");
+            const headerDiscountTypeInput = document.getElementById("HeaderDiscountType");
             const vatTypeInput = document.getElementById("VatType");
             const headerDiscountInput = document.getElementById("HeaderDiscountAmount");
+            const headerDiscountPercentInput = document.getElementById("HeaderDiscountPercent");
             const expiryInput = document.getElementById("ExpiryDate");
             const noExpiryInput = document.getElementById("quotationNoExpiry");
             const customerInput = document.getElementById("CustomerId");
@@ -55,6 +57,7 @@
             const customerResults = document.getElementById("quotationCustomerResults");
             const salespersonSelect = document.getElementById("SalespersonId");
             const headerDiscountHelp = document.getElementById("quotationHeaderDiscountHelp");
+            const headerDiscountPercentHelp = document.getElementById("quotationHeaderDiscountPercentHelp");
             const discountModeText = document.getElementById("quotationDiscountModeText");
             const branchInput = document.getElementById("BranchId");
             const branchStockUrl = '@Url.Action("BranchStock", "Quotations")';
@@ -87,6 +90,17 @@
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].UnitPrice" data-valmsg-replace="true"></span>
                     </td>
                     <td>
+                        <select name="Details[${index}].DiscountType" class="form-select js-line-discount-type">
+                            <option value="Amount" selected>Amount</option>
+                            <option value="Percent">Percent</option>
+                        </select>
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountType" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" max="100" name="Details[${index}].DiscountPercent" id="Details_${index}__DiscountPercent" value="0" class="form-control js-line-discount-percent" />
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountPercent" data-valmsg-replace="true"></span>
+                    </td>
+                    <td>
                         <input type="number" step="0.01" min="0" name="Details[${index}].DiscountAmount" id="Details_${index}__DiscountAmount" value="0" class="form-control js-line-discount" />
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
                     </td>
@@ -100,7 +114,7 @@
                 const detailRow = document.createElement("tr");
                 detailRow.className = "quotation-line-row quotation-line-row-detail";
                 detailRow.innerHTML = `
-                    <td colspan="6">
+                    <td colspan="8">
                         <label class="form-label">Description</label>
                         <textarea name="Details[${index}].Description" id="Details_${index}__Description" class="form-control js-line-description" rows="3"></textarea>
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Description" data-valmsg-replace="true"></span>
@@ -291,23 +305,39 @@
 
             const updateDiscountModeState = () => {
                 const isLineMode = discountModeInput.value === "Line";
-                headerDiscountInput.disabled = isLineMode;
-                if (isLineMode) {
-                    headerDiscountInput.value = "0";
-                    headerDiscountHelp.textContent = "Disabled in line discount mode.";
-                    discountModeText.textContent = "Line discount mode: use discount per quotation line. Header discount is disabled.";
-                } else {
-                    headerDiscountHelp.textContent = "Used only in header discount mode.";
-                    discountModeText.textContent = "Header discount mode: line discounts are disabled and the whole quotation discount is applied before VAT.";
-                }
-
-                lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
-                    const lineDiscountInput = row.querySelector(".js-line-discount");
-                    lineDiscountInput.disabled = !isLineMode;
-                    if (!isLineMode) {
-                        lineDiscountInput.value = "0";
+                    headerDiscountInput.disabled = isLineMode || headerDiscountTypeInput.value === "Percent";
+                    headerDiscountPercentInput.disabled = isLineMode || headerDiscountTypeInput.value !== "Percent";
+                    if (isLineMode) {
+                        headerDiscountInput.value = "0";
+                        headerDiscountPercentInput.value = "0";
+                        headerDiscountHelp.textContent = "Disabled in line discount mode.";
+                        headerDiscountPercentHelp.textContent = "Disabled in line discount mode.";
+                        discountModeText.textContent = "Line discount mode: use discount per quotation line. Header discount is disabled.";
+                    } else {
+                        if (headerDiscountTypeInput.value === "Percent") {
+                            headerDiscountHelp.textContent = "Calculated automatically from header discount percent.";
+                            headerDiscountPercentHelp.textContent = "Applied to subtotal before VAT.";
+                        } else {
+                            headerDiscountHelp.textContent = "Used only in header discount mode.";
+                            headerDiscountPercentHelp.textContent = "Disabled when header discount type is Amount.";
+                            headerDiscountPercentInput.value = "0";
+                        }
+                        discountModeText.textContent = "Header discount mode: line discounts are disabled and the whole quotation discount is applied before VAT.";
                     }
-                    updateLine(row, false);
+
+                    lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
+                        const lineDiscountTypeInput = row.querySelector(".js-line-discount-type");
+                        const lineDiscountPercentInput = row.querySelector(".js-line-discount-percent");
+                        const lineDiscountInput = row.querySelector(".js-line-discount");
+                        lineDiscountTypeInput.disabled = !isLineMode;
+                        lineDiscountPercentInput.disabled = !isLineMode || lineDiscountTypeInput.value !== "Percent";
+                        lineDiscountInput.disabled = !isLineMode || lineDiscountTypeInput.value === "Percent";
+                        if (!isLineMode) {
+                            lineDiscountTypeInput.value = "Amount";
+                            lineDiscountPercentInput.value = "0";
+                            lineDiscountInput.value = "0";
+                        }
+                        updateLine(row, false);
                 });
             };
 
@@ -328,6 +358,8 @@
                 const description = detailRow.querySelector(".js-line-description");
                 const quantity = row.querySelector(".js-line-quantity");
                 const unitPrice = row.querySelector(".js-line-unit-price");
+                const discountType = row.querySelector(".js-line-discount-type");
+                const discountPercent = row.querySelector(".js-line-discount-percent");
                 const discount = row.querySelector(".js-line-discount");
                 const total = row.querySelector(".js-line-total");
                 const stockHint = row.querySelector(".js-stock-hint");
@@ -352,7 +384,19 @@
 
                 const qty = parseFloat(quantity.value || "0");
                 const price = parseFloat(unitPrice.value || "0");
-                const discountValue = isLineMode ? parseFloat(discount.value || "0") : 0;
+                const gross = qty * price;
+                let discountValue = 0;
+                if (isLineMode) {
+                    if (discountType.value === "Percent") {
+                        const percentValue = parseFloat(discountPercent.value || "0");
+                        discountValue = Math.min(Math.max(gross * percentValue / 100, 0), gross);
+                        discount.value = discountValue.toFixed(2);
+                    } else {
+                        discountValue = parseFloat(discount.value || "0");
+                        const normalizedPercent = gross > 0 ? (discountValue / gross) * 100 : 0;
+                        discountPercent.value = normalizedPercent.toFixed(4);
+                    }
+                }
                 const lineTotal = Math.max((qty * price) - discountValue, 0);
                 total.value = lineTotal.toFixed(2);
             };
@@ -361,7 +405,7 @@
                 let subtotal = 0;
                 let discount = 0;
                 const isLineMode = discountModeInput.value === "Line";
-                const headerDiscount = parseFloat(headerDiscountInput.value || "0");
+                let headerDiscount = parseFloat(headerDiscountInput.value || "0");
 
                 lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
                     const qty = parseFloat(row.querySelector(".js-line-quantity").value || "0");
@@ -374,6 +418,17 @@
                         subtotal += qty * price;
                     }
                 });
+
+                if (!isLineMode) {
+                    if (headerDiscountTypeInput.value === "Percent") {
+                        const headerPercent = parseFloat(headerDiscountPercentInput.value || "0");
+                        headerDiscount = Math.min(Math.max(subtotal * headerPercent / 100, 0), subtotal);
+                        headerDiscountInput.value = headerDiscount.toFixed(2);
+                    } else {
+                        const headerPercent = subtotal > 0 ? (headerDiscount / subtotal) * 100 : 0;
+                        headerDiscountPercentInput.value = headerPercent.toFixed(4);
+                    }
+                }
 
                 const netBeforeVat = isLineMode ? subtotal : Math.max(subtotal - headerDiscount, 0);
                 const vat = vatTypeInput.value === "VAT" ? (netBeforeVat * 0.07) : 0;
@@ -411,8 +466,13 @@
                 updateDiscountModeState();
                 updateSummary();
             });
+            headerDiscountTypeInput.addEventListener("change", () => {
+                updateDiscountModeState();
+                updateSummary();
+            });
             vatTypeInput.addEventListener("change", updateSummary);
             headerDiscountInput.addEventListener("input", updateSummary);
+            headerDiscountPercentInput.addEventListener("input", updateSummary);
             salespersonSelect.addEventListener("change", updateSalespersonInfo);
             noExpiryInput.addEventListener("change", updateExpiryState);
             branchInput?.addEventListener("change", refreshBranchStock);
@@ -473,6 +533,20 @@
                 }
 
                 updateLine(row, false);
+                updateSummary();
+            });
+
+            lineBody.addEventListener("change", event => {
+                const row = event.target.closest(".quotation-line-row-main");
+                if (!row) {
+                    return;
+                }
+
+                if (event.target.classList.contains("js-line-discount-type")) {
+                    updateDiscountModeState();
+                } else {
+                    updateLine(row, false);
+                }
                 updateSummary();
             });
 

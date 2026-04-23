@@ -6,11 +6,16 @@
     var pageTitle = isEdit ? "Edit Receiving Draft" : "Create Receiving";
     ViewData["Title"] = pageTitle;
     var selectedPo = Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId);
-    var canPost = Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var canPostPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Post") || oldReceivingOperatorFallback;
+    var canPost = canPostPermission && Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
     var canSaveDraft = Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
     var postBlockedReason = canPost
         ? string.Empty
-        : "Post Receiving is blocked because no open purchase orders are available.";
+        : !canPostPermission
+            ? "You do not have permission to post receiving documents."
+            : "Post Receiving is blocked because no open purchase orders are available.";
     var hasSelectedPo = Model.PurchaseOrderId.HasValue;
     var startFromPoMessage = "Start receiving from an approved purchase order by using the Receive Goods action.";
     var backLabel = isEdit ? "Back to Details" : "Back to Receivings";
@@ -25,7 +30,7 @@
     <div class="page-actions">
         @if (isEdit)
         {
-            <button type="submit" form="receivingForm" class="btn btn-primary" name="command" value="Post" id="topPostReceivingButton" disabled="@(!canPost)">Post Receiving</button>
+            <button type="submit" form="receivingForm" class="btn btn-primary" name="command" value="Post" id="topPostReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">Post Receiving</button>
             <a asp-action="Details" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary">@backLabel</a>
         }
         else
@@ -85,7 +90,7 @@
                         </div>
                         <div class="col-md-3">
                             <div class="detail-label">Status</div>
-                            <div class="form-control readonly-detail">@(isEdit ? Model.Status : "New")</div>
+                            <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", isEdit ? Model.Status : "Draft")</div>
                         </div>
                         <div class="col-md-3">
                             <div class="detail-label">PO No.</div>
@@ -292,7 +297,7 @@
                     }
                     <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
                     <button type="submit" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="saveDraftButton" disabled="@(!canSaveDraft)">Save Draft</button>
-                    <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)">Post Receiving</button>
+                    <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">Post Receiving</button>
                 </div>
             </div>
         </form>
@@ -312,6 +317,7 @@
             const saveDraftButton = document.getElementById("saveDraftButton");
             const postButton = document.getElementById("postReceivingButton");
             const topPostButton = document.getElementById("topPostReceivingButton");
+            const canPostPermission = postButton?.dataset.canPostPermission === "true";
             const postReason = document.getElementById("receivingPostReason");
 
             const money = value => Number(value || 0).toFixed(2);
@@ -372,7 +378,9 @@
                 const selected = lookup.find(x => String(x.PurchaseOrderId) === String(poSelect.value));
                 let reason = "";
 
-                if (!selected) {
+                if (!canPostPermission) {
+                    reason = "You do not have permission to post receiving documents.";
+                } else if (!selected) {
                     reason = "Select a purchase order before posting.";
                 } else {
                     let totalQty = 0;

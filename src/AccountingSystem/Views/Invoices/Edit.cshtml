@@ -17,13 +17,13 @@
 
 @if (TempData["InvoiceNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card">
     <div class="card-body">
         <form asp-action="Edit" asp-route-id="@Model.InvoiceId" method="post">
-            <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+            <div asp-validation-summary="All" class="form-alert"></div>
             <input asp-for="InvoiceId" type="hidden" />
             <input asp-for="QuotationId" type="hidden" />
 

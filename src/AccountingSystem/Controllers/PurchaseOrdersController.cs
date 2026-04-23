@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Warehouse")]
+[Authorize]
 public class PurchaseOrdersController : CrudControllerBase
 {
     private const string NumberPrefix = "PO";
@@ -18,14 +19,21 @@ public class PurchaseOrdersController : CrudControllerBase
     private const string PrintCompanyPhone = "02-555-0100";
     private const string PrintCompanyEmail = "sales@bizcore.local";
     private readonly AccountingDbContext _context;
+    private readonly PurchaseWorkflowEmailService _purchaseWorkflowEmailService;
 
-    public PurchaseOrdersController(AccountingDbContext context)
+    public PurchaseOrdersController(AccountingDbContext context, PurchaseWorkflowEmailService purchaseWorkflowEmailService)
     {
         _context = context;
+        _purchaseWorkflowEmailService = purchaseWorkflowEmailService;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
     {
+        if (!CurrentUserHasPermission("PO.View"))
+        {
+            return Forbid();
+        }
+
         var query = _context.PurchaseOrderHeaders
             .AsNoTracking()
             .Include(x => x.Supplier)
@@ -87,9 +95,13 @@ public class PurchaseOrdersController : CrudControllerBase
         return View(orders);
     }
 
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(int? purchaseRequestId, int[]? purchaseRequestIds)
     {
+        if (!CurrentUserHasPermission("PO.Create"))
+        {
+            return Forbid();
+        }
+
         var model = new PurchaseOrderFormViewModel
         {
             PONo = await GetNextPONumberAsync(DateTime.Today),
@@ -132,10 +144,14 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PurchaseOrderFormViewModel model)
     {
+        if (!CurrentUserHasPermission("PO.Create"))
+        {
+            return Forbid();
+        }
+
         model.PONo = await EnsurePONumberAsync(model.PONo, model.PODate);
         model.Status = "Draft";
         ModelState.Remove(nameof(PurchaseOrderFormViewModel.PONo));
@@ -186,9 +202,13 @@ public class PurchaseOrdersController : CrudControllerBase
         return RedirectToAction(nameof(Details), new { id = header.PurchaseOrderId });
     }
 
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int? id)
     {
+        if (!CurrentUserHasPermission("PO.Edit"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -209,9 +229,9 @@ public class PurchaseOrdersController : CrudControllerBase
             return NotFound();
         }
 
-        if (header.Status != "Draft")
+        if (!CanEditOrder(header))
         {
-            TempData["PurchaseOrderNotice"] = $"Only Draft purchase orders can be edited. Current status is {header.Status}.";
+            TempData["PurchaseOrderNotice"] = $"Only Draft or Rejected purchase orders can be edited. Current status is {header.Status}.";
             return RedirectToAction(nameof(Details), new { id = header.PurchaseOrderId });
         }
 
@@ -281,10 +301,14 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, PurchaseOrderFormViewModel model)
     {
+        if (!CurrentUserHasPermission("PO.Edit"))
+        {
+            return Forbid();
+        }
+
         if (id != model.PurchaseOrderId)
         {
             return NotFound();
@@ -301,9 +325,9 @@ public class PurchaseOrdersController : CrudControllerBase
             return NotFound();
         }
 
-        if (existingHeader.Status != "Draft")
+        if (!CanEditOrder(existingHeader))
         {
-            TempData["PurchaseOrderNotice"] = $"Only Draft purchase orders can be edited. Current status is {existingHeader.Status}.";
+            TempData["PurchaseOrderNotice"] = $"Only Draft or Rejected purchase orders can be edited. Current status is {existingHeader.Status}.";
             return RedirectToAction(nameof(Details), new { id = existingHeader.PurchaseOrderId });
         }
 
@@ -336,6 +360,14 @@ public class PurchaseOrdersController : CrudControllerBase
         existingHeader.VatType = model.VatType;
         existingHeader.VatAmount = model.VatAmount;
         existingHeader.TotalAmount = model.TotalAmount;
+        if (existingHeader.Status == "Rejected")
+        {
+            existingHeader.Status = "Draft";
+            existingHeader.RejectedByUserId = null;
+            existingHeader.RejectedDate = null;
+            existingHeader.RejectReason = null;
+        }
+
         existingHeader.UpdatedByUserId = CurrentUserId();
         existingHeader.UpdatedDate = DateTime.UtcNow;
 
@@ -353,6 +385,11 @@ public class PurchaseOrdersController : CrudControllerBase
 
     public async Task<IActionResult> Details(int? id)
     {
+        if (!CurrentUserHasPermission("PO.View"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -366,6 +403,7 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
+            .Include(x => x.RejectedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
@@ -384,6 +422,11 @@ public class PurchaseOrdersController : CrudControllerBase
 
     public async Task<IActionResult> Print(int? id)
     {
+        if (!CurrentUserHasPermission("PO.View"))
+        {
+            return Forbid();
+        }
+
         if (id is null)
         {
             return NotFound();
@@ -397,6 +440,7 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
+            .Include(x => x.RejectedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
@@ -424,10 +468,14 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Approve(int id)
     {
+        if (!CurrentUserHasPermission("PO.Approve"))
+        {
+            return Forbid();
+        }
+
         var order = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.PurchaseOrderAllocations)
@@ -449,6 +497,9 @@ public class PurchaseOrdersController : CrudControllerBase
         order.Status = "Approved";
         order.ApprovedByUserId = CurrentUserId();
         order.ApprovedDate = now;
+        order.RejectedByUserId = null;
+        order.RejectedDate = null;
+        order.RejectReason = null;
         order.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
@@ -457,10 +508,94 @@ public class PurchaseOrdersController : CrudControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Submit(int id)
+    {
+        if (!CurrentUserHasPermission("PO.Submit"))
+        {
+            return Forbid();
+        }
+
+        var order = await _context.PurchaseOrderHeaders
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+            .FirstOrDefaultAsync(x => x.PurchaseOrderId == id);
+
+        if (order is null || !CanAccessBranch(order.BranchId))
+        {
+            return NotFound();
+        }
+
+        var blockReason = GetSubmitBlockedReason(order);
+        if (!string.IsNullOrWhiteSpace(blockReason))
+        {
+            TempData["PurchaseOrderNotice"] = blockReason;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var now = DateTime.UtcNow;
+        order.Status = "Submitted";
+        order.RejectedByUserId = null;
+        order.RejectedDate = null;
+        order.RejectReason = null;
+        order.UpdatedDate = now;
+        await _context.SaveChangesAsync();
+        await _purchaseWorkflowEmailService.NotifyPoSubmittedAsync(order.PurchaseOrderId);
+
+        TempData["PurchaseOrderNotice"] = "Purchase order submitted for approval.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reject(int id, string? rejectReason)
+    {
+        if (!CurrentUserHasPermission("PO.Reject"))
+        {
+            return Forbid();
+        }
+
+        var order = await _context.PurchaseOrderHeaders
+            .Include(x => x.PurchaseOrderDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocations)
+            .FirstOrDefaultAsync(x => x.PurchaseOrderId == id);
+
+        if (order is null || !CanAccessBranch(order.BranchId))
+        {
+            return NotFound();
+        }
+
+        var blockReason = GetRejectBlockedReason(order, rejectReason);
+        if (!string.IsNullOrWhiteSpace(blockReason))
+        {
+            TempData["PurchaseOrderNotice"] = blockReason;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var now = DateTime.UtcNow;
+        order.Status = "Rejected";
+        order.RejectedByUserId = CurrentUserId();
+        order.RejectedDate = now;
+        order.RejectReason = NormalizeReason(rejectReason);
+        order.ApprovedByUserId = null;
+        order.ApprovedDate = null;
+        order.UpdatedDate = now;
+        await _context.SaveChangesAsync();
+        await _purchaseWorkflowEmailService.NotifyPoRejectedAsync(order.PurchaseOrderId);
+
+        TempData["PurchaseOrderNotice"] = "Purchase order rejected and returned for correction.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
+        if (!CurrentUserHasPermission("PO.Cancel"))
+        {
+            return Forbid();
+        }
+
         var order = await _context.PurchaseOrderHeaders
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.PurchaseOrderAllocations)
@@ -563,7 +698,9 @@ public class PurchaseOrdersController : CrudControllerBase
         model.StatusOptions = new[]
         {
             new SelectListItem("Draft", "Draft"),
+            new SelectListItem("Submitted", "Submitted"),
             new SelectListItem("Approved", "Approved"),
+            new SelectListItem("Rejected", "Rejected"),
             new SelectListItem("Cancelled", "Cancelled")
         };
 
@@ -582,6 +719,16 @@ public class PurchaseOrdersController : CrudControllerBase
         model.PurchaseRequestNo = string.Join(", ", orderedRequests.Select(x => x.PRNo));
         model.PurchaseRequestSourceSummary = $"{orderedRequests.Count} PR source(s): {model.PurchaseRequestNo}";
         model.ReferenceNo = model.PurchaseRequestNo;
+        var sourceBranchIds = orderedRequests
+            .Where(x => x.BranchId.HasValue)
+            .Select(x => x.BranchId!.Value)
+            .Distinct()
+            .ToList();
+        if (sourceBranchIds.Count == 1)
+        {
+            model.BranchId = sourceBranchIds[0];
+        }
+
         model.ExpectedReceiveDate = orderedRequests
             .Where(x => x.RequiredDate.HasValue)
             .Select(x => x.RequiredDate)
@@ -884,32 +1031,42 @@ public class PurchaseOrdersController : CrudControllerBase
         return ModelState.IsValid;
     }
 
-    private static string GetApproveBlockedReason(PurchaseOrderHeader order)
+    private static string GetSubmitBlockedReason(PurchaseOrderHeader order)
     {
-        if (order.Status != "Draft")
+        if (order.Status is not ("Draft" or "Rejected"))
         {
-            return $"Approve is available only for Draft purchase orders. Current status is {order.Status}.";
+            return $"Submit is available only for Draft or Rejected purchase orders. Current status is {order.Status}.";
         }
 
         if (order.SupplierId <= 0)
         {
-            return "Approve is blocked because supplier is not selected.";
+            return "Submit is blocked because supplier is not selected.";
         }
 
         if (!order.PurchaseOrderDetails.Any())
         {
-            return "Approve is blocked because no PO lines exist.";
+            return "Submit is blocked because no PO lines exist.";
         }
 
         if (order.PurchaseOrderDetails.Any(x => x.ItemId <= 0 || x.Qty <= 0 || x.UnitPrice < 0 || x.DiscountAmount < 0))
         {
-            return "Approve is blocked because one or more PO lines are incomplete.";
+            return "Submit is blocked because one or more PO lines are incomplete.";
         }
 
         if (order.PurchaseOrderDetails.Any(x => !x.PurchaseOrderAllocations.Any() ||
             x.PurchaseOrderAllocations.Sum(a => a.AllocatedQty) != x.Qty))
         {
-            return "Approve is blocked because delivery allocation must equal PO quantity for every line.";
+            return "Submit is blocked because delivery allocation must equal PO quantity for every line.";
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetApproveBlockedReason(PurchaseOrderHeader order)
+    {
+        if (order.Status != "Submitted")
+        {
+            return $"Approve is available only for Submitted purchase orders. Current status is {order.Status}.";
         }
 
         return string.Empty;
@@ -928,9 +1085,29 @@ public class PurchaseOrdersController : CrudControllerBase
             return "Cancel PO is blocked because receiving already exists.";
         }
 
-        if (order.Status is not ("Draft" or "Approved"))
+        if (order.Status is not ("Draft" or "Submitted" or "Approved" or "Rejected"))
         {
-            return $"Cancel PO is available only for Draft or Approved purchase orders. Current status is {order.Status}.";
+            return $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {order.Status}.";
+        }
+
+        return string.Empty;
+    }
+
+    private static bool CanEditOrder(PurchaseOrderHeader order)
+    {
+        return order.Status is "Draft" or "Rejected";
+    }
+
+    private static string GetRejectBlockedReason(PurchaseOrderHeader order, string? rejectReason)
+    {
+        if (order.Status != "Submitted")
+        {
+            return $"Reject is available only for Submitted purchase orders. Current status is {order.Status}.";
+        }
+
+        if (string.IsNullOrWhiteSpace(rejectReason))
+        {
+            return "Reject reason is required.";
         }
 
         return string.Empty;
@@ -1061,12 +1238,17 @@ public class PurchaseOrdersController : CrudControllerBase
 
     private static string? NormalizeCancelReason(string? cancelReason)
     {
-        if (string.IsNullOrWhiteSpace(cancelReason))
+        return NormalizeReason(cancelReason);
+    }
+
+    private static string? NormalizeReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
         {
             return null;
         }
 
-        var trimmed = cancelReason.Trim();
+        var trimmed = reason.Trim();
         return trimmed.Length <= 500 ? trimmed : trimmed[..500];
     }
 

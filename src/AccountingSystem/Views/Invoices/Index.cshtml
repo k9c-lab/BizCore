@@ -87,7 +87,7 @@
                             <td class="fw-semibold">@invoice.Customer?.CustomerName</td>
                             <td>@(invoice.Branch?.BranchName ?? "-")</td>
                             <td>@invoice.TotalAmount.ToString("N2")</td>
-                            <td><span class="status-pill active">@invoice.Status</span></td>
+                            <td>@await Html.PartialAsync("_StatusPill", invoice.Status)</td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-secondary">View</a>

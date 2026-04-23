@@ -7,6 +7,15 @@
     var currentBranchId = int.TryParse(User.FindFirst("BranchId")?.Value, out var parsedBranchId) ? parsedBranchId : (int?)null;
     var hasReceiving = Model.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
     var hasOpenLines = Model.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
+    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
+    var oldCentralAdminFallback = !hasPermissionClaims && User.IsInRole("CentralAdmin");
+    var canEditPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Edit") || oldCentralAdminFallback;
+    var canSubmitPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Submit") || oldCentralAdminFallback;
+    var canApprovePermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Approve");
+    var canRejectPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Reject");
+    var canCancelPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Cancel") || oldCentralAdminFallback;
+    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
+    var canReceivePermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Create") || User.HasClaim("Permission", "PO.Receive") || oldReceivingOperatorFallback;
     var openReceivingBranches = Model.PurchaseOrderDetails
         .SelectMany(x => x.PurchaseOrderAllocations)
         .Where(x => x.AllocatedQty > x.ReceivedQty && (canAccessAllBranches || x.BranchId == currentBranchId))
@@ -28,55 +37,73 @@
             RemainingQty = Model.PurchaseOrderDetails.Sum(x => Math.Max(0m, x.Qty - x.ReceivedQty))
         });
     }
-    var canEdit = User.IsInRole("Admin") && Model.Status == "Draft" && !hasReceiving;
+    var canEdit = canEditPermission && (Model.Status is "Draft" or "Rejected") && !hasReceiving;
     var editBlockedReason = canEdit
         ? string.Empty
-        : !User.IsInRole("Admin")
-            ? "Only Admin can edit purchase orders."
+        : !canEditPermission
+            ? "You do not have permission to edit purchase orders."
             : Model.Status == "Cancelled"
             ? "Cancelled purchase orders are read-only."
             : hasReceiving
                 ? "Edit PO is blocked because receiving already exists."
-                : $"Edit PO is available only for Draft purchase orders. Current status is {Model.Status}.";
-    var canApprove = User.IsInRole("Admin") &&
-        Model.Status == "Draft" &&
+                : $"Edit PO is available only for Draft or Rejected purchase orders. Current status is {Model.Status}.";
+    var canSubmit = canSubmitPermission &&
+        (Model.Status is "Draft" or "Rejected") &&
         Model.SupplierId > 0 &&
         Model.PurchaseOrderDetails.Any() &&
         Model.PurchaseOrderDetails.All(x => x.ItemId > 0 && x.Qty > 0 && x.UnitPrice >= 0 && x.DiscountAmount >= 0);
+    var submitBlockedReason = canSubmit
+        ? string.Empty
+        : !canSubmitPermission
+            ? "You do not have permission to submit purchase orders."
+            : Model.Status is not ("Draft" or "Rejected")
+                ? $"Submit is available only for Draft or Rejected purchase orders. Current status is {Model.Status}."
+                : !Model.PurchaseOrderDetails.Any()
+                    ? "Submit is blocked because no PO lines exist."
+                    : "Submit is blocked because supplier or PO lines are incomplete.";
+    var canApprove = canApprovePermission && Model.Status == "Submitted";
     var approveBlockedReason = canApprove
         ? string.Empty
-        : !User.IsInRole("Admin")
-            ? "Only Admin can approve purchase orders."
-            : Model.Status != "Draft"
-            ? $"Approve is available only for Draft purchase orders. Current status is {Model.Status}."
-            : !Model.PurchaseOrderDetails.Any()
-                ? "Approve is blocked because no PO lines exist."
-                : "Approve is blocked because supplier or PO lines are incomplete.";
-    var canReceive = (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && openReceivingBranches.Any();
+        : !canApprovePermission
+            ? "You do not have permission to approve purchase orders."
+            : Model.Status != "Submitted"
+                ? $"Approve is available only for Submitted purchase orders. Current status is {Model.Status}."
+                : "Approve is blocked.";
+    var canReject = canRejectPermission && Model.Status == "Submitted";
+    var rejectBlockedReason = canReject
+        ? string.Empty
+        : !canRejectPermission
+            ? "You do not have permission to reject purchase orders."
+            : Model.Status != "Submitted"
+                ? $"Reject is available only for Submitted purchase orders. Current status is {Model.Status}."
+                : "Reject is blocked.";
+    var canReceive = canReceivePermission && (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && openReceivingBranches.Any();
     var receiveBlockedReason = canReceive
         ? string.Empty
-        : Model.Status == "Cancelled"
+        : !canReceivePermission
+            ? "You do not have permission to receive goods."
+            : Model.Status == "Cancelled"
             ? "Receive Goods is blocked because the PO is cancelled."
             : Model.Status == "FullyReceived" || !hasOpenLines
                 ? "Receive Goods is blocked because the PO is already fully received."
                 : !openReceivingBranches.Any() && hasOpenLines
                     ? "Receive Goods is blocked because this PO has no open allocation for your branch."
                     : "Receive Goods is available only after PO approval.";
-    var canCancel = User.IsInRole("Admin") && (Model.Status == "Draft" || Model.Status == "Approved") && !hasReceiving;
+    var canCancel = canCancelPermission && (Model.Status == "Draft" || Model.Status == "Submitted" || Model.Status == "Approved" || Model.Status == "Rejected") && !hasReceiving;
     var cancelBlockedReason = canCancel
         ? string.Empty
-        : !User.IsInRole("Admin")
-            ? "Only Admin can cancel purchase orders."
+        : !canCancelPermission
+            ? "You do not have permission to cancel purchase orders."
             : Model.Status == "Cancelled"
             ? "Cancelled purchase orders are read-only."
             : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
                 ? "Cancel PO is blocked because receiving already exists."
-                : $"Cancel PO is available only for Draft or Approved purchase orders. Current status is {Model.Status}.";
+                : $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {Model.Status}.";
 }
 
 @if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    <div class="workflow-info mb-3">@notice</div>
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="page-header">
@@ -94,6 +121,17 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit PO</button>
         }
+        @if (canSubmit)
+        {
+            <form asp-action="Submit" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
+        }
         @if (canApprove)
         {
             <form asp-action="Approve" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline">
@@ -104,6 +142,18 @@
         else
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+        }
+        @if (canReject)
+        {
+            <form asp-action="Reject" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="rejectReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for rejecting this purchase order:'); if (reason === null) return false; if (!reason.trim()) { alert('Reject reason is required.'); return false; } this.form.rejectReason.value = reason; return confirm('Reject this purchase order and return it for correction?');">Reject</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
         }
         @if (canCancel)
         {
@@ -130,12 +180,12 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">Receive Goods</button>
         }
-        <a asp-action="Print" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary" target="_blank" rel="noopener">Print</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.PurchaseOrderId })', '_blank', 'noopener');">Print</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
-@if (!canEdit || !canApprove || !canCancel || !canReceive)
+@if (!canEdit || !canSubmit || !canApprove || !canReject || !canCancel || !canReceive)
 {
     <div class="workflow-info mb-3">
         @if (!canEdit)
@@ -145,6 +195,14 @@
         @if (!canApprove)
         {
             <div>@approveBlockedReason</div>
+        }
+        @if (!canSubmit)
+        {
+            <div>@submitBlockedReason</div>
+        }
+        @if (!canReject)
+        {
+            <div>@rejectBlockedReason</div>
         }
         @if (!canCancel)
         {
@@ -210,7 +268,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-12">
                         <div class="detail-label">Remark</div>
@@ -363,6 +421,11 @@
                         <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
+                        <span class="document-history-label">Rejected</span>
+                        <span class="document-history-value">@(Model.RejectedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.RejectedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
                         <span class="document-history-label">Cancelled</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
@@ -373,6 +436,13 @@
                     <div class="document-history-reason">
                         <span class="document-history-label">Cancel Reason</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
+                    </div>
+                }
+                @if (Model.Status == "Rejected")
+                {
+                    <div class="document-history-reason">
+                        <span class="document-history-label">Reject Reason</span>
+                        <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.RejectReason) ? "-" : Model.RejectReason)</span>
                     </div>
                 }
             </div>

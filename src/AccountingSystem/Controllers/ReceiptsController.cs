@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin,BranchAdmin,Sales")]
+[Authorize]
 public class ReceiptsController : CrudControllerBase
 {
     private const string PrintCompanyName = "BizCore Co., Ltd.";
