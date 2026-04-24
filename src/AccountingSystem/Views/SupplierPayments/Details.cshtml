@@ -1,0 +1,171 @@
+@model BizCore.Models.Entities.SupplierPaymentHeader
+
+@{
+    ViewData["Title"] = "Supplier Payment Details";
+    var order = Model.PurchaseOrderHeader;
+    var postedPayments = order?.SupplierPayments.Where(x => x.Status == "Posted").OrderBy(x => x.PaymentDate).ThenBy(x => x.SupplierPaymentId).ToList()
+        ?? new List<BizCore.Models.Entities.SupplierPaymentHeader>();
+    var paidToDate = postedPayments.Sum(x => x.Amount);
+    var remaining = order is null ? 0m : Math.Max(order.TotalAmount - paidToDate, 0m);
+    var canCancel = (User.IsInRole("Admin") || User.HasClaim("Permission", "SupplierPayment.Cancel")) && Model.Status == "Posted";
+}
+
+@if (TempData["SupplierPaymentNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Supplier Payment Details</h1>
+        <p class="page-subtitle">Review posted supplier payment information and the linked purchase order balance.</p>
+    </div>
+    <div class="page-actions">
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.SupplierPaymentId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="cancelReason" />
+                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this supplier payment (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this supplier payment?');">Cancel Payment</button>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled>Cancel Payment</button>
+        }
+        @if (order is not null)
+        {
+            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@order.PurchaseOrderId" class="btn btn-outline-secondary">View PO</a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">Payment Header</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Payment No.</div>
+                        <div class="form-control readonly-detail">@Model.PaymentNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Payment Date</div>
+                        <div class="form-control readonly-detail">@Model.PaymentDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Payment Method</div>
+                        <div class="form-control readonly-detail">@Model.PaymentMethod</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Purchase Order</div>
+                        <div class="form-control readonly-detail">
+                            @if (order is not null)
+                            {
+                                <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@order.PurchaseOrderId">@order.PONo</a>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Supplier</div>
+                        <div class="form-control readonly-detail">@(Model.Supplier?.SupplierName ?? "-")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Branch</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Reference No.</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Payment Amount</div>
+                        <div class="form-control readonly-detail">@Model.Amount.ToString("N2")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">PO Remaining</div>
+                        <div class="form-control readonly-detail">@remaining.ToString("N2")</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">Remark</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.CancelReason))
+                    {
+                        <div class="col-12">
+                            <div class="detail-label">Cancel Reason</div>
+                            <div class="form-control readonly-detail readonly-detail-multiline">@Model.CancelReason</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="quote-summary-grid">
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">PO Total</span>
+                    <p class="quote-summary-value">@(order?.TotalAmount.ToString("N2") ?? "-")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">Paid to Date</span>
+                    <p class="quote-summary-value">@paidToDate.ToString("N2")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">Outstanding AP</span>
+                    <p class="quote-summary-value">@remaining.ToString("N2")</p>
+                </div>
+            </div>
+
+            @if (postedPayments.Any())
+            {
+                <div class="form-section">
+                    <div class="form-section-title">Payment History for This PO</div>
+                    <div class="table-responsive">
+                        <table class="table entity-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Payment No.</th>
+                                    <th>Date</th>
+                                    <th>Method</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var payment in postedPayments)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (payment.SupplierPaymentId == Model.SupplierPaymentId)
+                                        {
+                                            <span class="code-chip">@payment.PaymentNo</span>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Details" asp-route-id="@payment.SupplierPaymentId">@payment.PaymentNo</a>
+                                        }
+                                    </td>
+                                    <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                                    <td>@payment.PaymentMethod</td>
+                                    <td class="text-end">@payment.Amount.ToString("N2")</td>
+                                    <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

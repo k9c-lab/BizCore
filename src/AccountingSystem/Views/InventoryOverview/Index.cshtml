@@ -1,0 +1,227 @@
+@model BizCore.Models.ViewModels.InventoryOverviewViewModel
+
+@{
+    ViewData["Title"] = "Inventory Overview";
+    var maxMovement = Model.MovementRows.Any() ? Model.MovementRows.Max(x => x.Quantity) : 0m;
+    var maxBranch = Model.BranchStockRows.Any() ? Model.BranchStockRows.Max(x => x.BalanceAmount) : 0m;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Inventory Summary</div>
+        <h1 class="page-title">Inventory Overview</h1>
+        <p class="page-subtitle">Executive stock position and movement summary for @Model.BranchName.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="StockInquiry" asp-action="Index" class="btn btn-outline-secondary">Stock Inquiry</a>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-3">
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@Model.DateFrom.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@Model.DateTo.ToString("yyyy-MM-dd")" type="date" class="form-control" />
+            </div>
+            @if (Model.CanAccessAllBranches)
+            {
+                <div class="list-filter-field">
+                    <label class="form-label" for="branchId">Branch</label>
+                    <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
+                </div>
+            }
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">This Month</a>
+                <button type="submit" class="btn btn-primary">Run</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Stock On Hand Qty</span>
+        <p class="quote-summary-value">@Model.StockOnHandQty.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Items In Stock</span>
+        <p class="quote-summary-value">@Model.InventoryItems</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Low Stock Items</span>
+        <p class="quote-summary-value">@Model.LowStockItems</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Serials In Stock</span>
+        <p class="quote-summary-value">@Model.SerialsInStock</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Pending Receivings</span>
+        <p class="quote-summary-value">@Model.PendingReceivings</p>
+    </div>
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Open Claims</span>
+        <p class="quote-summary-value">@Model.OpenClaims</p>
+    </div>
+</div>
+
+<div class="quotation-party-grid mb-3">
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Movement by Type</h2>
+                        <p class="section-subtitle">What is driving stock movement in the selected period.</p>
+                    </div>
+                </div>
+                <div class="dashboard-meter-list">
+                    @foreach (var row in Model.MovementRows.Take(8))
+                    {
+                        var width = maxMovement <= 0m ? 0 : (int)Math.Round(row.Quantity / maxMovement * 100);
+                        <div class="dashboard-meter-row">
+                            <div class="dashboard-meter-head">
+                                <span>@row.MovementType</span>
+                                <strong>@row.Quantity.ToString("N0")</strong>
+                            </div>
+                            <div class="dashboard-meter-track">
+                                <div class="dashboard-meter-fill" style="width:@width%"></div>
+                            </div>
+                        </div>
+                    }
+                    @if (!Model.MovementRows.Any())
+                    {
+                        <div class="table-empty">No stock movement found for the selected period.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="quotation-party-column">
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">Stock by Branch</h2>
+                        <p class="section-subtitle">Where the current stock quantity is sitting.</p>
+                    </div>
+                </div>
+                <div class="dashboard-meter-list">
+                    @foreach (var row in Model.BranchStockRows.Take(8))
+                    {
+                        var width = maxBranch <= 0m ? 0 : (int)Math.Round(row.BalanceAmount / maxBranch * 100);
+                        <div class="dashboard-meter-row">
+                            <div class="dashboard-meter-head">
+                                <span>@row.PartyName</span>
+                                <strong>@row.BalanceAmount.ToString("N0")</strong>
+                            </div>
+                            <div class="dashboard-meter-track">
+                                <div class="dashboard-meter-fill inventory-meter-fill" style="width:@width%"></div>
+                            </div>
+                        </div>
+                    }
+                    @if (!Model.BranchStockRows.Any())
+                    {
+                        <div class="table-empty">No stock branch summary found.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="quotation-party-grid">
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Top Stock Items</h2>
+                    <p class="section-subtitle">Items with the highest on-hand quantity.</p>
+                </div>
+                <div class="table-meta">@Model.TopStockRows.Count row(s)</div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Branch</th>
+                                <th class="text-end">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.TopStockRows)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@row.ItemCode</div>
+                                    <div class="table-meta">@row.ItemName</div>
+                                </td>
+                                <td>@row.BranchName</td>
+                                <td class="text-end">@row.QtyOnHand.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.TopStockRows.Any())
+                        {
+                            <tr><td colspan="3" class="table-empty">No stock rows found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="quotation-party-column">
+        <div class="card content-card table-card h-100">
+            <div class="table-card-header">
+                <div>
+                    <h2 class="section-title">Low Stock Items</h2>
+                    <p class="section-subtitle">Items that are close to running low.</p>
+                </div>
+                <div class="table-meta">@Model.LowStockRows.Count row(s)</div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Branch</th>
+                                <th class="text-end">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.LowStockRows)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@row.ItemCode</div>
+                                    <div class="table-meta">@row.ItemName</div>
+                                </td>
+                                <td>@row.BranchName</td>
+                                <td class="text-end">@row.QtyOnHand.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (!Model.LowStockRows.Any())
+                        {
+                            <tr><td colspan="3" class="table-empty">No low stock items found.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .inventory-meter-fill {
+        background: #2563eb;
+    }
+</style>

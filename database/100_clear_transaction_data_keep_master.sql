@@ -50,6 +50,9 @@ BEGIN TRY
     IF OBJECT_ID(N'dbo.PaymentHeaders', N'U') IS NOT NULL
         DELETE FROM dbo.PaymentHeaders;
 
+    IF OBJECT_ID(N'dbo.SupplierPaymentHeaders', N'U') IS NOT NULL
+        DELETE FROM dbo.SupplierPaymentHeaders;
+
     /* Sales documents */
     IF OBJECT_ID(N'dbo.InvoiceSerials', N'U') IS NOT NULL
         DELETE FROM dbo.InvoiceSerials;
@@ -144,6 +147,7 @@ BEGIN TRY
     IF OBJECT_ID(N'dbo.ReceiptHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.ReceiptHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.PaymentAllocations', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.PaymentAllocations', RESEED, 0);
     IF OBJECT_ID(N'dbo.PaymentHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.PaymentHeaders', RESEED, 0);
+    IF OBJECT_ID(N'dbo.SupplierPaymentHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.SupplierPaymentHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceSerials', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceSerials', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceDetails', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceDetails', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceHeaders', RESEED, 0);

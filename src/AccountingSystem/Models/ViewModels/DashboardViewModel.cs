@@ -7,7 +7,9 @@ public class DashboardViewModel
     public decimal SalesToday { get; set; }
     public decimal SalesThisMonth { get; set; }
     public decimal PaymentsThisMonth { get; set; }
+    public decimal SupplierPaymentsThisMonth { get; set; }
     public decimal OutstandingAr { get; set; }
+    public decimal OutstandingAp { get; set; }
     public decimal StockOnHandQty { get; set; }
     public int LowStockItems { get; set; }
     public int OpenPurchaseOrders { get; set; }

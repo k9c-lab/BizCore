@@ -1418,3 +1418,158 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
 - Verification:
   - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreDropdownAndPOLayoutBuild`
   - result: 0 warnings, 0 errors
+
+## 2026-04-24 Lightweight Supplier Payments
+- Added lightweight supplier payment tracking for purchasing without introducing a full AP module.
+- New module: `Supplier Payments`
+  - menu under `Purchasing`
+  - list view
+  - create/post payment
+  - details view
+  - cancel payment
+- New database script:
+  - `database/040_supplier_payments_lightweight.sql`
+  - creates `SupplierPaymentHeaders`
+  - seeds menu/action permissions:
+    - `Purchasing.SupplierPayments.Menu`
+    - `SupplierPayment.View`
+    - `SupplierPayment.Create`
+    - `SupplierPayment.Cancel`
+- New PO-linked behavior:
+  - supplier payments are recorded against one PO at a time
+  - supports partial/multiple payments
+  - PO balance is computed from posted supplier payments
+  - payment entry is allowed for `Approved`, `PartiallyReceived`, and `FullyReceived` POs
+- Purchase Order details page updates:
+  - added `Record Payment` action
+  - added PO payment summary:
+    - PO Total
+    - Paid to Supplier
+    - Outstanding AP
+  - added supplier payment history table on the PO details page
+- Reporting/dashboard updates:
+  - dashboard now shows:
+    - `Supplier Payments`
+    - `Outstanding AP`
+  - reports page now shows:
+    - `Supplier Payments`
+    - `Outstanding AP`
+- Cleanup scripts updated so supplier payments are also removed when resetting demo/handover databases:
+  - `database/100_clear_transaction_data_keep_master.sql`
+  - `database/101_clear_customer_handover_keep_admin.sql`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreSupplierPaymentsBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-24 Financial Overview
+- Added a dedicated `Financial Overview` page for cash collection and supplier payment visibility.
+- Access path:
+  - `Dashboard -> Financial Overview`
+  - controller uses existing `Reports.Menu` / `Reports.View` permissions, so no extra permission script is required for access
+- Scope:
+  - focused on AR / AP only
+  - separated from the broader operational `Reports` page
+- New summary cards:
+  - Revenue / AR Base
+  - Collected AR
+  - Outstanding AR
+  - Purchase / AP Base
+  - Paid AP
+  - Outstanding AP
+- Added donut charts:
+  - receivables mix: collected vs outstanding
+  - payables mix: paid vs outstanding
+- Added drilldown tables:
+  - Outstanding Receivables
+  - Receivables by Customer
+  - Outstanding Payables
+  - Payables by Supplier
+- New files:
+  - `Controllers/FinancialOverviewController.cs`
+  - `Views/FinancialOverview/Index.cshtml`
+  - `Models/ViewModels/FinancialOverviewViewModel.cs`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreFinancialOverviewBuild`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-24 Overview Menu Permissions
+- Refined the left navigation so `Dashboard`, `Financial Overview`, `Inventory Overview`, and `Reports` can be controlled independently by menu permissions.
+- New menu permissions:
+  - `Dashboard.Menu`
+  - `FinancialOverview.Menu`
+  - `InventoryOverview.Menu`
+- Sidebar changes:
+  - renamed the top section label from `Dashboard` to `Overview`
+  - role-based users can now be shown only `Financial Overview` and `Inventory Overview`
+  - `Dashboard` and `Reports` can be hidden without hardcoding menu removal
+- URL protection changes:
+  - `Home` now checks `Dashboard.Menu`
+  - `FinancialOverview` now checks `FinancialOverview.Menu`
+  - `InventoryOverview` now checks `InventoryOverview.Menu`
+- Added script:
+  - `database/041_overview_menu_permissions.sql`
+- Script behavior:
+  - seeds the new overview permissions
+  - grants overview access to operational roles
+  - removes `Reports.Menu` from non-admin overview users so sidebar access stays focused on finance and inventory
+
+## 2026-04-24 Welcome Landing Page
+- Added a new authenticated landing page at `Welcome/Index`.
+- Purpose:
+  - avoid sending users to `Home/Index` when they do not have `Dashboard.Menu`
+  - provide a simple announcement / starting page after login
+  - give quick links into the overviews users can actually access
+- Updated login flow:
+  - successful login now redirects to `Welcome/Index` when there is no local `returnUrl`
+  - default route `/` now points to `Welcome/Index`
+- Updated brand navigation:
+  - sidebar logo now links to `Welcome`
+  - mobile topbar logo now links to `Welcome`
+- Welcome page content:
+  - greets the signed-in user
+  - shows role and branch context
+  - offers quick entry cards for:
+    - `Financial Overview`
+    - `Inventory Overview`
+    - `Dashboard` when the user actually has dashboard access
+
+## 2026-04-24 Announcements
+- Added a permission-driven `Announcements` page for writing and maintaining welcome-page notices.
+- New entity and table:
+  - `Announcements`
+- New menu permission:
+  - `Announcements.Menu`
+- Default grants in `database/042_announcements_menu.sql`:
+  - `Admin`
+  - `Executive`
+- New screen behavior:
+  - users with `Announcements.Menu` can create, edit, enable, and disable announcements
+  - active announcements are shown on the `Welcome` landing page
+  - publish windows are supported with `Publish From` and `Publish To`
+- New files:
+  - `Controllers/AnnouncementsController.cs`
+  - `Views/Announcements/*`
+  - `Models/Entities/Announcement.cs`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreAnnouncementsBuild2`
+  - result: 0 warnings, 0 errors
+
+## 2026-04-24 Current Deployment Notes
+- Recommended cleanup script for first customer implementation:
+  - `database/101_clear_customer_handover_keep_admin.sql`
+- This keeps:
+  - `admin` user
+  - `Branches`
+  - `Permissions`
+  - `RolePermissions`
+- This clears:
+  - all transactions
+  - items
+  - customers
+  - suppliers
+  - salespersons
+  - all users except `admin`
+- Latest database scripts to remember for a fresh environment if not already included in the restored backup:
+  - `040_supplier_payments_lightweight.sql`
+  - `041_overview_menu_permissions.sql`
+  - `042_announcements_menu.sql`

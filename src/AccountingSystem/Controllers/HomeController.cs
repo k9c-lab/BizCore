@@ -28,6 +28,7 @@ public class HomeController : CrudControllerBase
 
         var invoiceQuery = _context.InvoiceHeaders.AsNoTracking().Where(x => x.Status != "Cancelled");
         var paymentQuery = _context.PaymentHeaders.AsNoTracking().Where(x => x.Status == "Posted");
+        var supplierPaymentQuery = _context.SupplierPaymentHeaders.AsNoTracking().Where(x => x.Status == "Posted");
         var stockQuery = _context.StockBalances.AsNoTracking().AsQueryable();
         var poQuery = _context.PurchaseOrderHeaders.AsNoTracking().Where(x => x.Status != "Cancelled");
         var receivingQuery = _context.ReceivingHeaders.AsNoTracking().Where(x => x.Status == "Draft");
@@ -38,6 +39,7 @@ public class HomeController : CrudControllerBase
         {
             invoiceQuery = invoiceQuery.Where(x => x.BranchId == branchId.Value);
             paymentQuery = paymentQuery.Where(x => x.BranchId == branchId.Value);
+            supplierPaymentQuery = supplierPaymentQuery.Where(x => x.BranchId == branchId.Value);
             stockQuery = stockQuery.Where(x => x.BranchId == branchId.Value);
             poQuery = poQuery.Where(x => x.BranchId == branchId.Value || x.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == branchId.Value)));
             receivingQuery = receivingQuery.Where(x => x.BranchId == branchId.Value);
@@ -120,6 +122,22 @@ public class HomeController : CrudControllerBase
             })
             .ToListAsync();
 
+        var apBaseQuery = _context.PurchaseOrderHeaders.AsNoTracking()
+            .Where(x => x.Status == "Approved" || x.Status == "PartiallyReceived" || x.Status == "FullyReceived");
+        if (branchId.HasValue)
+        {
+            apBaseQuery = apBaseQuery.Where(x => x.BranchId == branchId.Value || x.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == branchId.Value)));
+        }
+
+        var poOutstandingRows = await apBaseQuery
+            .Select(x => new
+            {
+                x.PurchaseOrderId,
+                x.TotalAmount,
+                PaidAmount = x.SupplierPayments.Where(p => p.Status == "Posted").Sum(p => (decimal?)p.Amount) ?? 0m
+            })
+            .ToListAsync();
+
         var model = new DashboardViewModel
         {
             BranchName = branchName,
@@ -127,7 +145,9 @@ public class HomeController : CrudControllerBase
             SalesToday = await invoiceQuery.Where(x => x.InvoiceDate == today).SumAsync(x => (decimal?)x.TotalAmount) ?? 0m,
             SalesThisMonth = await invoiceQuery.Where(x => x.InvoiceDate >= monthStart && x.InvoiceDate <= today).SumAsync(x => (decimal?)x.TotalAmount) ?? 0m,
             PaymentsThisMonth = await paymentQuery.Where(x => x.PaymentDate >= monthStart && x.PaymentDate <= today).SumAsync(x => (decimal?)x.Amount) ?? 0m,
+            SupplierPaymentsThisMonth = await supplierPaymentQuery.Where(x => x.PaymentDate >= monthStart && x.PaymentDate <= today).SumAsync(x => (decimal?)x.Amount) ?? 0m,
             OutstandingAr = await invoiceQuery.SumAsync(x => (decimal?)x.BalanceAmount) ?? 0m,
+            OutstandingAp = poOutstandingRows.Sum(x => Math.Max(x.TotalAmount - x.PaidAmount, 0m)),
             StockOnHandQty = await stockQuery.SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m,
             LowStockItems = await stockQuery.CountAsync(x => x.QtyOnHand > 0 && x.QtyOnHand <= 5),
             OpenPurchaseOrders = await poQuery.CountAsync(x => x.Status == "Approved" || x.Status == "PartiallyReceived"),

@@ -1,0 +1,30 @@
+@model BizCore.Models.Entities.Announcement
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" maxlength="150" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+    <div class="col-md-2">
+        <label asp-for="PublishFromDate" class="form-label">Publish From</label>
+        <input asp-for="PublishFromDate" type="date" class="form-control" />
+        <span asp-validation-for="PublishFromDate" class="text-danger"></span>
+    </div>
+    <div class="col-md-2">
+        <label asp-for="PublishToDate" class="form-label">Publish To</label>
+        <input asp-for="PublishToDate" type="date" class="form-control" />
+        <span asp-validation-for="PublishToDate" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Message" class="form-label">Announcement Message</label>
+        <textarea asp-for="Message" rows="8" class="form-control"></textarea>
+        <span asp-validation-for="Message" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label">Active and visible during the publish period</label>
+        </div>
+    </div>
+</div>

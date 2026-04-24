@@ -1,0 +1,123 @@
+@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
+
+<div class="form-section quotation-header-section">
+    <div class="form-section-title">Payment Header</div>
+    <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+            <label asp-for="PaymentNo" class="form-label"></label>
+            <input asp-for="PaymentNo" class="form-control" readonly />
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label asp-for="PaymentDate" class="form-label"></label>
+            <input asp-for="PaymentDate" class="form-control" />
+            <span asp-validation-for="PaymentDate" class="text-danger"></span>
+        </div>
+        <div class="col-lg-6">
+            <label asp-for="PurchaseOrderId" class="form-label"></label>
+            <select asp-for="PurchaseOrderId" asp-items="Model.PurchaseOrderOptions" class="form-select" id="supplierPaymentPurchaseOrder">
+                <option value="">Select purchase order</option>
+            </select>
+            <span asp-validation-for="PurchaseOrderId" class="text-danger"></span>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label asp-for="PaymentMethod" class="form-label"></label>
+            <select asp-for="PaymentMethod" asp-items="Model.PaymentMethodOptions" class="form-select"></select>
+            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label asp-for="ReferenceNo" class="form-label"></label>
+            <input asp-for="ReferenceNo" class="form-control" />
+            <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label asp-for="Amount" class="form-label"></label>
+            <input asp-for="Amount" class="form-control" />
+            <span asp-validation-for="Amount" class="text-danger"></span>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Outstanding Balance</label>
+            <input class="form-control" id="supplierPaymentBalance" value="@Model.BalanceAmount.ToString("N2")" readonly />
+        </div>
+        <div class="col-12">
+            <label asp-for="Remark" class="form-label"></label>
+            <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Remark" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<div class="quotation-party-grid mb-3">
+    <div class="quotation-party-column">
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">Purchase Order Summary</div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">PO No.</span>
+                    <span class="quotation-info-value" id="supplierPaymentPoNo">@(string.IsNullOrWhiteSpace(Model.PurchaseOrderNo) ? "-" : Model.PurchaseOrderNo)</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Supplier</span>
+                    <span class="quotation-info-value" id="supplierPaymentSupplier">@(string.IsNullOrWhiteSpace(Model.SupplierName) ? "-" : Model.SupplierName)</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Branch</span>
+                    <span class="quotation-info-value" id="supplierPaymentBranch">@(string.IsNullOrWhiteSpace(Model.BranchName) ? "-" : Model.BranchName)</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">PO Total</span>
+                    <span class="quotation-info-value" id="supplierPaymentTotal">@Model.PurchaseOrderTotal.ToString("N2")</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Paid to Date</span>
+                    <span class="quotation-info-value" id="supplierPaymentPaid">@Model.PaidAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Open Balance</span>
+                    <span class="quotation-info-value" id="supplierPaymentOpenBalance">@Model.BalanceAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const lookup = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PurchaseOrderLookup, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        const poSelect = document.getElementById('supplierPaymentPurchaseOrder');
+        const amountInput = document.getElementById('@Html.IdFor(x => x.Amount)');
+        const balanceInput = document.getElementById('supplierPaymentBalance');
+        const poNo = document.getElementById('supplierPaymentPoNo');
+        const supplier = document.getElementById('supplierPaymentSupplier');
+        const branch = document.getElementById('supplierPaymentBranch');
+        const total = document.getElementById('supplierPaymentTotal');
+        const paid = document.getElementById('supplierPaymentPaid');
+        const balance = document.getElementById('supplierPaymentOpenBalance');
+
+        function formatNumber(value) {
+            return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function sync() {
+            const selectedId = Number(poSelect?.value || 0);
+            const selected = lookup.find(x => x.purchaseOrderId === selectedId);
+            poNo.textContent = selected ? selected.pONo : '-';
+            supplier.textContent = selected ? selected.supplierName : '-';
+            branch.textContent = selected ? selected.branchName : '-';
+            total.textContent = selected ? formatNumber(selected.totalAmount) : formatNumber(0);
+            paid.textContent = selected ? formatNumber(selected.paidAmount) : formatNumber(0);
+            balance.textContent = selected ? formatNumber(selected.balanceAmount) : formatNumber(0);
+            balanceInput.value = selected ? formatNumber(selected.balanceAmount) : formatNumber(0);
+
+            if (selected && (!amountInput.value || Number(amountInput.value) <= 0)) {
+                amountInput.value = selected.balanceAmount.toFixed(2);
+            }
+        }
+
+        poSelect?.addEventListener('change', sync);
+        sync();
+    })();
+</script>

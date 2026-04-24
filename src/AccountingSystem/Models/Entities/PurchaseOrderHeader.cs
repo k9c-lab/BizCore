@@ -79,4 +79,5 @@ public class PurchaseOrderHeader
     public User? CancelledByUser { get; set; }
     public ICollection<PurchaseOrderDetail> PurchaseOrderDetails { get; set; } = new List<PurchaseOrderDetail>();
     public ICollection<ReceivingHeader> Receivings { get; set; } = new List<ReceivingHeader>();
+    public ICollection<SupplierPaymentHeader> SupplierPayments { get; set; } = new List<SupplierPaymentHeader>();
 }

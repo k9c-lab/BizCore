@@ -211,6 +211,102 @@ a {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.welcome-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.welcome-branch {
+  color: var(--muted-text);
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.welcome-announcements {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.welcome-announcement-card {
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.85rem;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.welcome-announcement-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.welcome-announcement-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.welcome-announcement-message {
+  margin: 0;
+  color: #374151;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.welcome-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.9rem;
+  padding: 0 0.8rem;
+  border-radius: 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.welcome-card-icon.finance {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.welcome-card-icon.inventory {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.welcome-card-icon.dashboard {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
 .app-main {
   min-width: 0;
   flex: 1;
@@ -486,6 +582,11 @@ a {
   gap: 0.35rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.table-actions-multirow {
+  max-width: 18rem;
+  row-gap: 0.4rem;
 }
 
 .list-filter-bar {

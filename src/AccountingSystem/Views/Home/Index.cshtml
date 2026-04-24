@@ -30,12 +30,20 @@
         <p class="quote-summary-value">@Model.PaymentsThisMonth.ToString("N2")</p>
     </div>
     <div class="quote-summary-card">
+        <span class="quote-summary-label">Supplier Payments</span>
+        <p class="quote-summary-value">@Model.SupplierPaymentsThisMonth.ToString("N2")</p>
+    </div>
+    <div class="quote-summary-card">
         <span class="quote-summary-label">Outstanding AR</span>
         <p class="quote-summary-value">@Model.OutstandingAr.ToString("N2")</p>
     </div>
 </div>
 
 <div class="quote-summary-grid mb-3">
+    <div class="quote-summary-card">
+        <span class="quote-summary-label">Outstanding AP</span>
+        <p class="quote-summary-value">@Model.OutstandingAp.ToString("N2")</p>
+    </div>
     <div class="quote-summary-card">
         <span class="quote-summary-label">Stock On Hand Qty</span>
         <p class="quote-summary-value">@Model.StockOnHandQty.ToString("N2")</p>

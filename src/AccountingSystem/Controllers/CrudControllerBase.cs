@@ -12,7 +12,11 @@ public abstract class CrudControllerBase : Controller
     private static readonly Regex TrailingDigitsRegex = new(@"\d+$", RegexOptions.Compiled);
     private static readonly IReadOnlyDictionary<string, string> ControllerMenuPermissions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
+        ["Home"] = "Dashboard.Menu",
         ["Reports"] = "Reports.Menu",
+        ["FinancialOverview"] = "FinancialOverview.Menu",
+        ["InventoryOverview"] = "InventoryOverview.Menu",
+        ["Announcements"] = "Announcements.Menu",
         ["Quotations"] = "Sales.Quotations.Menu",
         ["Invoices"] = "Sales.Invoices.Menu",
         ["Payments"] = "Sales.Payments.Menu",
@@ -20,6 +24,7 @@ public abstract class CrudControllerBase : Controller
         ["PurchaseRequests"] = "Purchasing.PR.Menu",
         ["PurchaseOrders"] = "Purchasing.PO.Menu",
         ["Receivings"] = "Purchasing.Receiving.Menu",
+        ["SupplierPayments"] = "Purchasing.SupplierPayments.Menu",
         ["StockInquiry"] = "Inventory.StockInquiry.Menu",
         ["SerialInquiry"] = "Inventory.SerialInquiry.Menu",
         ["StockLedger"] = "Inventory.StockLedger.Menu",
@@ -162,6 +167,8 @@ public abstract class CrudControllerBase : Controller
                 User.IsInRole("CentralAdmin") || User.IsInRole("Executive") || User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
             "Receiving.Create" or "Receiving.Edit" or "Receiving.Post" or "Receiving.Cancel" =>
                 User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
+            "SupplierPayment.View" or "SupplierPayment.Create" or "SupplierPayment.Cancel" =>
+                User.IsInRole("CentralAdmin"),
             "Reports.View" =>
                 User.IsInRole("CentralAdmin") || User.IsInRole("BranchAdmin") || User.IsInRole("Sales") || User.IsInRole("Warehouse"),
             _ => false

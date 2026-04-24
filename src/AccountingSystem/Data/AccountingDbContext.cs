@@ -12,6 +12,7 @@ public class AccountingDbContext : DbContext
 
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<Customer> Customers => Set<Customer>();
@@ -35,6 +36,7 @@ public class AccountingDbContext : DbContext
     public DbSet<PaymentHeader> PaymentHeaders => Set<PaymentHeader>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<ReceiptHeader> ReceiptHeaders => Set<ReceiptHeader>();
+    public DbSet<SupplierPaymentHeader> SupplierPaymentHeaders => Set<SupplierPaymentHeader>();
     public DbSet<PurchaseRequestHeader> PurchaseRequestHeaders => Set<PurchaseRequestHeader>();
     public DbSet<PurchaseRequestDetail> PurchaseRequestDetails => Set<PurchaseRequestDetail>();
     public DbSet<PurchaseOrderHeader> PurchaseOrderHeaders => Set<PurchaseOrderHeader>();
@@ -61,6 +63,21 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Branch)
                 .WithMany()
                 .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Announcement>(entity =>
+        {
+            entity.HasKey(x => x.AnnouncementId);
+            entity.Property(x => x.Title).HasMaxLength(150);
+            entity.Property(x => x.Message).HasMaxLength(4000);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -537,6 +554,42 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.IssuedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.IssuedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupplierPaymentHeader>(entity =>
+        {
+            entity.HasKey(x => x.SupplierPaymentId);
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.PaymentNo).IsUnique();
+            entity.HasOne(x => x.PurchaseOrderHeader)
+                .WithMany(x => x.SupplierPayments)
+                .HasForeignKey(x => x.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Supplier)
+                .WithMany()
+                .HasForeignKey(x => x.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PostedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.PostedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CancelledByUser)
                 .WithMany()

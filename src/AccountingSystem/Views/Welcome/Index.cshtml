@@ -1,0 +1,127 @@
+@model BizCore.Models.ViewModels.WelcomeViewModel
+
+@{
+    ViewData["Title"] = "Welcome";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Welcome</div>
+        <h1 class="page-title">Ready to work in BizCore</h1>
+        <p class="page-subtitle">Start from the overview that fits your role, then move into the day-to-day workflow from the sidebar.</p>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="welcome-hero">
+            <div>
+                <h2 class="section-title mb-2">Hello, @Model.DisplayName</h2>
+                <p class="section-subtitle mb-0">
+                    Role: <strong>@Model.RoleName</strong>
+                    @if (!string.IsNullOrWhiteSpace(Model.BranchName))
+                    {
+                        <span class="welcome-branch">| Branch: <strong>@Model.BranchName</strong></span>
+                    }
+                </p>
+            </div>
+            <div class="welcome-badge">Overview Hub</div>
+        </div>
+    </div>
+</div>
+
+<div class="welcome-grid">
+    @if (Model.CanUseFinancialOverview)
+    {
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="welcome-card-icon finance">THB</div>
+                <h2 class="section-title">Financial Overview</h2>
+                <p class="section-subtitle">See revenue, collections, supplier payments, and outstanding balances in one place.</p>
+                <div class="page-actions">
+                    <a asp-controller="FinancialOverview" asp-action="Index" class="btn btn-primary">Open Financial Overview</a>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.CanUseInventoryOverview)
+    {
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="welcome-card-icon inventory">INV</div>
+                <h2 class="section-title">Inventory Overview</h2>
+                <p class="section-subtitle">Check stock on hand, low-stock items, movement summary, and branch-level inventory visibility.</p>
+                <div class="page-actions">
+                    <a asp-controller="InventoryOverview" asp-action="Index" class="btn btn-primary">Open Inventory Overview</a>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.CanUseDashboard)
+    {
+        <div class="card content-card h-100">
+            <div class="card-body">
+                <div class="welcome-card-icon dashboard">DB</div>
+                <h2 class="section-title">Dashboard</h2>
+                <p class="section-subtitle">Open the operational dashboard for daily activity, stock attention items, and quick branch-level signals.</p>
+                <div class="page-actions">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Open Dashboard</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.Announcements.Any())
+{
+    <div class="card content-card mt-3">
+        <div class="card-body">
+            <div class="table-card-header px-0 pt-0">
+                <div>
+                    <h2 class="section-title">Announcements</h2>
+                    <p class="section-subtitle">Current notices published for users on the welcome page.</p>
+                </div>
+                @if (Model.CanUseAnnouncements)
+                {
+                    <div class="page-actions">
+                        <a asp-controller="Announcements" asp-action="Index" class="btn btn-outline-secondary">Manage Announcements</a>
+                    </div>
+                }
+            </div>
+
+            <div class="welcome-announcements">
+                @foreach (var announcement in Model.Announcements)
+                {
+                    <article class="welcome-announcement-card">
+                        <div class="welcome-announcement-head">
+                            <div>
+                                <h3 class="welcome-announcement-title">@announcement.Title</h3>
+                                <div class="table-meta">@announcement.DateRangeLabel</div>
+                            </div>
+                            @await Html.PartialAsync("_StatusPill", announcement.StatusLabel)
+                        </div>
+                        <p class="welcome-announcement-message">@announcement.Message</p>
+                    </article>
+                }
+            </div>
+        </div>
+    </div>
+}
+else if (Model.CanUseAnnouncements)
+{
+    <div class="card content-card mt-3">
+        <div class="card-body">
+            <div class="table-card-header px-0 pt-0">
+                <div>
+                    <h2 class="section-title">Announcements</h2>
+                    <p class="section-subtitle">There are no active announcements yet.</p>
+                </div>
+                <div class="page-actions">
+                    <a asp-controller="Announcements" asp-action="Index" class="btn btn-outline-secondary">Manage Announcements</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}

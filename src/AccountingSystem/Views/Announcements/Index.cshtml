@@ -1,0 +1,120 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Announcement>
+
+@{
+    ViewData["Title"] = "Announcements";
+    var search = ViewData["Search"]?.ToString();
+    var status = ViewData["Status"]?.ToString();
+    var today = DateTime.Today;
+}
+
+@if (TempData["AnnouncementNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Overview Module</div>
+        <h1 class="page-title">Announcements</h1>
+        <p class="page-subtitle">Manage welcome-page announcements for users across the system.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary">Create Announcement</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Title or message" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Active" selected="@(status == "Active")">Active</option>
+                    <option value="Scheduled" selected="@(status == "Scheduled")">Scheduled</option>
+                    <option value="Expired" selected="@(status == "Expired")">Expired</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card content-card table-card mt-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Announcement Register</h2>
+            <p class="section-subtitle">Announcements available for welcome-page publishing.</p>
+        </div>
+        <div class="table-meta">@Model.TotalCount row(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Publish Window</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var announcement in Model.Items)
+                {
+                    var messagePreview = announcement.Message ?? string.Empty;
+                    var statusLabel = !announcement.IsActive
+                        ? "Inactive"
+                        : announcement.PublishFromDate.HasValue && announcement.PublishFromDate.Value.Date > today
+                            ? "Scheduled"
+                            : announcement.PublishToDate.HasValue && announcement.PublishToDate.Value.Date < today
+                                ? "Expired"
+                                : "Active";
+
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@announcement.Title</div>
+                            <div class="table-meta">@(messagePreview.Length > 110 ? messagePreview[..110] + "..." : messagePreview)</div>
+                        </td>
+                        <td>
+                            <div>@(announcement.PublishFromDate?.ToString("dd MMM yyyy") ?? "Immediate")</div>
+                            <div class="table-meta">to @(announcement.PublishToDate?.ToString("dd MMM yyyy") ?? "Until changed")</div>
+                        </td>
+                        <td>@await Html.PartialAsync("_StatusPill", statusLabel)</td>
+                        <td>
+                            <div>@(announcement.UpdatedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? announcement.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm"))</div>
+                            <div class="table-meta">@((announcement.UpdatedByUser?.DisplayName ?? announcement.CreatedByUser?.DisplayName) ?? "-")</div>
+                        </td>
+                        <td class="text-end">
+                            <div class="table-actions table-actions-multirow justify-content-end">
+                                <a asp-action="Edit" asp-route-id="@announcement.AnnouncementId" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <form asp-action="ToggleStatus" asp-route-id="@announcement.AnnouncementId" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                        @(announcement.IsActive ? "Disable" : "Enable")
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="5" class="table-empty">No announcements found.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pager" model="Model.Pagination" />

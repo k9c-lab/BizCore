@@ -37,6 +37,9 @@ public class ReportsController : CrudControllerBase
         var paymentQuery = _context.PaymentHeaders
             .AsNoTracking()
             .Where(x => x.Status == "Posted" && x.PaymentDate >= from && x.PaymentDate <= to);
+        var supplierPaymentQuery = _context.SupplierPaymentHeaders
+            .AsNoTracking()
+            .Where(x => x.Status == "Posted" && x.PaymentDate >= from && x.PaymentDate <= to);
         var stockQuery = _context.StockBalances
             .AsNoTracking()
             .Include(x => x.Item)
@@ -56,6 +59,7 @@ public class ReportsController : CrudControllerBase
         {
             invoiceQuery = invoiceQuery.Where(x => x.BranchId == effectiveBranchId.Value);
             paymentQuery = paymentQuery.Where(x => x.BranchId == effectiveBranchId.Value);
+            supplierPaymentQuery = supplierPaymentQuery.Where(x => x.BranchId == effectiveBranchId.Value);
             stockQuery = stockQuery.Where(x => x.BranchId == effectiveBranchId.Value);
             movementQuery = movementQuery.Where(x => x.FromBranchId == effectiveBranchId.Value || x.ToBranchId == effectiveBranchId.Value);
             customerClaimQuery = customerClaimQuery.Where(x => x.BranchId == effectiveBranchId.Value);
@@ -63,6 +67,8 @@ public class ReportsController : CrudControllerBase
         }
 
         var salesTotal = await invoiceQuery.SumAsync(x => (decimal?)x.TotalAmount) ?? 0m;
+        var collectedAr = await paymentQuery.SumAsync(x => (decimal?)x.Amount) ?? 0m;
+        var paidAp = await supplierPaymentQuery.SumAsync(x => (decimal?)x.Amount) ?? 0m;
         var salesRows = await invoiceQuery
             .GroupBy(x => new
             {
@@ -81,6 +87,40 @@ public class ReportsController : CrudControllerBase
             .OrderByDescending(x => x.Date)
             .ThenBy(x => x.BranchName)
             .Take(30)
+            .ToListAsync();
+
+        var receivableRows = await invoiceQuery
+            .Where(x => x.BalanceAmount > 0)
+            .Select(x => new ReceivableDocumentRowViewModel
+            {
+                InvoiceId = x.InvoiceId,
+                InvoiceNo = x.InvoiceNo,
+                InvoiceDate = x.InvoiceDate,
+                CustomerName = x.Customer != null ? x.Customer.CustomerName : "-",
+                BranchName = x.Branch != null ? x.Branch.BranchName : "No Branch",
+                TotalAmount = x.TotalAmount,
+                PaidAmount = x.PaidAmount,
+                BalanceAmount = x.BalanceAmount,
+                Status = x.Status
+            })
+            .OrderByDescending(x => x.BalanceAmount)
+            .ThenByDescending(x => x.InvoiceDate)
+            .Take(20)
+            .ToListAsync();
+
+        var receivableCustomerRows = await invoiceQuery
+            .Where(x => x.BalanceAmount > 0)
+            .GroupBy(x => x.Customer != null ? x.Customer.CustomerName : "No Customer")
+            .Select(x => new PartyBalanceRowViewModel
+            {
+                PartyName = x.Key,
+                DocumentCount = x.Count(),
+                TotalAmount = x.Sum(i => i.TotalAmount),
+                PaidAmount = x.Sum(i => i.PaidAmount),
+                BalanceAmount = x.Sum(i => i.BalanceAmount)
+            })
+            .OrderByDescending(x => x.BalanceAmount)
+            .Take(15)
             .ToListAsync();
 
         var stockRows = await stockQuery
@@ -130,10 +170,69 @@ public class ReportsController : CrudControllerBase
             .ToListAsync();
 
         var arQuery = _context.InvoiceHeaders.AsNoTracking().Where(x => x.Status != "Cancelled");
+        var apQuery = _context.PurchaseOrderHeaders.AsNoTracking()
+            .Where(x => x.Status == "Approved" || x.Status == "PartiallyReceived" || x.Status == "FullyReceived");
         if (effectiveBranchId.HasValue)
         {
             arQuery = arQuery.Where(x => x.BranchId == effectiveBranchId.Value);
+            apQuery = apQuery.Where(x => x.BranchId == effectiveBranchId.Value || x.PurchaseOrderDetails.Any(d => d.PurchaseOrderAllocations.Any(a => a.BranchId == effectiveBranchId.Value)));
         }
+
+        var outstandingApRows = await apQuery
+            .Select(x => new
+            {
+                x.TotalAmount,
+                PaidAmount = x.SupplierPayments.Where(p => p.Status == "Posted").Sum(p => (decimal?)p.Amount) ?? 0m
+            })
+            .ToListAsync();
+
+        var payableBaseRows = await apQuery
+            .Select(x => new
+            {
+                x.PurchaseOrderId,
+                x.PONo,
+                x.PODate,
+                SupplierName = x.Supplier != null ? x.Supplier.SupplierName : "-",
+                BranchName = x.Branch != null ? x.Branch.BranchName : "No Branch",
+                x.TotalAmount,
+                PaidAmount = x.SupplierPayments.Where(p => p.Status == "Posted").Sum(p => (decimal?)p.Amount) ?? 0m,
+                x.Status
+            })
+            .ToListAsync();
+
+        var payableRows = payableBaseRows
+            .Select(x => new PayableDocumentRowViewModel
+            {
+                PurchaseOrderId = x.PurchaseOrderId,
+                PONo = x.PONo,
+                PODate = x.PODate,
+                SupplierName = x.SupplierName,
+                BranchName = x.BranchName,
+                TotalAmount = x.TotalAmount,
+                PaidAmount = x.PaidAmount,
+                BalanceAmount = Math.Max(x.TotalAmount - x.PaidAmount, 0m),
+                Status = x.Status
+            })
+            .Where(x => x.BalanceAmount > 0m)
+            .OrderByDescending(x => x.BalanceAmount)
+            .ThenByDescending(x => x.PODate)
+            .Take(20)
+            .ToList();
+
+        var payableSupplierRows = payableRows
+            .GroupBy(x => x.SupplierName)
+            .Select(x => new PartyBalanceRowViewModel
+            {
+                PartyName = x.Key,
+                DocumentCount = x.Count(),
+                TotalAmount = x.Sum(i => i.TotalAmount),
+                PaidAmount = x.Sum(i => i.PaidAmount),
+                BalanceAmount = x.Sum(i => i.BalanceAmount)
+            })
+            .Where(x => x.BalanceAmount > 0m)
+            .OrderByDescending(x => x.BalanceAmount)
+            .Take(15)
+            .ToList();
 
         var model = new ReportsPageViewModel
         {
@@ -144,10 +243,18 @@ public class ReportsController : CrudControllerBase
             CanAccessAllBranches = canAccessAllBranches,
             BranchOptions = await BuildBranchOptionsAsync(effectiveBranchId, canAccessAllBranches),
             SalesTotal = salesTotal,
-            PaymentsTotal = await paymentQuery.SumAsync(x => (decimal?)x.Amount) ?? 0m,
+            PaymentsTotal = collectedAr,
+            SupplierPaymentsTotal = paidAp,
             OutstandingAr = await arQuery.SumAsync(x => (decimal?)x.BalanceAmount) ?? 0m,
+            OutstandingAp = outstandingApRows.Sum(x => Math.Max(x.TotalAmount - x.PaidAmount, 0m)),
+            CollectedAr = collectedAr,
+            PaidAp = paidAp,
             StockQty = await stockQuery.SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m,
             SalesRows = salesRows,
+            ReceivableRows = receivableRows,
+            ReceivableCustomerRows = receivableCustomerRows,
+            PayableRows = payableRows,
+            PayableSupplierRows = payableSupplierRows,
             StockRows = stockRows,
             MovementRows = movementRows,
             ClaimRows = customerClaimRows.Concat(supplierClaimRows)

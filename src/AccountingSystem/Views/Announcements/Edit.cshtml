@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.Announcement
+
+@{
+    ViewData["Title"] = "Edit Announcement";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Overview Module</div>
+        <h1 class="page-title">Edit Announcement</h1>
+        <p class="page-subtitle">Update wording, publish window, or visibility for this welcome-page notice.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" method="post" class="form-shell">
+            @Html.AntiForgeryToken()
+            <input asp-for="AnnouncementId" type="hidden" />
+            <div asp-validation-summary="All" class="form-alert"></div>
+            @await Html.PartialAsync("_Form", Model)
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

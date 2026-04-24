@@ -16,6 +16,7 @@
     var canCancelPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Cancel") || oldCentralAdminFallback;
     var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
     var canReceivePermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Create") || User.HasClaim("Permission", "PO.Receive") || oldReceivingOperatorFallback;
+    var canSupplierPaymentPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "SupplierPayment.Create") || oldCentralAdminFallback;
     var openReceivingBranches = Model.PurchaseOrderDetails
         .SelectMany(x => x.PurchaseOrderAllocations)
         .Where(x => x.AllocatedQty > x.ReceivedQty && (canAccessAllBranches || x.BranchId == currentBranchId))
@@ -99,6 +100,22 @@
             : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
                 ? "Cancel PO is blocked because receiving already exists."
                 : $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {Model.Status}.";
+    var postedSupplierPayments = Model.SupplierPayments.Where(x => x.Status == "Posted").OrderByDescending(x => x.PaymentDate).ThenByDescending(x => x.SupplierPaymentId).ToList();
+    var poPaidAmount = postedSupplierPayments.Sum(x => x.Amount);
+    var poBalanceAmount = Math.Max(Model.TotalAmount - poPaidAmount, 0m);
+    var paymentStatus = poPaidAmount <= 0m
+        ? "Unpaid"
+        : poBalanceAmount <= 0m
+            ? "Paid"
+            : "Partially Paid";
+    var canRecordPayment = canSupplierPaymentPermission && Model.Status is "Approved" or "PartiallyReceived" or "FullyReceived" && poBalanceAmount > 0m;
+    var supplierPaymentBlockedReason = canRecordPayment
+        ? string.Empty
+        : !canSupplierPaymentPermission
+            ? "You do not have permission to record supplier payments."
+            : Model.Status is not ("Approved" or "PartiallyReceived" or "FullyReceived")
+                ? $"Supplier payment is available only for Approved or received purchase orders. Current status is {Model.Status}."
+                : "This purchase order has already been fully paid.";
 }
 
 @if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -180,12 +197,20 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">Receive Goods</button>
         }
+        @if (canRecordPayment)
+        {
+            <a asp-controller="SupplierPayments" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" class="btn btn-outline-primary">Record Payment</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@supplierPaymentBlockedReason">Record Payment</button>
+        }
         <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.PurchaseOrderId })', '_blank', 'noopener');">Print</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
 </div>
 
-@if (!canEdit || !canSubmit || !canApprove || !canReject || !canCancel || !canReceive)
+@if (!canEdit || !canSubmit || !canApprove || !canReject || !canCancel || !canReceive || !canRecordPayment)
 {
     <div class="workflow-info mb-3">
         @if (!canEdit)
@@ -211,6 +236,10 @@
         @if (!canReceive)
         {
             <div>@receiveBlockedReason</div>
+        }
+        @if (!canRecordPayment)
+        {
+            <div>@supplierPaymentBlockedReason</div>
         }
     </div>
 }
@@ -306,6 +335,25 @@
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Address) ? "-" : Model.Supplier!.Address)</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="quote-summary-grid mb-3">
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">PO Total</span>
+                    <p class="quote-summary-value">@Model.TotalAmount.ToString("N2")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">Paid to Supplier</span>
+                    <p class="quote-summary-value">@poPaidAmount.ToString("N2")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">Outstanding AP</span>
+                    <p class="quote-summary-value">@poBalanceAmount.ToString("N2")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">Payment Status</span>
+                    <p class="quote-summary-value">@await Html.PartialAsync("_StatusPill", paymentStatus)</p>
                 </div>
             </div>
 
@@ -443,6 +491,52 @@
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.RejectReason) ? "-" : Model.RejectReason)</span>
                     </div>
                 }
+            </div>
+
+            <div class="form-section">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                    <div>
+                        <div class="form-section-title mb-1">Supplier Payments</div>
+                        <div class="table-meta">Lightweight payment tracking for this purchase order.</div>
+                    </div>
+                    <div class="table-meta">@postedSupplierPayments.Count posted payment(s)</div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Payment No.</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th class="text-end">Amount</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var payment in Model.SupplierPayments.OrderByDescending(x => x.PaymentDate).ThenByDescending(x => x.SupplierPaymentId))
+                        {
+                            <tr>
+                                <td><span class="code-chip">@payment.PaymentNo</span></td>
+                                <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                                <td>@payment.PaymentMethod</td>
+                                <td>@(string.IsNullOrWhiteSpace(payment.ReferenceNo) ? "-" : payment.ReferenceNo)</td>
+                                <td class="text-end">@payment.Amount.ToString("N2")</td>
+                                <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
+                                <td class="text-end">
+                                    <a asp-controller="SupplierPayments" asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.SupplierPayments.Any())
+                        {
+                            <tr><td colspan="7" class="table-empty">No supplier payments recorded yet.</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

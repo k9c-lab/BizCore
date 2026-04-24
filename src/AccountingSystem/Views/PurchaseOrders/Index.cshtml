@@ -17,6 +17,7 @@
     var canCancelPO = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Cancel") || oldCentralAdminFallback;
     var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
     var canReceiveGoods = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Create") || User.HasClaim("Permission", "PO.Receive") || oldReceivingOperatorFallback;
+    var canRecordSupplierPayment = User.IsInRole("Admin") || User.HasClaim("Permission", "SupplierPayment.Create") || oldCentralAdminFallback;
 }
 
 <div class="page-header">
@@ -91,6 +92,7 @@
                         <th>Supplier</th>
                         <th>Branch</th>
                         <th>Total</th>
+                        <th>Payment</th>
                         <th>Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -102,6 +104,20 @@
                     {
                         var hasReceiving = po.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
                         var hasOpenLines = po.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
+                        var postedSupplierPayments = po.SupplierPayments.Where(x => x.Status == "Posted").ToList();
+                        var poPaidAmount = postedSupplierPayments.Sum(x => x.Amount);
+                        var poBalanceAmount = Math.Max(po.TotalAmount - poPaidAmount, 0m);
+                        var paymentStatus = poPaidAmount <= 0m
+                            ? "Unpaid"
+                            : poBalanceAmount <= 0m
+                                ? "Paid"
+                                : "Partially Paid";
+                        var canPay = canRecordSupplierPayment && po.Status is "Approved" or "PartiallyReceived" or "FullyReceived" && poBalanceAmount > 0m;
+                        var payBlockedReason = !canRecordSupplierPayment
+                            ? "You do not have permission to record supplier payments."
+                            : po.Status is not ("Approved" or "PartiallyReceived" or "FullyReceived")
+                                ? $"Pay is available only for Approved or received purchase orders. Current status is {po.Status}."
+                                : "This purchase order has already been fully paid.";
                         var canSubmit = canSubmitPO && (po.Status is "Draft" or "Rejected") && po.PurchaseOrderDetails.Any();
                         var submitBlockedReason = po.Status is "Draft" or "Rejected"
                             ? canSubmitPO
@@ -139,12 +155,20 @@
                         <tr>
                             <td><span class="code-chip">@po.PONo</span></td>
                             <td>@po.PODate.ToString("dd MMM yyyy")</td>
-                            <td class="fw-semibold">@po.Supplier?.SupplierName</td>
+                            <td>
+                                <div class="fw-semibold">@po.Supplier?.SupplierName</div>
+                                <div class="table-meta">Payment: @paymentStatus</div>
+                            </td>
                             <td>@(po.Branch?.BranchName ?? "-")</td>
-                            <td>@po.TotalAmount.ToString("N2")</td>
+                            <td>
+                                <div>@po.TotalAmount.ToString("N2")</div>
+                                <div class="table-meta">Paid @poPaidAmount.ToString("N2")</div>
+                                <div class="table-meta">Balance @poBalanceAmount.ToString("N2")</div>
+                            </td>
+                            <td>@await Html.PartialAsync("_StatusPill", paymentStatus)</td>
                             <td>@await Html.PartialAsync("_StatusPill", po.Status)</td>
                             <td class="text-end">
-                                <div class="table-actions">
+                                <div class="table-actions table-actions-multirow">
                                     <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary">View</a>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = po.PurchaseOrderId })', '_blank', 'noopener');">Print</button>
                                     @if (canSubmit)
@@ -189,6 +213,14 @@
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@receiveBlockedReason">Receive</button>
                                     }
+                                    @if (canPay)
+                                    {
+                                        <a asp-controller="SupplierPayments" asp-action="Create" asp-route-purchaseOrderId="@po.PurchaseOrderId" class="btn btn-sm btn-outline-primary">Pay</a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@payBlockedReason">Pay</button>
+                                    }
                                     @if (canCancel)
                                     {
                                         <form asp-action="Cancel" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline">
@@ -208,7 +240,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="7" class="table-empty">No purchase orders yet. Start with a supplier PO.</td></tr>
+                    <tr><td colspan="8" class="table-empty">No purchase orders yet. Start with a supplier PO.</td></tr>
                 }
                 </tbody>
             </table>

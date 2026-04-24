@@ -1,0 +1,119 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SupplierPaymentHeader>
+
+@{
+    ViewData["Title"] = "Supplier Payments";
+    var search = ViewData["Search"]?.ToString();
+    var status = ViewData["Status"]?.ToString();
+    var dateFrom = ViewData["DateFrom"]?.ToString();
+    var dateTo = ViewData["DateTo"]?.ToString();
+}
+
+@if (TempData["SupplierPaymentNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Supplier Payments</h1>
+        <p class="page-subtitle">Track supplier payment postings against approved purchase orders.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary">Record Payment</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Payment no., PO no., reference, or supplier" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Posted" selected="@(status == "Posted")">Posted</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">From</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">To</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card content-card table-card mt-3">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Payment Register</h2>
+            <p class="section-subtitle">Posted and cancelled supplier payment history.</p>
+        </div>
+        <div class="table-meta">@Model.TotalCount row(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Payment No.</th>
+                        <th>Date</th>
+                        <th>PO No.</th>
+                        <th>Supplier</th>
+                        <th>Branch</th>
+                        <th class="text-end">Amount</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var payment in Model.Items)
+                {
+                    <tr>
+                        <td><span class="code-chip">@payment.PaymentNo</span></td>
+                        <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                        <td>
+                            @if (payment.PurchaseOrderHeader is not null)
+                            {
+                                <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@payment.PurchaseOrderId">@payment.PurchaseOrderHeader.PONo</a>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@(payment.Supplier?.SupplierName ?? "-")</div>
+                            <div class="table-meta">@(payment.Supplier?.SupplierCode ?? "-")</div>
+                        </td>
+                        <td>@(payment.Branch?.BranchName ?? "-")</td>
+                        <td class="text-end">@payment.Amount.ToString("N2")</td>
+                        <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Items.Any())
+                {
+                    <tr><td colspan="8" class="table-empty">No supplier payments found.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<partial name="_Pager" model="Model.Pagination" />

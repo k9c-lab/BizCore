@@ -44,6 +44,7 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.UpdatedByUser)
             .Include(x => x.ApprovedByUser)
             .Include(x => x.CancelledByUser)
+            .Include(x => x.SupplierPayments)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.PurchaseOrderAllocations)
             .AsQueryable();
@@ -406,6 +407,7 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.ApprovedByUser)
             .Include(x => x.RejectedByUser)
             .Include(x => x.CancelledByUser)
+            .Include(x => x.SupplierPayments)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.PurchaseOrderDetails)
@@ -443,6 +445,7 @@ public class PurchaseOrdersController : CrudControllerBase
             .Include(x => x.ApprovedByUser)
             .Include(x => x.RejectedByUser)
             .Include(x => x.CancelledByUser)
+            .Include(x => x.SupplierPayments)
             .Include(x => x.PurchaseOrderDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.PurchaseOrderDetails)

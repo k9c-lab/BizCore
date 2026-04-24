@@ -1,0 +1,49 @@
+@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
+
+@{
+    ViewData["Title"] = "Record Supplier Payment";
+    var hasPurchaseOrderContext = Model.PurchaseOrderId.HasValue;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Purchasing Module</div>
+        <h1 class="page-title">Record Supplier Payment</h1>
+        <p class="page-subtitle">Post a lightweight supplier payment against one approved purchase order.</p>
+    </div>
+    <div class="page-actions">
+        @if (hasPurchaseOrderContext)
+        {
+            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">Back to PO</a>
+        }
+        else
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        }
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" class="form-shell">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="form-alert"></div>
+            @await Html.PartialAsync("_Form", Model)
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Post Payment</button>
+                @if (hasPurchaseOrderContext)
+                {
+                    <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">Back to PO</a>
+                }
+                else
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
