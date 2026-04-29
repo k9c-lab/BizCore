@@ -7,6 +7,7 @@
     var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
     var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+    var netAfterDiscount = Model.Subtotal - appliedDiscount;
     var headerDiscountDisplay = Model.DiscountMode == "Header"
         ? Model.HeaderDiscountType == "Percent"
             ? $"{Model.HeaderDiscountPercent:N2}% ({Model.HeaderDiscountAmount:N2})"
@@ -95,7 +96,7 @@
             white-space: pre-line;
         }
         .document-block {
-            min-width: 280px;
+            min-width: 300px;
             text-align: right;
         }
         .document-title-th {
@@ -106,7 +107,7 @@
         }
         .document-title-en {
             margin: 2px 0 12px;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             color: #1f2937;
             letter-spacing: 0.04em;
@@ -121,6 +122,9 @@
             color: #111827;
         }
         .document-meta td:first-child {
+            white-space: nowrap;
+        }
+        .meta-value-nowrap {
             white-space: nowrap;
         }
         .salesperson-meta {
@@ -193,7 +197,7 @@
         .line-no { width: 52px; text-align: center; }
         .line-description { width: auto; white-space: pre-wrap; word-break: break-word; }
         .line-qty { width: 82px; text-align: right; }
-        .line-unit-price, .line-total { width: 120px; text-align: right; }
+        .line-unit-price, .line-net-price, .line-total { width: 100px; text-align: right; }
         .summary-wrap {
             display: flex;
             justify-content: space-between;
@@ -291,7 +295,7 @@
                     <h2 class="document-title-th">ใบเสนอราคา</h2>
                     <div class="document-title-en">Quotation</div>
                     <table class="document-meta">
-                        <tr><td class="meta-label">เลขที่เอกสาร / Document No.</td><td>@Model.QuotationNumber</td></tr>
+                        <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.QuotationNumber</td></tr>
                         <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.QuotationDate.ToString("dd/MM/yyyy")</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
                         <tr><td class="meta-label">วันหมดอายุ / Expiry Date</td><td>@(Model.ExpiryDate?.ToString("dd/MM/yyyy") ?? "No expiry")</td></tr>
@@ -330,6 +334,7 @@
                             <th class="line-description"><span class="bi-label-th">รายการ</span><span class="bi-label-en">Description</span></th>
                             <th class="line-qty"><span class="bi-label-th">จำนวน</span><span class="bi-label-en">Qty</span></th>
                             <th class="line-unit-price"><span class="bi-label-th">ราคาต่อหน่วย</span><span class="bi-label-en">Unit Price</span></th>
+                            <th class="line-net-price"><span class="bi-label-th">ราคาหลังส่วนลด</span><span class="bi-label-en">Net Price</span></th>
                             <th class="line-total"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
                         </tr>
                     </thead>
@@ -344,6 +349,7 @@
                             <td class="line-description">@description</td>
                             <td class="line-qty">@line.Quantity.ToString("N2")</td>
                             <td class="line-unit-price">@line.UnitPrice.ToString("N2")</td>
+                            <td class="line-net-price">@(line.Quantity > 0 ? (line.LineTotal / line.Quantity).ToString("N2") : "0.00")</td>
                             <td class="line-total">@line.LineTotal.ToString("N2")</td>
                         </tr>
                     }
@@ -355,6 +361,7 @@
                     <table class="summary-table">
                         <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
                         <tr><td class="summary-label">ส่วนลด / Discount</td><td>@(Model.DiscountMode == "Header" ? headerDiscountDisplay : appliedDiscount.ToString("N2"))</td></tr>
+                        <tr><td class="summary-label">ยอดสุทธิหลังส่วนลด / Net After Discount</td><td>@netAfterDiscount.ToString("N2")</td></tr>
                         <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
                         <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
                     </table>

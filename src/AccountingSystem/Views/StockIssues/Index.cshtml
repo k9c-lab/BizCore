@@ -109,9 +109,24 @@
                                     <a asp-action="Details" asp-route-id="@issue.StockIssueId" class="btn btn-sm btn-outline-secondary">View</a>
                                     @if (canPost)
                                     {
-                                        <form asp-action="Post" asp-route-id="@issue.StockIssueId" method="post" class="d-inline">
+                                        <form asp-action="Post" asp-route-id="@issue.StockIssueId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Post</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="postStockIssueConfirm_@issue.StockIssueId"
+                                                        aria-expanded="false">
+                                                    Post
+                                                </button>
+                                                <div class="confirm-popover" id="postStockIssueConfirm_@issue.StockIssueId" hidden>
+                                                    <div class="confirm-popover-title">Post this stock issue?</div>
+                                                    <div class="confirm-popover-text">This will deduct stock from the selected branch and finalize the issue document.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     else

@@ -19,6 +19,7 @@ builder.Services.Configure<CompanyProfileSettings>(builder.Configuration.GetSect
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<PasswordHashService>();
+builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<PurchaseWorkflowEmailService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

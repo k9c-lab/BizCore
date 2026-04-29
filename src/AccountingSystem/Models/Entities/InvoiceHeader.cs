@@ -47,6 +47,10 @@ public class InvoiceHeader
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal BalanceAmount { get; set; }
+    public decimal? ReferenceLineSubtotal { get; set; }
+    public decimal? ReferenceLineDiscountAmount { get; set; }
+    public decimal? ReferenceLineVatAmount { get; set; }
+    public decimal? ReferenceLineTotalAmount { get; set; }
 
     [Required]
     [StringLength(20)]

@@ -1,3 +1,4 @@
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseRequestHeader>
 
 @{
@@ -6,14 +7,11 @@
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
-    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
-    var oldPrOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
-    var oldCentralAdminFallback = !hasPermissionClaims && User.IsInRole("CentralAdmin");
-    var canCreatePR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Create") || oldPrOperatorFallback;
-    var canSubmitPR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Submit") || oldPrOperatorFallback;
-    var canApprovePR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Approve") || oldCentralAdminFallback;
-    var canRejectPR = User.IsInRole("Admin") || User.HasClaim("Permission", "PR.Reject") || oldCentralAdminFallback;
-    var canCreatePOPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "PO.Create") || oldCentralAdminFallback;
+    var canCreatePR = PermissionService.HasPermission(User, "PR.Create");
+    var canSubmitPR = PermissionService.HasPermission(User, "PR.Submit");
+    var canApprovePR = PermissionService.HasPermission(User, "PR.Approve");
+    var canRejectPR = PermissionService.HasPermission(User, "PR.Reject");
+    var canCreatePOPermission = PermissionService.HasPermission(User, "PO.Create");
 }
 
 <div class="page-header">
@@ -144,9 +142,24 @@
                                     <a asp-action="Details" asp-route-id="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-secondary">View</a>
                                     @if (canSubmit)
                                     {
-                                        <form asp-action="Submit" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                        <form asp-action="Submit" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Submit</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="submitPrConfirm_@pr.PurchaseRequestId"
+                                                        aria-expanded="false">
+                                                    Submit
+                                                </button>
+                                                <div class="confirm-popover" id="submitPrConfirm_@pr.PurchaseRequestId" hidden>
+                                                    <div class="confirm-popover-title">Submit this PR?</div>
+                                                    <div class="confirm-popover-text">This will send the purchase request into the approval workflow.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     else
@@ -155,9 +168,24 @@
                                     }
                                     @if (canApprove)
                                     {
-                                        <form asp-action="Approve" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                        <form asp-action="Approve" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Approve</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="approvePrConfirm_@pr.PurchaseRequestId"
+                                                        aria-expanded="false">
+                                                    Approve
+                                                </button>
+                                                <div class="confirm-popover" id="approvePrConfirm_@pr.PurchaseRequestId" hidden>
+                                                    <div class="confirm-popover-title">Approve this PR?</div>
+                                                    <div class="confirm-popover-text">This will mark the purchase request as approved and ready for PO creation.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     else
@@ -166,10 +194,28 @@
                                     }
                                     @if (canReject)
                                     {
-                                        <form asp-action="Reject" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline">
+                                        <form asp-action="Reject" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="rejectReason" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="const reason = prompt('Reason for rejecting this purchase request:'); if (reason === null) return false; if (!reason.trim()) { alert('Reject reason is required.'); return false; } this.form.rejectReason.value = reason; return confirm('Reject this purchase request and return it for correction?');">Reject</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
+                                                        data-confirm-target="rejectPrConfirm_@pr.PurchaseRequestId"
+                                                        aria-expanded="false">
+                                                    Reject
+                                                </button>
+                                                <div class="confirm-popover" id="rejectPrConfirm_@pr.PurchaseRequestId" hidden>
+                                                    <div class="confirm-popover-title">Reject this PR?</div>
+                                                    <div class="confirm-popover-text">A reject reason is required before this purchase request is returned for correction.</div>
+                                                    <div class="confirm-popover-field">
+                                                        <label class="confirm-popover-label" for="rejectPrReason_@pr.PurchaseRequestId">Reject Reason</label>
+                                                        <textarea id="rejectPrReason_@pr.PurchaseRequestId" name="rejectReason" class="form-control" rows="3" placeholder="Required reason" required></textarea>
+                                                    </div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     else

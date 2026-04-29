@@ -2,7 +2,16 @@
 
 @{
     ViewData["Title"] = "Quotation Details";
+    var paymentStatus = ViewData["PaymentStatus"] as BizCore.Models.ViewModels.QuotationPaymentStatusViewModel
+        ?? new BizCore.Models.ViewModels.QuotationPaymentStatusViewModel
+        {
+            QuotationHeaderId = Model.QuotationHeaderId,
+            QuotationTotalAmount = Model.TotalAmount,
+            RemainingAmount = Model.TotalAmount,
+            Status = "Not Invoiced"
+        };
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
+    var netAfterDiscount = Model.Subtotal - appliedDiscount;
     var headerDiscountDisplay = Model.DiscountMode == "Header"
         ? Model.HeaderDiscountType == "Percent"
             ? $"{Model.HeaderDiscountPercent:N2}% ({Model.HeaderDiscountAmount:N2})"
@@ -10,8 +19,8 @@
         : "-";
     var canApprove = Model.Status == "Draft";
     var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"Only Draft quotations can be approved. Current status is {Model.Status}.";
-    var canConvert = Model.Status == "Approved";
-    var convertBlockedReason = Model.Status == "Approved" ? string.Empty : $"Convert to Invoice is available only after approval. Current status is {Model.Status}.";
+    var canConvert = Model.Status == "Approved" || Model.Status == "Converted";
+    var convertBlockedReason = canConvert ? string.Empty : $"Convert to Invoice is available only after approval. Current status is {Model.Status}.";
 }
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -29,9 +38,24 @@
         @if (canApprove)
         {
             <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">Edit Quotation</a>
-            <form asp-action="Approve" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
+            <form asp-action="Approve" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-primary">Approve</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-primary js-confirm-popover-toggle"
+                            data-confirm-target="approveQuotationDetailsConfirm_@Model.QuotationHeaderId"
+                            aria-expanded="false">
+                        Approve
+                    </button>
+                    <div class="confirm-popover" id="approveQuotationDetailsConfirm_@Model.QuotationHeaderId" hidden>
+                        <div class="confirm-popover-title">Approve this quotation?</div>
+                        <div class="confirm-popover-text">This will approve the quotation and allow it to be converted into an invoice.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -41,9 +65,24 @@
         <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.QuotationHeaderId })', '_blank', 'noopener');">Print</button>
         @if (canConvert)
         {
-            <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline">
+            <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-primary">Convert to Invoice</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-primary js-confirm-popover-toggle"
+                            data-confirm-target="convertQuotationDetailsConfirm_@Model.QuotationHeaderId"
+                            aria-expanded="false">
+                        Convert to Invoice
+                    </button>
+                    <div class="confirm-popover" id="convertQuotationDetailsConfirm_@Model.QuotationHeaderId" hidden>
+                        <div class="confirm-popover-title">Convert this quotation?</div>
+                        <div class="confirm-popover-text">This will open the quotation into a draft invoice flow for further review before issuing.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -138,6 +177,10 @@
                                 <strong>@appliedDiscount.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
+                                <span>Net After Discount</span>
+                                <strong>@netAfterDiscount.ToString("N2")</strong>
+                            </div>
+                            <div class="quotation-summary-chip">
                                 <span>VAT</span>
                                 <strong>@Model.VatAmount.ToString("N2")</strong>
                             </div>
@@ -154,6 +197,32 @@
                             <div class="col-12">
                                 <div class="detail-label">Remarks</div>
                                 <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quotation-header-card">
+                        <div class="quotation-header-card-title">Invoice Coverage</div>
+                        <div class="row g-2 quotation-header-grid">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">สถานะการออก Invoice</div>
+                                <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", paymentStatus.Status)</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">ยอดวางบิล</div>
+                                <div class="form-control readonly-detail">@paymentStatus.InvoicedAmount.ToString("N2")</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">ยอดตามใบเสนอราคา</div>
+                                <div class="form-control readonly-detail">@paymentStatus.QuotationTotalAmount.ToString("N2")</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">ยอดคงเหลือที่ยังไม่ได้ออก Invoice</div>
+                                <div class="form-control readonly-detail">@paymentStatus.RemainingAmount.ToString("N2")</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="detail-label">Invoice ที่อ้างอิง</div>
+                                <div class="form-control readonly-detail">@paymentStatus.InvoiceCount.ToString("N0")</div>
                             </div>
                         </div>
                     </div>
@@ -231,6 +300,7 @@
                                 <th style="width: 12%;">Unit Price</th>
                                 <th style="width: 14%;">Disc. Type</th>
                                 <th style="width: 12%;">Discount</th>
+                                <th style="width: 12%;">Net Price</th>
                                 <th style="width: 12%;">Line Total</th>
                             </tr>
                         </thead>
@@ -248,6 +318,7 @@
                                 <td>@line.UnitPrice.ToString("N2")</td>
                                 <td>@(line.DiscountType == "Percent" ? $"{line.DiscountPercent:N2}% ({line.DiscountAmount:N2})" : line.DiscountType)</td>
                                 <td>@line.DiscountAmount.ToString("N2")</td>
+                                <td>@(line.Quantity > 0 ? (line.LineTotal / line.Quantity).ToString("N2") : "0.00")</td>
                                 <td>@line.LineTotal.ToString("N2")</td>
                             </tr>
                         }
@@ -264,6 +335,10 @@
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">Discount</span>
                             <span class="quotation-summary-amount">@appliedDiscount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">Net After Discount</span>
+                            <span class="quotation-summary-amount">@netAfterDiscount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">VAT</span>

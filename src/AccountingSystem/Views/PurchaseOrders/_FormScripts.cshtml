@@ -37,7 +37,7 @@
                 <select name="Details[${lineIndex}].Allocations[${allocationIndex}].BranchId" class="form-select form-select-sm js-allocation-branch">
                     ${branchOptionsHtml(defaultBranch)}
                 </select>
-                <input type="number" step="0.01" min="0" name="Details[${lineIndex}].Allocations[${allocationIndex}].AllocatedQty" value="${money(qty || 0)}" class="form-control form-control-sm js-allocation-qty" />
+                <input type="number" step="1" min="0" data-qty-min="0" name="Details[${lineIndex}].Allocations[${allocationIndex}].AllocatedQty" value="${money(qty || 0)}" class="form-control form-control-sm js-allocation-qty js-integer-qty" />
                 <button type="button" class="btn btn-sm btn-outline-secondary js-remove-allocation" title="Remove branch allocation">-</button>`;
             return row;
         };
@@ -132,7 +132,7 @@
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
                 </td>
                 <td>
-                    <input type="number" step="0.01" min="0.01" name="Details[${index}].Qty" id="Details_${index}__Qty" value="1" class="form-control js-line-qty" />
+                    <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].Qty" id="Details_${index}__Qty" value="1" class="form-control js-line-qty js-integer-qty" />
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Qty" data-valmsg-replace="true"></span>
                 </td>
                 <td><input type="number" step="0.01" name="Details[${index}].ReceivedQty" id="Details_${index}__ReceivedQty" value="0" class="form-control" readonly /></td>

@@ -77,6 +77,9 @@ public class QuotationsController : CrudControllerBase
             .OrderByDescending(x => x.QuotationDate)
             .ThenByDescending(x => x.QuotationHeaderId), page, pageSize);
 
+        ViewData["PaymentStatusMap"] = await BuildQuotationPaymentStatusMapAsync(
+            quotations.Select(x => (x.QuotationHeaderId, x.TotalAmount)));
+
         return View(quotations);
     }
 
@@ -330,7 +333,21 @@ public class QuotationsController : CrudControllerBase
                 .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id.Value);
 
-        return quotation is null || !CanAccessBranch(quotation.BranchId) ? NotFound() : View(quotation);
+        if (quotation is null || !CanAccessBranch(quotation.BranchId))
+        {
+            return NotFound();
+        }
+
+        ViewData["PaymentStatus"] = (await BuildQuotationPaymentStatusMapAsync(new[] { (quotation.QuotationHeaderId, quotation.TotalAmount) }))
+            .GetValueOrDefault(quotation.QuotationHeaderId, new QuotationPaymentStatusViewModel
+            {
+                QuotationHeaderId = quotation.QuotationHeaderId,
+                QuotationTotalAmount = quotation.TotalAmount,
+                RemainingAmount = quotation.TotalAmount,
+                Status = "Not Invoiced"
+            });
+
+        return View(quotation);
     }
 
     public async Task<IActionResult> Print(int? id)
@@ -363,8 +380,6 @@ public class QuotationsController : CrudControllerBase
     public async Task<IActionResult> ConvertToInvoice(int id)
     {
         var quotation = await _context.QuotationHeaders
-            .Include(x => x.QuotationDetails)
-                .ThenInclude(x => x.Item)
             .FirstOrDefaultAsync(x => x.QuotationHeaderId == id);
 
         if (quotation is null || !CanAccessBranch(quotation.BranchId))
@@ -372,96 +387,13 @@ public class QuotationsController : CrudControllerBase
             return NotFound();
         }
 
-        if (quotation.Status != "Approved")
+        if (quotation.Status is not ("Approved" or "Converted"))
         {
-            TempData["QuotationNotice"] = "Only approved quotations can be converted to invoice.";
+            TempData["QuotationNotice"] = "Only approved quotations can be used to prefill an invoice.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        var existingInvoiceId = await _context.InvoiceHeaders
-            .Where(x => x.QuotationId == quotation.QuotationHeaderId)
-            .Select(x => (int?)x.InvoiceId)
-            .FirstOrDefaultAsync();
-
-        if (existingInvoiceId.HasValue || quotation.Status == "Converted")
-        {
-            TempData["QuotationNotice"] = "This quotation has already been converted to an invoice.";
-            return existingInvoiceId.HasValue
-                ? RedirectToAction("Details", "Invoices", new { id = existingInvoiceId.Value })
-                : RedirectToAction(nameof(Details), new { id });
-        }
-
-        var shortageMessages = await GetBranchStockShortageMessagesAsync(quotation);
-        if (shortageMessages.Count > 0)
-        {
-            TempData["QuotationNotice"] = "Cannot convert to invoice because selected branch stock is not enough: " + string.Join("; ", shortageMessages);
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
-        {
-            var invoiceDate = DateTime.Today;
-            var invoice = new InvoiceHeader
-            {
-                InvoiceNo = await GetNextInvoiceNumberAsync(invoiceDate),
-                InvoiceDate = invoiceDate,
-                CustomerId = quotation.CustomerId,
-                SalespersonId = quotation.SalespersonId,
-                BranchId = quotation.BranchId,
-                QuotationId = quotation.QuotationHeaderId,
-                ReferenceNo = quotation.ReferenceNo?.Trim(),
-                Remark = string.IsNullOrWhiteSpace(quotation.Remarks)
-                    ? BuildConversionRemark(quotation)
-                    : $"{quotation.Remarks.Trim()} | {BuildConversionRemark(quotation)}",
-                Subtotal = quotation.Subtotal,
-                DiscountAmount = quotation.DiscountMode == "Header"
-                    ? quotation.HeaderDiscountAmount
-                    : quotation.DiscountAmount,
-                VatType = quotation.VatType,
-                VatAmount = quotation.VatAmount,
-                TotalAmount = quotation.TotalAmount,
-                PaidAmount = 0m,
-                BalanceAmount = quotation.TotalAmount,
-                Status = "Draft",
-                CreatedDate = DateTime.UtcNow,
-                CreatedByUserId = CurrentUserId(),
-                InvoiceDetails = quotation.QuotationDetails
-                    .OrderBy(x => x.LineNumber)
-                    .Select(x => new InvoiceDetail
-                    {
-                        LineNumber = x.LineNumber,
-                        ItemId = x.ItemId,
-                        Qty = x.Quantity,
-                        UnitPrice = x.UnitPrice,
-                        DiscountAmount = quotation.DiscountMode == "Line" ? x.DiscountAmount : 0m,
-                        LineTotal = x.LineTotal,
-                        Remark = x.Description,
-                        CustomerWarrantyStartDate = null,
-                        CustomerWarrantyEndDate = null
-                    })
-                    .ToList()
-            };
-
-            _context.InvoiceHeaders.Add(invoice);
-            quotation.Status = "Converted";
-            quotation.UpdatedDate = DateTime.UtcNow;
-            quotation.UpdatedByUserId = CurrentUserId();
-            quotation.ConvertedByUserId = CurrentUserId();
-            quotation.ConvertedDate = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            return RedirectToAction("Details", "Invoices", new { id = invoice.InvoiceId });
-        }
-        catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
-        {
-            await transaction.RollbackAsync();
-            TempData["QuotationNotice"] = "Quotation conversion failed because the generated invoice number was already in use.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
+        return RedirectToAction("Create", "Invoices", new { quotationId = quotation.QuotationHeaderId });
     }
 
     [HttpPost]
@@ -856,13 +788,6 @@ public class QuotationsController : CrudControllerBase
         };
     }
 
-    private static string BuildConversionRemark(QuotationHeader quotation)
-    {
-        return quotation.HeaderDiscountAmount > 0
-            ? $"Converted from quotation {quotation.QuotationNumber} (includes header discount {quotation.HeaderDiscountAmount:N2})"
-            : $"Converted from quotation {quotation.QuotationNumber}";
-    }
-
     private async Task<IReadOnlyList<string>> GetBranchStockShortageMessagesAsync(QuotationHeader quotation)
     {
         if (!quotation.BranchId.HasValue)
@@ -931,5 +856,59 @@ public class QuotationsController : CrudControllerBase
         var codes = await codesQuery.Where(x => x.StartsWith(prefix)).ToListAsync();
         var nextSequence = codes.Select(ExtractSequence).DefaultIfEmpty(0).Max() + 1;
         return FormatPeriodPrefixedCode(numberPrefix, date, nextSequence);
+    }
+
+    private async Task<Dictionary<int, QuotationPaymentStatusViewModel>> BuildQuotationPaymentStatusMapAsync(IEnumerable<(int QuotationHeaderId, decimal TotalAmount)> quotationRows)
+    {
+        var quotations = quotationRows
+            .Distinct()
+            .ToDictionary(x => x.QuotationHeaderId, x => x.TotalAmount);
+
+        if (quotations.Count == 0)
+        {
+            return new Dictionary<int, QuotationPaymentStatusViewModel>();
+        }
+
+        var quotationIds = quotations.Keys.ToList();
+        var invoiceSummaries = await _context.InvoiceHeaders
+            .AsNoTracking()
+            .Where(x => x.QuotationId.HasValue &&
+                        quotationIds.Contains(x.QuotationId.Value) &&
+                        x.Status != "Cancelled")
+            .GroupBy(x => x.QuotationId!.Value)
+            .Select(x => new
+            {
+                QuotationHeaderId = x.Key,
+                InvoiceCount = x.Count(),
+                InvoicedAmount = x.Sum(i => i.TotalAmount),
+                PaidAmount = x.Sum(i => i.PaidAmount)
+            })
+            .ToDictionaryAsync(x => x.QuotationHeaderId);
+
+        return quotations.ToDictionary(
+            x => x.Key,
+            x =>
+            {
+                var hasSummary = invoiceSummaries.TryGetValue(x.Key, out var summary);
+                var paidAmount = hasSummary ? summary!.PaidAmount : 0m;
+                var invoicedAmount = hasSummary ? summary!.InvoicedAmount : 0m;
+                var remainingAmount = Math.Max(x.Value - invoicedAmount, 0m);
+                var statusValue = invoicedAmount >= x.Value && x.Value > 0m
+                    ? "Fully Invoiced"
+                    : invoicedAmount > 0m
+                        ? "Partially Invoiced"
+                        : "Not Invoiced";
+
+                return new QuotationPaymentStatusViewModel
+                {
+                    QuotationHeaderId = x.Key,
+                    InvoiceCount = hasSummary ? summary!.InvoiceCount : 0,
+                    QuotationTotalAmount = x.Value,
+                    InvoicedAmount = invoicedAmount,
+                    PaidAmount = paidAmount,
+                    RemainingAmount = remainingAmount,
+                    Status = statusValue
+                };
+            });
     }
 }

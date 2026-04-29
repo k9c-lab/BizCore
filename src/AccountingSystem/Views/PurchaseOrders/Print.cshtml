@@ -89,7 +89,7 @@
             white-space: pre-line;
         }
         .document-block {
-            min-width: 280px;
+            min-width: 300px;
             text-align: right;
         }
         .document-title-th {
@@ -100,7 +100,7 @@
         }
         .document-title-en {
             margin: 2px 0 12px;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             color: #1f2937;
             letter-spacing: 0.04em;
@@ -115,6 +115,9 @@
             color: #111827;
         }
         .document-meta td:first-child {
+            white-space: nowrap;
+        }
+        .meta-value-nowrap {
             white-space: nowrap;
         }
         .print-section { margin-top: 16px; }
@@ -269,7 +272,7 @@
                     <h2 class="document-title-th">ใบสั่งซื้อ</h2>
                     <div class="document-title-en">Purchase Order</div>
                     <table class="document-meta">
-                        <tr><td class="meta-label">เลขที่เอกสาร / Document No.</td><td>@Model.PONo</td></tr>
+                        <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.PONo</td></tr>
                         <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.PODate.ToString("dd/MM/yyyy")</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>

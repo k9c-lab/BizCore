@@ -4,6 +4,7 @@ using BizCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BizCore.Controllers;
 
@@ -131,7 +132,7 @@ public abstract class CrudControllerBase : Controller
 
     protected bool CurrentUserHasMenuAccess(string permissionCode)
     {
-        return User.IsInRole("Admin") || User.HasClaim("Permission", permissionCode);
+        return PermissionService().HasMenuAccess(User, permissionCode);
     }
 
     protected void PopulatePrintCompanyViewData(CompanyProfileSettings companyProfile)
@@ -145,33 +146,11 @@ public abstract class CrudControllerBase : Controller
 
     protected bool CurrentUserHasPermission(string permissionCode)
     {
-        if (User.IsInRole("Admin") || User.IsInRole("Executive") || User.HasClaim("Permission", permissionCode))
-        {
-            return true;
-        }
+        return PermissionService().HasPermission(User, permissionCode);
+    }
 
-        if (User.HasClaim(x => x.Type == "Permission"))
-        {
-            return false;
-        }
-
-        return permissionCode switch
-        {
-            "PR.View" or "PR.Create" or "PR.Edit" or "PR.Submit" or "PR.Cancel" =>
-                User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
-            "PR.Approve" or "PR.Reject" or "PO.Create" or "PO.Edit" or "PO.Submit" or "PO.Cancel" =>
-                User.IsInRole("CentralAdmin"),
-            "PO.View" or "PO.Receive" =>
-                User.IsInRole("CentralAdmin") || User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
-            "Receiving.View" =>
-                User.IsInRole("CentralAdmin") || User.IsInRole("Executive") || User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
-            "Receiving.Create" or "Receiving.Edit" or "Receiving.Post" or "Receiving.Cancel" =>
-                User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"),
-            "SupplierPayment.View" or "SupplierPayment.Create" or "SupplierPayment.Cancel" =>
-                User.IsInRole("CentralAdmin"),
-            "Reports.View" =>
-                User.IsInRole("CentralAdmin") || User.IsInRole("BranchAdmin") || User.IsInRole("Sales") || User.IsInRole("Warehouse"),
-            _ => false
-        };
+    private IUserPermissionService PermissionService()
+    {
+        return HttpContext.RequestServices.GetRequiredService<IUserPermissionService>();
     }
 }

@@ -1,0 +1,922 @@
+<script>
+    (() => {
+        const byId = id => document.getElementById(id);
+        const itemLookupElement = byId("invoiceItemLookupData");
+        const serialLookupElement = byId("invoiceSerialLookupData");
+        const customerLookupElement = byId("invoiceCustomerLookupData");
+        const salespersonLookupElement = byId("invoiceSalespersonLookupData");
+
+        if (!itemLookupElement || !serialLookupElement || !customerLookupElement || !salespersonLookupElement) {
+            return;
+        }
+
+        const itemLookup = JSON.parse(itemLookupElement.textContent);
+        const serialLookup = JSON.parse(serialLookupElement.textContent);
+        const customerLookup = JSON.parse(customerLookupElement.textContent);
+        const salespersonLookup = JSON.parse(salespersonLookupElement.textContent);
+        const quotationSelect = byId("QuotationId");
+        const amountDueInput = byId("AmountDueThisInvoice");
+        const amountDueSection = byId("invoiceAmountDueSection");
+        const lineBody = byId("invoiceLineBody");
+        const addButton = byId("addInvoiceLine");
+        const vatTypeInput = byId("VatType");
+        const discountModeInput = byId("DiscountMode");
+        const headerDiscountInput = byId("HeaderDiscountAmount");
+        const headerDiscountHelp = byId("invoiceHeaderDiscountHelp");
+        const entryAlert = byId("invoiceEntryAlert");
+        const entryItemSearch = byId("invoiceEntryItemSearch");
+        const entryItemResults = byId("invoiceEntryItemResults");
+        const customerInput = byId("CustomerId");
+        const customerSearch = byId("invoiceCustomerSearch");
+        const customerResults = byId("invoiceCustomerResults");
+        const salespersonSelect = byId("SalespersonId");
+        const entryQuotedQty = byId("invoiceEntryQuotedQty");
+        const entryQty = byId("invoiceEntryQty");
+        const entryUnitPrice = byId("invoiceEntryUnitPrice");
+        const entryDiscount = byId("invoiceEntryDiscount");
+        const entryCurrentStock = byId("invoiceEntryCurrentStock");
+        const entryItemMeta = byId("invoiceEntryItemMeta");
+        const entrySerials = byId("invoiceEntrySerials");
+        const entryWarrantyStart = byId("invoiceEntryWarrantyStart");
+        const entryWarrantyEnd = byId("invoiceEntryWarrantyEnd");
+        const entryDescription = byId("invoiceEntryDescription");
+        const entryRemark = byId("invoiceEntryRemark");
+        const entryStockSection = document.querySelector(".js-entry-stock-section");
+        const entrySerialSection = document.querySelector(".js-entry-serial-section");
+        const entryWarrantySection = document.querySelector(".js-entry-warranty-section");
+        const entryDescriptionSection = document.querySelector(".js-entry-description-section");
+        const entryRemarkSection = document.querySelector(".js-entry-remark-section");
+        const invoiceForm = lineBody.closest("form");
+        const hasLinkedQuotation = () => {
+            if (!quotationSelect) {
+                return !!document.querySelector("input[name='QuotationId'][type='hidden'][value]:not([value=''])");
+            }
+
+            return !!quotationSelect.value;
+        };
+
+        if (!lineBody) {
+            return;
+        }
+
+        const itemMap = Object.fromEntries(itemLookup.map(item => [String(item.ItemId), item]));
+        const itemDisplayMap = Object.fromEntries(itemLookup.map(item => [item.DisplayText.toLowerCase(), item]));
+        const customerMap = Object.fromEntries(customerLookup.map(customer => [String(customer.CustomerId), customer]));
+        const salespersonMap = Object.fromEntries(salespersonLookup.map(salesperson => [String(salesperson.SalespersonId), salesperson]));
+        const serialByItem = serialLookup.reduce((acc, serial) => {
+            const key = String(serial.ItemId);
+            acc[key] = acc[key] || [];
+            acc[key].push(serial);
+            return acc;
+        }, {});
+
+        const formatAmount = value => Number(value || 0).toFixed(2);
+        const buildQuotationProgressText = line => {
+            if (!line || !line.QuotationDetailId) {
+                return "";
+            }
+
+            const quotedQty = line.QuotedQty ?? 0;
+            const previouslyInvoicedQty = line.PreviouslyInvoicedQty ?? 0;
+            const remainingQuotedQty = line.RemainingQuotedQty ?? 0;
+            return `Ordered from quotation: ${formatAmount(quotedQty)} | Issued Before: ${formatAmount(previouslyInvoicedQty)} | Remaining: ${formatAmount(remainingQuotedQty)}`;
+        };
+        const getMainRows = () => [...lineBody.querySelectorAll(".invoice-line-main")];
+        const isLineDiscountMode = () => !hasLinkedQuotation() && discountModeInput && discountModeInput.value === "Line";
+        const escapeHtml = value => String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        const getValue = value => value && String(value).trim() ? value : "-";
+
+        const hideEntryResults = () => {
+            if (!entryItemResults) {
+                return;
+            }
+
+            entryItemResults.style.display = "none";
+            entryItemResults.innerHTML = "";
+        };
+
+        const hideCustomerResults = () => {
+            if (!customerResults) {
+                return;
+            }
+
+            customerResults.style.display = "none";
+            customerResults.innerHTML = "";
+        };
+
+        const showEntryError = message => {
+            if (!entryAlert) {
+                return;
+            }
+
+            entryAlert.textContent = message;
+            entryAlert.style.display = "";
+        };
+
+        const clearEntryError = () => {
+            if (!entryAlert) {
+                return;
+            }
+
+            entryAlert.textContent = "";
+            entryAlert.style.display = "none";
+        };
+
+        const buildEntrySerialCheckboxes = (itemId, selectedValues) => {
+            const selectedSet = new Set((selectedValues || []).map(String));
+            return (serialByItem[String(itemId)] || [])
+                .map(serial => {
+                    const checked = selectedSet.has(String(serial.SerialId)) ? " checked=\"checked\"" : "";
+                    return `
+                        <label class="serial-checkbox-item">
+                            <input type="checkbox" class="form-check-input js-entry-serial-checkbox" value="${serial.SerialId}"${checked} />
+                            <span>${escapeHtml(serial.DisplayText)}</span>
+                        </label>`;
+                })
+                .join("");
+        };
+
+        const buildLineSerialCheckboxes = (index, itemId, selectedValues) => {
+            const selectedSet = new Set((selectedValues || []).map(String));
+            return (serialByItem[String(itemId)] || [])
+                .map(serial => {
+                    const checked = selectedSet.has(String(serial.SerialId)) ? " checked=\"checked\"" : "";
+                    return `
+                        <label class="serial-checkbox-item">
+                            <input type="checkbox" class="form-check-input js-line-serial-checkbox" name="Details[${index}].SelectedSerialIds" value="${serial.SerialId}"${checked} />
+                            <span>${escapeHtml(serial.DisplayText)}</span>
+                        </label>`;
+                })
+                .join("");
+        };
+
+        const updateCustomerInfo = () => {
+            const customer = customerMap[customerInput?.value];
+            const fields = {
+                invoiceCustomerName: customer?.CustomerName,
+                invoiceCustomerTaxId: customer?.TaxId,
+                invoiceCustomerPhone: customer?.Phone,
+                invoiceCustomerEmail: customer?.Email,
+                invoiceCustomerBillingAddress: customer?.BillingAddress
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const target = byId(id);
+                if (target) {
+                    target.textContent = getValue(value);
+                }
+            });
+        };
+
+        const updateSalespersonInfo = () => {
+            const salesperson = salespersonMap[salespersonSelect?.value];
+            const fields = {
+                invoiceSalespersonName: salesperson?.SalespersonName,
+                invoiceSalespersonPhone: salesperson?.Phone,
+                invoiceSalespersonEmail: salesperson?.Email
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const target = byId(id);
+                if (target) {
+                    target.textContent = getValue(value);
+                }
+            });
+        };
+
+        const getSelectedEntryItem = () => {
+            if (!entryItemSearch) {
+                return null;
+            }
+
+            const selectedId = entryItemSearch.dataset.selectedItemId;
+            if (selectedId && itemMap[selectedId]) {
+                return itemMap[selectedId];
+            }
+
+            return itemDisplayMap[(entryItemSearch.value || "").trim().toLowerCase()] ?? null;
+        };
+
+        const renderEntryMode = item => {
+            if (!entryItemMeta) {
+                return;
+            }
+
+            const isProduct = item && (item.ItemType || "Product") === "Product";
+            const trackStock = isProduct && !!item.TrackStock;
+            const isSerial = isProduct && !!item.IsSerialControlled;
+
+            entryItemMeta.textContent = item
+                ? `${item.ItemType || "Product"} | Part No.: ${item.PartNumber || "-"}`
+                : "Select an item to see product or service behavior.";
+
+            if (entryStockSection) {
+                entryStockSection.style.display = trackStock ? "" : "none";
+            }
+            if (entrySerialSection) {
+                entrySerialSection.style.display = isSerial ? "" : "none";
+            }
+            if (entryWarrantySection) {
+                entryWarrantySection.style.display = isSerial ? "" : "none";
+            }
+            if (entryDescriptionSection) {
+                entryDescriptionSection.style.display = item && !isProduct ? "" : "none";
+            }
+            if (entryRemarkSection) {
+                entryRemarkSection.style.display = isProduct ? "" : "none";
+            }
+            if (entryCurrentStock) {
+                entryCurrentStock.value = trackStock ? formatAmount(item.CurrentStock) : "";
+            }
+
+            if (entrySerials) {
+                if (isSerial) {
+                    const selectedIds = [...entrySerials.querySelectorAll(".js-entry-serial-checkbox:checked")].map(input => input.value);
+                    entrySerials.innerHTML = buildEntrySerialCheckboxes(item.ItemId, selectedIds);
+                } else {
+                    entrySerials.innerHTML = "";
+                    if (entryWarrantyStart) {
+                        entryWarrantyStart.value = "";
+                    }
+                    if (entryWarrantyEnd) {
+                        entryWarrantyEnd.value = "";
+                    }
+                }
+            }
+
+            if (entryDescription && isProduct) {
+                entryDescription.value = "";
+            }
+            if (entryRemark && !isProduct) {
+                entryRemark.value = "";
+            }
+            if (entryDiscount) {
+                entryDiscount.disabled = !isLineDiscountMode();
+            }
+        };
+
+        const resetEntryForm = () => {
+            if (!entryItemSearch) {
+                return;
+            }
+
+            entryItemSearch.value = "";
+            delete entryItemSearch.dataset.selectedItemId;
+            if (entryQty) {
+                entryQty.value = "1";
+            }
+            if (entryQuotedQty) {
+                entryQuotedQty.value = "1";
+            }
+            if (entryUnitPrice) {
+                entryUnitPrice.value = "0";
+            }
+            if (entryDiscount) {
+                entryDiscount.value = "0";
+            }
+            if (entryCurrentStock) {
+                entryCurrentStock.value = "";
+            }
+            if (entrySerials) {
+                entrySerials.innerHTML = "";
+            }
+            if (entryWarrantyStart) {
+                entryWarrantyStart.value = "";
+            }
+            if (entryWarrantyEnd) {
+                entryWarrantyEnd.value = "";
+            }
+            if (entryDescription) {
+                entryDescription.value = "";
+            }
+            if (entryRemark) {
+                entryRemark.value = "";
+            }
+            renderEntryMode(null);
+            hideEntryResults();
+            clearEntryError();
+        };
+
+        const renderEntryResults = query => {
+            if (!entryItemResults) {
+                return;
+            }
+
+            const keyword = (query || "").trim().toLowerCase();
+            const matches = itemLookup
+                .filter(item =>
+                    !keyword ||
+                    item.ItemCode.toLowerCase().includes(keyword) ||
+                    item.ItemName.toLowerCase().includes(keyword) ||
+                    (item.PartNumber || "").toLowerCase().includes(keyword))
+                .slice(0, keyword ? 12 : 20);
+
+            if (matches.length === 0) {
+                entryItemResults.innerHTML = "<div class=\"search-dropdown-empty\">No matching items found.</div>";
+                entryItemResults.style.display = "";
+                return;
+            }
+
+            entryItemResults.innerHTML = matches
+                .map(item => `
+                    <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
+                        <span class="search-dropdown-title">${escapeHtml(item.ItemCode)} - ${escapeHtml(item.ItemName)}</span>
+                        <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")}</span>
+                    </button>`)
+                .join("");
+            entryItemResults.style.display = "";
+        };
+
+        const renderCustomerResults = query => {
+            if (!customerResults) {
+                return;
+            }
+
+            const keyword = (query || "").trim().toLowerCase();
+            const matches = customerLookup
+                .filter(customer =>
+                    !keyword ||
+                    (customer.CustomerCode || "").toLowerCase().includes(keyword) ||
+                    customer.CustomerName.toLowerCase().includes(keyword) ||
+                    (customer.TaxId || "").toLowerCase().includes(keyword))
+                .slice(0, keyword ? 12 : 20);
+
+            if (matches.length === 0) {
+                customerResults.innerHTML = "<div class=\"search-dropdown-empty\">No matching customers found.</div>";
+                customerResults.style.display = "";
+                return;
+            }
+
+            customerResults.innerHTML = matches
+                .map(customer => `
+                    <button type="button" class="search-dropdown-option" data-customer-id="${customer.CustomerId}">
+                        <span class="search-dropdown-title">${escapeHtml(customer.CustomerCode || "-")} - ${escapeHtml(customer.CustomerName)}</span>
+                        <span class="search-dropdown-meta">Tax ID: ${escapeHtml(customer.TaxId || "-")} | ${escapeHtml(customer.Phone || "-")}</span>
+                    </button>`)
+                .join("");
+            customerResults.style.display = "";
+        };
+
+        const selectEntryItem = item => {
+            if (!entryItemSearch) {
+                return;
+            }
+
+            entryItemSearch.value = item.DisplayText;
+            entryItemSearch.dataset.selectedItemId = String(item.ItemId);
+            hideEntryResults();
+            renderEntryMode(item);
+            if (entryUnitPrice) {
+                entryUnitPrice.value = item.UnitPrice;
+            }
+        };
+
+        const selectCustomer = customer => {
+            if (!customerInput || !customerSearch) {
+                return;
+            }
+
+            customerInput.value = customer.CustomerId;
+            customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
+            customerSearch.dataset.selectedCustomerId = String(customer.CustomerId);
+            hideCustomerResults();
+            updateCustomerInfo();
+        };
+
+        const reindexRows = () => {
+            getMainRows().forEach((row, index) => {
+                const detailRow = row.nextElementSibling;
+                [row, detailRow].filter(Boolean).forEach(section => {
+                    section.querySelectorAll("input, textarea, span[data-valmsg-for]").forEach(element => {
+                        if (element.name) {
+                            element.name = element.name.replace(/Details\[\d+\]/g, `Details[${index}]`);
+                        }
+                        const field = element.getAttribute("data-valmsg-for");
+                        if (field) {
+                            element.setAttribute("data-valmsg-for", field.replace(/Details\[\d+\]/g, `Details[${index}]`));
+                        }
+                    });
+                });
+
+                const lineNumber = row.querySelector(".js-line-number");
+                if (lineNumber) {
+                    lineNumber.value = String(index + 1);
+                }
+            });
+        };
+
+        const recalculateLine = row => {
+            const qtyInput = row.querySelector(".js-qty-input");
+            const priceInput = row.querySelector(".js-unit-price-input");
+            const discountInput = row.querySelector(".js-discount-input");
+            const lineTotalInput = row.querySelector(".js-line-total-input");
+            const qty = parseFloat(qtyInput?.value || "0");
+            const price = parseFloat(priceInput?.value || "0");
+            const gross = qty * price;
+            let discount = isLineDiscountMode() ? parseFloat(discountInput?.value || "0") : 0;
+
+            if (discount > gross) {
+                discount = gross;
+                if (discountInput) {
+                    discountInput.value = formatAmount(gross);
+                }
+            }
+
+            if (discountInput) {
+                discountInput.disabled = hasLinkedQuotation() || !isLineDiscountMode();
+                if (hasLinkedQuotation() || !isLineDiscountMode()) {
+                    discountInput.value = "0";
+                }
+            }
+
+            if (lineTotalInput) {
+                lineTotalInput.value = formatAmount(Math.max(gross - discount, 0));
+            }
+        };
+
+        const syncSerialSelectionLimit = (checkbox, row) => {
+            const detailRow = row?.nextElementSibling;
+            const serialCheckboxes = detailRow ? [...detailRow.querySelectorAll(".js-line-serial-checkbox")] : [];
+            if (serialCheckboxes.length === 0) {
+                return;
+            }
+
+            const qty = parseFloat(row.querySelector(".js-qty-input")?.value || "0");
+            const max = qty > 0 ? Math.floor(qty) : 0;
+            const checked = serialCheckboxes.filter(input => input.checked);
+
+            if (checked.length > max && checkbox) {
+                checkbox.checked = false;
+            }
+        };
+
+        const createRow = (index, line) => {
+            const remarkLabel = (line.ItemType || "Product") === "Service" ? "Description" : "Remark";
+            const availableSerials = serialByItem[String(line.ItemId)] || [];
+            const serialMarkup = availableSerials.length > 0
+                ? `<div class="serial-checkbox-list">${buildLineSerialCheckboxes(index, line.ItemId, line.SelectedSerialIds || [])}</div>`
+                : `<div class="detail-value js-line-serial-value">${escapeHtml(line.SerialText || "-")}</div>`;
+            const mainRow = document.createElement("tr");
+            mainRow.className = "invoice-line-row invoice-line-main";
+            mainRow.innerHTML = `
+                <td>
+                    <input type="hidden" name="Details[${index}].InvoiceDetailId" value="${escapeHtml(line.InvoiceDetailId || "")}" />
+                    <input type="hidden" class="js-line-number" name="Details[${index}].LineNumber" value="${index + 1}" />
+                    <input type="hidden" name="Details[${index}].ItemId" value="${escapeHtml(line.ItemId)}" class="js-item-id-hidden" />
+                    <input type="hidden" name="Details[${index}].ItemCode" value="${escapeHtml(line.ItemCode)}" class="js-item-code-hidden" />
+                    <input type="hidden" name="Details[${index}].ItemName" value="${escapeHtml(line.ItemName)}" class="js-item-name-hidden" />
+                    <input type="hidden" name="Details[${index}].PartNumber" value="${escapeHtml(line.PartNumber || "")}" class="js-part-number-hidden" />
+                    <input type="hidden" name="Details[${index}].ItemType" value="${escapeHtml(line.ItemType || "Product")}" class="js-item-type-hidden" />
+                    <input type="hidden" name="Details[${index}].TrackStock" value="${String(!!line.TrackStock).toLowerCase()}" class="js-track-stock-hidden" />
+                    <input type="hidden" name="Details[${index}].IsSerialControlled" value="${String(!!line.IsSerialControlled).toLowerCase()}" class="js-is-serial-hidden" />
+                    <input type="hidden" name="Details[${index}].CurrentStock" value="${escapeHtml(line.CurrentStock || 0)}" class="js-current-stock-hidden" />
+                    <input type="hidden" name="Details[${index}].QuotationDetailId" value="${escapeHtml(line.QuotationDetailId || "")}" class="js-quotation-detail-id-hidden" />
+                    <input type="hidden" name="Details[${index}].PreviouslyInvoicedQty" value="${escapeHtml(line.PreviouslyInvoicedQty ?? "")}" class="js-previously-invoiced-qty-hidden" />
+                    <input type="hidden" name="Details[${index}].RemainingQuotedQty" value="${escapeHtml(line.RemainingQuotedQty ?? "")}" class="js-remaining-quoted-qty-hidden" />
+                    <div class="fw-semibold js-item-display">${escapeHtml(line.ItemCode)} - ${escapeHtml(line.ItemName)}</div>
+                    <div class="table-meta js-item-part-display">Part No.: ${escapeHtml(line.PartNumber || "-")}</div>
+                    <div class="table-meta js-quotation-progress-display" style="${line.QuotationDetailId ? "" : "display:none;"}">${escapeHtml(buildQuotationProgressText(line))}</div>
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <span class="js-item-type-display">${escapeHtml(line.ItemType || "Product")}</span>
+                </td>
+                <td>
+                    <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].QuotedQty" value="${formatAmount(line.QuotedQty || line.Qty)}" class="form-control js-quoted-qty-input js-integer-qty" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].QuotedQty" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].Qty" value="${formatAmount(line.Qty)}" class="form-control js-qty-input js-integer-qty" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Qty" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="Details[${index}].UnitPrice" value="${formatAmount(line.UnitPrice)}" class="form-control js-unit-price-input" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].UnitPrice" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="Details[${index}].DiscountAmount" value="${formatAmount(line.DiscountAmount)}" class="form-control js-discount-input" />
+                    <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="Details[${index}].LineTotal" value="${formatAmount(line.LineTotal)}" class="form-control js-line-total-input" readonly />
+                </td>
+                <td class="text-end">
+                    <div class="table-actions">
+                        <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                    </div>
+                </td>`;
+
+            const detailRow = document.createElement("tr");
+            detailRow.className = "invoice-line-row invoice-line-detail";
+            detailRow.innerHTML = `
+                <td colspan="7">
+                    <div class="invoice-line-detail-shell">
+                        <div class="invoice-line-detail-block js-line-detail-text-block">
+                            <div class="detail-label js-line-detail-label">${remarkLabel}</div>
+                            <textarea name="Details[${index}].Remark" class="form-control js-remark-input" rows="3">${escapeHtml(line.Remark || "")}</textarea>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Remark" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="invoice-line-detail-block js-line-detail-stock-block" style="${line.TrackStock ? "" : "display:none;"}">
+                            <div class="detail-label">Current Stock</div>
+                            <div class="detail-value js-line-stock-value">${formatAmount(line.CurrentStock || 0)}</div>
+                        </div>
+                        <div class="invoice-line-detail-block js-line-detail-serial-block" style="${line.IsSerialControlled ? "" : "display:none;"}">
+                            <div class="detail-label">Serial Numbers</div>
+                            ${serialMarkup}
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SelectedSerialIds" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="invoice-line-detail-block js-line-detail-warranty-block" style="${line.IsSerialControlled ? "" : "display:none;"}">
+                            <div class="detail-label">Warranty</div>
+                            <div class="invoice-warranty-row">
+                                <input type="date" name="Details[${index}].CustomerWarrantyStartDate" value="${escapeHtml(line.CustomerWarrantyStartDate || "")}" class="form-control js-warranty-start-input" />
+                                <input type="date" name="Details[${index}].CustomerWarrantyEndDate" value="${escapeHtml(line.CustomerWarrantyEndDate || "")}" class="form-control js-warranty-end-input" />
+                            </div>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].CustomerWarrantyStartDate" data-valmsg-replace="true"></span>
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].CustomerWarrantyEndDate" data-valmsg-replace="true"></span>
+                        </div>
+                    </div>
+                </td>`;
+
+            return [mainRow, detailRow];
+        };
+
+        const appendLine = line => {
+            createRow(getMainRows().length, line).forEach(row => lineBody.appendChild(row));
+        };
+
+        const updateSummary = () => {
+            let subtotal = 0;
+            let discount = 0;
+            const headerDiscount = hasLinkedQuotation() ? 0 : parseFloat(headerDiscountInput?.value || "0");
+
+            getMainRows().forEach(row => {
+                recalculateLine(row);
+                const qty = parseFloat(row.querySelector(".js-qty-input")?.value || "0");
+                const price = parseFloat(row.querySelector(".js-unit-price-input")?.value || "0");
+                const lineDiscount = hasLinkedQuotation() ? 0 : parseFloat(row.querySelector(".js-discount-input")?.value || "0");
+                subtotal += qty * price;
+                if (isLineDiscountMode()) {
+                    discount += lineDiscount;
+                }
+            });
+
+            const appliedDiscount = isLineDiscountMode() ? discount : headerDiscount;
+            const net = Math.max(subtotal - appliedDiscount, 0);
+            const vat = vatTypeInput?.value === "VAT" ? (net * 0.07) : 0;
+            const referenceTotal = net + vat;
+            const hasQuotation = !!(quotationSelect && quotationSelect.value);
+            const enteredDueAmount = amountDueInput && amountDueInput.value ? parseFloat(amountDueInput.value) : Number.NaN;
+            const dueAmount = hasQuotation && Number.isFinite(enteredDueAmount) && enteredDueAmount > 0
+                ? enteredDueAmount
+                : referenceTotal;
+
+            const fields = {
+                invoiceSubtotal: subtotal,
+                invoiceDiscount: appliedDiscount,
+                invoiceVat: vat,
+                invoiceTotal: dueAmount,
+                invoiceBalance: dueAmount,
+                invoiceAmountDueSummary: dueAmount
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const target = byId(id);
+                if (target) {
+                    target.textContent = value.toFixed(2);
+                }
+            });
+
+            if (amountDueSection) {
+                amountDueSection.style.display = hasQuotation ? "" : "none";
+            }
+        };
+
+        const updateDiscountModeState = () => {
+            const lineMode = isLineDiscountMode();
+            const quotationLinked = hasLinkedQuotation();
+            if (headerDiscountInput) {
+                headerDiscountInput.disabled = quotationLinked || lineMode;
+                if (quotationLinked) {
+                    headerDiscountInput.value = "0";
+                }
+            }
+            if (discountModeInput) {
+                discountModeInput.disabled = quotationLinked;
+                if (quotationLinked) {
+                    discountModeInput.value = "Line";
+                }
+            }
+            if (entryDiscount) {
+                entryDiscount.disabled = quotationLinked || !lineMode;
+                if (quotationLinked || !lineMode) {
+                    entryDiscount.value = "0";
+                }
+            }
+            const discountModeHelp = byId("invoiceDiscountModeHelp");
+            if (discountModeHelp) {
+                discountModeHelp.textContent = quotationLinked
+                    ? "Invoices linked to a quotation use the quotation net amount and do not allow invoice discounts."
+                    : "Choose line discount or header discount for standalone invoices.";
+            }
+            if (headerDiscountHelp) {
+                headerDiscountHelp.textContent = quotationLinked
+                    ? "Disabled for quotation-linked invoices."
+                    : lineMode
+                    ? "Disabled in line discount mode."
+                    : "Used only in header discount mode.";
+            }
+
+            getMainRows().forEach(row => {
+                const discountInput = row.querySelector(".js-discount-input");
+                if (!discountInput) {
+                    return;
+                }
+
+                discountInput.disabled = quotationLinked || !lineMode;
+                if (quotationLinked || !lineMode) {
+                    discountInput.value = "0";
+                }
+            });
+        };
+
+        const validateEntry = () => {
+            const item = getSelectedEntryItem();
+            if (!item) {
+                return { error: "Please select a valid item before adding to the list." };
+            }
+
+            const quotedQty = parseFloat(entryQuotedQty?.value || "0");
+            const qty = parseFloat(entryQty?.value || "0");
+            const unitPrice = parseFloat(entryUnitPrice?.value || "0");
+            const discountAmount = hasLinkedQuotation() ? 0 : (isLineDiscountMode() ? parseFloat(entryDiscount?.value || "0") : 0);
+            const isProduct = (item.ItemType || "Product") === "Product";
+            const trackStock = isProduct && !!item.TrackStock;
+            const isSerial = isProduct && !!item.IsSerialControlled;
+
+            if (!(quotedQty > 0)) {
+                return { error: "Quoted quantity must be greater than zero." };
+            }
+
+            if (!(qty > 0)) {
+                return { error: "Quantity must be greater than zero." };
+            }
+
+            const gross = qty * unitPrice;
+            if (discountAmount > gross) {
+                return { error: "Discount cannot exceed the line amount." };
+            }
+
+            const selectedSerialIds = entrySerials
+                ? [...entrySerials.querySelectorAll(".js-entry-serial-checkbox:checked")].map(input => Number(input.value))
+                : [];
+
+            if (isSerial) {
+                if (qty !== Math.trunc(qty)) {
+                    return { error: "Serial-controlled items must use whole-number quantity." };
+                }
+
+                if (quotedQty !== Math.trunc(quotedQty)) {
+                    return { error: "Quoted quantity must use whole numbers for serial-controlled items." };
+                }
+
+                if (selectedSerialIds.length > qty) {
+                    return { error: "Selected serial count cannot exceed quantity." };
+                }
+
+                if (entryWarrantyStart?.value && entryWarrantyEnd?.value && entryWarrantyEnd.value < entryWarrantyStart.value) {
+                    return { error: "Warranty end date must be on or after the start date." };
+                }
+            }
+
+            return {
+                line: {
+                    InvoiceDetailId: "",
+                    ItemId: item.ItemId,
+                    ItemCode: item.ItemCode,
+                    ItemName: item.ItemName,
+                    PartNumber: item.PartNumber,
+                    ItemType: item.ItemType || "Product",
+                    TrackStock: trackStock,
+                    IsSerialControlled: isSerial,
+                    CurrentStock: trackStock ? Number(item.CurrentStock || 0) : 0,
+                    QuotedQty: quotedQty,
+                    Qty: qty,
+                    UnitPrice: unitPrice,
+                    DiscountAmount: discountAmount,
+                    LineTotal: Math.max(gross - discountAmount, 0),
+                    Remark: isProduct ? (entryRemark?.value || "") : (entryDescription?.value || ""),
+                    CustomerWarrantyStartDate: isSerial ? (entryWarrantyStart?.value || "") : "",
+                    CustomerWarrantyEndDate: isSerial ? (entryWarrantyEnd?.value || "") : "",
+                    SelectedSerialIds: selectedSerialIds,
+                    SerialText: isSerial && entrySerials
+                        ? [...entrySerials.querySelectorAll(".js-entry-serial-checkbox:checked")].map(input => input.parentElement.textContent.trim()).join(", ")
+                        : "-"
+                }
+            };
+        };
+
+        if (quotationSelect) {
+            quotationSelect.addEventListener("change", () => {
+                const quotationId = quotationSelect.value;
+                const targetUrl = quotationId
+                    ? `@Url.Action("Create", "Invoices")?quotationId=${encodeURIComponent(quotationId)}`
+                    : `@Url.Action("Create", "Invoices")`;
+                window.location.href = targetUrl;
+            });
+        }
+
+        if (entryItemSearch) {
+            entryItemSearch.addEventListener("change", () => {
+                const item = getSelectedEntryItem();
+                if (item) {
+                    selectEntryItem(item);
+                } else {
+                    delete entryItemSearch.dataset.selectedItemId;
+                    renderEntryMode(null);
+                }
+            });
+
+            entryItemSearch.addEventListener("input", () => {
+                delete entryItemSearch.dataset.selectedItemId;
+                renderEntryMode(null);
+                renderEntryResults(entryItemSearch.value);
+            });
+
+            entryItemSearch.addEventListener("focus", () => renderEntryResults(entryItemSearch.value));
+        }
+
+        if (entryItemResults) {
+            entryItemResults.addEventListener("click", event => {
+                const option = event.target.closest(".search-dropdown-option");
+                if (!option) {
+                    return;
+                }
+
+                const item = itemMap[option.dataset.itemId];
+                if (item) {
+                    selectEntryItem(item);
+                }
+            });
+        }
+
+        document.addEventListener("click", event => {
+            const clickedItemSearch = entryItemSearch && (event.target === entryItemSearch || entryItemResults?.contains(event.target));
+            const clickedCustomerSearch = customerSearch && (event.target === customerSearch || customerResults?.contains(event.target));
+            if (!clickedItemSearch) {
+                hideEntryResults();
+            }
+            if (!clickedCustomerSearch) {
+                hideCustomerResults();
+            }
+        });
+
+        if (customerSearch) {
+            customerSearch.addEventListener("input", () => {
+                delete customerSearch.dataset.selectedCustomerId;
+                if (customerInput) {
+                    customerInput.value = "";
+                }
+                updateCustomerInfo();
+                renderCustomerResults(customerSearch.value);
+            });
+
+            customerSearch.addEventListener("focus", () => renderCustomerResults(customerSearch.value));
+
+            customerSearch.addEventListener("change", () => {
+                const selectedId = customerSearch.dataset.selectedCustomerId;
+                if (selectedId && customerMap[selectedId]) {
+                    selectCustomer(customerMap[selectedId]);
+                    return;
+                }
+
+                const value = (customerSearch.value || "").trim().toLowerCase();
+                const match = customerLookup.find(customer =>
+                    `${customer.CustomerCode || "-"} - ${customer.CustomerName}`.toLowerCase() === value ||
+                    customer.CustomerName.toLowerCase() === value);
+                if (match) {
+                    selectCustomer(match);
+                } else if (customerInput?.value && customerMap[customerInput.value]) {
+                    selectCustomer(customerMap[customerInput.value]);
+                } else {
+                    if (customerInput) {
+                        customerInput.value = "";
+                    }
+                    updateCustomerInfo();
+                }
+            });
+        }
+
+        if (customerResults) {
+            customerResults.addEventListener("click", event => {
+                const option = event.target.closest(".search-dropdown-option");
+                if (!option) {
+                    return;
+                }
+
+                const customer = customerMap[option.dataset.customerId];
+                if (customer) {
+                    selectCustomer(customer);
+                }
+            });
+        }
+
+        if (addButton) {
+            addButton.addEventListener("click", () => {
+                clearEntryError();
+                const result = validateEntry();
+                if (result.error) {
+                    showEntryError(result.error);
+                    return;
+                }
+
+                appendLine(result.line);
+                reindexRows();
+                updateSummary();
+                resetEntryForm();
+            });
+        }
+
+        lineBody.addEventListener("click", event => {
+            const removeButton = event.target.closest(".js-remove-line");
+            if (!removeButton) {
+                return;
+            }
+
+            const rows = getMainRows();
+            if (rows.length === 1) {
+                return;
+            }
+
+            const mainRow = removeButton.closest(".invoice-line-main");
+            const detailRow = mainRow?.nextElementSibling;
+            detailRow?.remove();
+            mainRow?.remove();
+            reindexRows();
+            updateSummary();
+        });
+
+        lineBody.addEventListener("input", event => {
+            const mainRow = event.target.closest(".invoice-line-main");
+            if (mainRow) {
+                recalculateLine(mainRow);
+            }
+            updateSummary();
+        });
+
+        lineBody.addEventListener("change", event => {
+            const mainRow = event.target.closest(".invoice-line-main");
+            const detailRow = event.target.closest(".invoice-line-detail");
+            const targetRow = mainRow || detailRow?.previousElementSibling;
+            if (!targetRow) {
+                return;
+            }
+
+            if (event.target.classList.contains("js-line-serial-checkbox")) {
+                syncSerialSelectionLimit(event.target, targetRow);
+            }
+
+            updateSummary();
+        });
+
+        vatTypeInput?.addEventListener("change", updateSummary);
+        discountModeInput?.addEventListener("change", () => {
+            updateDiscountModeState();
+            updateSummary();
+        });
+        headerDiscountInput?.addEventListener("input", updateSummary);
+        amountDueInput?.addEventListener("input", updateSummary);
+        salespersonSelect?.addEventListener("change", updateSalespersonInfo);
+
+        invoiceForm?.addEventListener("submit", () => {
+            const zeroIfBlankSelectors = [
+                ".js-discount-input",
+                "#HeaderDiscountAmount"
+            ];
+
+            zeroIfBlankSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(input => {
+                    if (input instanceof HTMLInputElement && input.value.trim() === "") {
+                        input.value = "0";
+                    }
+                });
+            });
+        });
+
+        if (customerInput?.value && customerMap[customerInput.value] && customerSearch) {
+            const customer = customerMap[customerInput.value];
+            customerSearch.value = `${customer.CustomerCode || "-"} - ${customer.CustomerName}`;
+            customerSearch.dataset.selectedCustomerId = customerInput.value;
+        }
+
+        updateCustomerInfo();
+        updateSalespersonInfo();
+        updateDiscountModeState();
+        renderEntryMode(null);
+        updateSummary();
+    })();
+</script>

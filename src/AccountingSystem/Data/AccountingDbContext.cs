@@ -411,6 +411,10 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
             entity.Property(x => x.PaidAmount).HasPrecision(18, 2);
             entity.Property(x => x.BalanceAmount).HasPrecision(18, 2);
+            entity.Property(x => x.ReferenceLineSubtotal).HasPrecision(18, 2);
+            entity.Property(x => x.ReferenceLineDiscountAmount).HasPrecision(18, 2);
+            entity.Property(x => x.ReferenceLineVatAmount).HasPrecision(18, 2);
+            entity.Property(x => x.ReferenceLineTotalAmount).HasPrecision(18, 2);
             entity.HasIndex(x => x.InvoiceNo).IsUnique();
             entity.HasOne(x => x.Customer)
                 .WithMany()
@@ -448,10 +452,12 @@ public class AccountingDbContext : DbContext
 
         modelBuilder.Entity<InvoiceDetail>(entity =>
         {
+            entity.Property(x => x.QuotedQty).HasPrecision(18, 2);
             entity.Property(x => x.Qty).HasPrecision(18, 2);
             entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
             entity.Property(x => x.LineTotal).HasPrecision(18, 2);
+            entity.HasIndex(x => x.QuotationDetailId);
             entity.HasOne(x => x.InvoiceHeader)
                 .WithMany(x => x.InvoiceDetails)
                 .HasForeignKey(x => x.InvoiceId)

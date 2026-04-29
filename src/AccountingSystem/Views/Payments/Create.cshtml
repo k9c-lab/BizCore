@@ -8,7 +8,7 @@
     <div>
         <div class="page-eyebrow">AR Module</div>
         <h1 class="page-title">Create Payment</h1>
-        <p class="page-subtitle">Post a customer payment, allocate it to open invoices, and issue one receipt automatically.</p>
+        <p class="page-subtitle">Post a customer payment with optional invoice allocation, then issue one receipt automatically.</p>
     </div>
     <div class="page-actions">
         <a asp-action="Index" class="btn btn-outline-secondary">Back to Payments</a>
@@ -20,7 +20,7 @@
         <form asp-action="Create" method="post" id="paymentForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Save posts the payment immediately and creates one read-only receipt.</span>
+                <span class="table-meta">Save posts the payment immediately. You can leave it unapplied or allocate part/all of it to invoices.</span>
                 <div class="page-actions">
                     <span class="table-meta text-danger" id="postPaymentReason"></span>
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
@@ -155,14 +155,8 @@
                     reason = "Select a customer before posting.";
                 } else if (paymentAmount <= 0) {
                     reason = "Enter a payment amount greater than zero.";
-                } else if (activeRows.length === 0) {
-                    reason = "The selected customer has no open invoices to allocate.";
-                } else if (allocationRows.length === 0 || applied <= 0) {
-                    reason = "Apply payment to at least one invoice.";
                 } else if (applied > paymentAmount) {
                     reason = "Total applied amount cannot exceed payment amount.";
-                } else if (remaining !== 0) {
-                    reason = "Payment amount must be fully allocated before posting";
                 } else {
                     const overApplied = allocationRows.find(x => parseAmount(x.input.value) > x.balance);
                     if (overApplied) {
@@ -172,7 +166,13 @@
                 }
 
                 postButton.disabled = reason.length > 0;
-                postReason.textContent = reason;
+                if (!reason && paymentAmount > 0 && remaining > 0) {
+                    postReason.textContent = `This payment will save with unapplied balance ${remaining.toFixed(2)}.`;
+                } else if (!reason && customerId && activeRows.length === 0) {
+                    postReason.textContent = "This customer has no open invoices. Payment will be saved as unapplied.";
+                } else {
+                    postReason.textContent = reason;
+                }
                 return reason;
             };
 

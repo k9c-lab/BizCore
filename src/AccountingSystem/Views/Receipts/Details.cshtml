@@ -9,6 +9,7 @@
     var appliedAmount = allocations.Sum(x => x.AppliedAmount);
     var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
     var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
+    var hasAllocations = allocations.Any();
     var canCancel = Model.Status == "Issued";
     var cancelBlockedReason = canCancel
         ? string.Empty
@@ -24,7 +25,7 @@
     <div>
         <div class="page-eyebrow">AR Module</div>
         <h1 class="page-title">Receipt Details</h1>
-        <p class="page-subtitle">Review the issued receipt and the related posted payment allocations.</p>
+        <p class="page-subtitle">Review the issued receipt and any related posted payment allocations.</p>
     </div>
     <div class="page-actions">
         @if (Model.PaymentHeader is not null)
@@ -34,9 +35,24 @@
         <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId })', '_blank', 'noopener');">Print</button>
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this receipt? Payment and invoice balances will not change.');">Cancel Receipt</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-danger js-confirm-popover-toggle"
+                            data-confirm-target="cancelReceiptDetailsConfirm_@Model.ReceiptId"
+                            aria-expanded="false">
+                        Cancel Receipt
+                    </button>
+                    <div class="confirm-popover" id="cancelReceiptDetailsConfirm_@Model.ReceiptId" hidden>
+                        <div class="confirm-popover-title">Cancel this receipt?</div>
+                        <div class="confirm-popover-text">Payment and invoice balances will not change when this receipt is cancelled.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -132,7 +148,7 @@
                             </div>
                             <div class="quotation-info-field">
                                 <span class="quotation-info-label">Allocations</span>
-                                <span class="quotation-info-value">@allocations.Count invoice(s)</span>
+                                <span class="quotation-info-value">@(hasAllocations ? $"{allocations.Count} invoice(s)" : "No linked invoices")</span>
                             </div>
                         </div>
                     </div>
@@ -147,51 +163,58 @@
                     </div>
                     <div class="table-meta">@allocations.Count invoice(s)</div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table entity-table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th class="text-end">Qty</th>
-                                <th class="text-end">Unit Price</th>
-                                <th class="text-end">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var allocation in allocations)
-                        {
-                            var invoice = allocation.InvoiceHeader;
-                            if (invoice is null)
-                            {
-                                continue;
-                            }
-
-                            <tr>
-                                <td colspan="4">
-                                    <span class="code-chip">@invoice.InvoiceNo</span>
-                                    <span class="text-muted ms-2">@invoice.InvoiceDate.ToString("dd MMM yyyy")</span>
-                                </td>
-                            </tr>
-                            foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
-                            {
+                @if (hasAllocations)
+                {
+                    <div class="table-responsive">
+                        <table class="table entity-table align-middle">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div class="fw-semibold">@line.Item?.ItemName</div>
-                                        <div class="text-muted small">@line.Item?.ItemCode</div>
-                                        @if (!string.IsNullOrWhiteSpace(line.Remark))
-                                        {
-                                            <div class="text-muted small">@line.Remark</div>
-                                        }
-                                    </td>
-                                    <td class="text-end">@line.Qty.ToString("N2")</td>
-                                    <td class="text-end">@line.UnitPrice.ToString("N2")</td>
-                                    <td class="text-end">@line.LineTotal.ToString("N2")</td>
+                                    <th>Description</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Amount</th>
                                 </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var allocation in allocations)
+                            {
+                                var invoice = allocation.InvoiceHeader;
+                                if (invoice is null)
+                                {
+                                    continue;
+                                }
+
+                                <tr>
+                                    <td colspan="4">
+                                        <span class="code-chip">@invoice.InvoiceNo</span>
+                                        <span class="text-muted ms-2">@invoice.InvoiceDate.ToString("dd MMM yyyy")</span>
+                                    </td>
+                                </tr>
+                                foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@line.Item?.ItemName</div>
+                                            <div class="text-muted small">@line.Item?.ItemCode</div>
+                                            @if (!string.IsNullOrWhiteSpace(line.Remark))
+                                            {
+                                                <div class="text-muted small">@line.Remark</div>
+                                            }
+                                        </td>
+                                        <td class="text-end">@line.Qty.ToString("N2")</td>
+                                        <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                                        <td class="text-end">@line.LineTotal.ToString("N2")</td>
+                                    </tr>
+                                }
                             }
-                        }
-                        </tbody>
-                    </table>
-                </div>
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="workflow-info">This receipt was issued from a standalone payment with no invoice allocations.</div>
+                }
             </div>
 
             <div class="quotation-party-grid">
@@ -228,7 +251,7 @@
                             </div>
                             <div class="quotation-summary-row total">
                                 <span class="quotation-summary-name">This Receipt Paid</span>
-                                <span class="quotation-summary-amount">@appliedAmount.ToString("N2")</span>
+                                <span class="quotation-summary-amount">@(hasAllocations ? appliedAmount.ToString("N2") : Model.TotalReceivedAmount.ToString("N2"))</span>
                             </div>
                             <div class="quotation-summary-row">
                                 <span class="quotation-summary-name">Receipt Amount</span>

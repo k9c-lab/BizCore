@@ -1,9 +1,11 @@
+@inject IUserPermissionService PermissionService
+
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     string ActiveLink(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? " active" : string.Empty;
     string ActiveSection(params string[] controllers) => controllers.Any(controller => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)) ? " active" : string.Empty;
     string? AriaCurrent(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "page" : null;
-    bool CanUseMenu(string permissionCode) => User.IsInRole("Admin") || User.HasClaim("Permission", permissionCode);
+    bool CanUseMenu(string permissionCode) => PermissionService.HasMenuAccess(User, permissionCode);
 
     var canUseDashboard = CanUseMenu("Dashboard.Menu");
     var canUseFinancialOverview = CanUseMenu("FinancialOverview.Menu");

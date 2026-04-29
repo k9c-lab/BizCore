@@ -96,16 +96,46 @@
                                     <a asp-action="Details" asp-route-id="@payment.PaymentId" class="btn btn-sm btn-outline-secondary">View</a>
                                     @if (canGenerateReceipt)
                                     {
-                                        <form asp-action="GenerateReceipt" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                        <form asp-action="GenerateReceipt" asp-route-id="@payment.PaymentId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-primary">Generate Receipt</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="generateReceiptPaymentConfirm_@payment.PaymentId"
+                                                        aria-expanded="false">
+                                                    Generate Receipt
+                                                </button>
+                                                <div class="confirm-popover" id="generateReceiptPaymentConfirm_@payment.PaymentId" hidden>
+                                                    <div class="confirm-popover-title">Generate receipt for this payment?</div>
+                                                    <div class="confirm-popover-text">This will create one receipt linked to this posted payment.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     @if (canCancel)
                                     {
-                                        <form asp-action="Cancel" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                        <form asp-action="Cancel" asp-route-id="@payment.PaymentId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this payment and reverse invoice allocations?');">Cancel</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
+                                                        data-confirm-target="cancelPaymentConfirm_@payment.PaymentId"
+                                                        aria-expanded="false">
+                                                    Cancel
+                                                </button>
+                                                <div class="confirm-popover" id="cancelPaymentConfirm_@payment.PaymentId" hidden>
+                                                    <div class="confirm-popover-title">Cancel this payment?</div>
+                                                    <div class="confirm-popover-text">This will cancel the payment and reverse any invoice allocations linked to it.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                 </div>

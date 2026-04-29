@@ -18,11 +18,21 @@
     <div class="page-actions">
         <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn btn-primary">Edit User</a>
         <a asp-action="ResetPassword" asp-route-id="@Model.UserId" class="btn btn-outline-secondary">Reset Password</a>
-        <form asp-action="ToggleActive" asp-route-id="@Model.UserId" method="post" class="d-inline">
+        <form asp-action="ToggleActive" asp-route-id="@Model.UserId" method="post" class="d-inline confirm-popover-form">
             @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Change active status for this user?');">
-                @(Model.IsActive ? "Deactivate" : "Activate")
-            </button>
+            <div class="confirm-popover-shell">
+                <button type="button" class="btn btn-outline-secondary js-confirm-popover-toggle" data-confirm-target="toggleUserActiveConfirm_@Model.UserId" aria-expanded="false">
+                    @(Model.IsActive ? "Deactivate" : "Activate")
+                </button>
+                <div class="confirm-popover" id="toggleUserActiveConfirm_@Model.UserId" hidden>
+                    <div class="confirm-popover-title">Change user active status?</div>
+                    <div class="confirm-popover-text">This will @(Model.IsActive ? "deactivate" : "activate") this user account.</div>
+                    <div class="confirm-popover-actions">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Confirm</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
         </form>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>

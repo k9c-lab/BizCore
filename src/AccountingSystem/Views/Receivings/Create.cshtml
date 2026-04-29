@@ -1,3 +1,4 @@
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.ReceivingFormViewModel
 
 @{
@@ -6,9 +7,7 @@
     var pageTitle = isEdit ? "Edit Receiving Draft" : "Create Receiving";
     ViewData["Title"] = pageTitle;
     var selectedPo = Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId);
-    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
-    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
-    var canPostPermission = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Post") || oldReceivingOperatorFallback;
+    var canPostPermission = PermissionService.HasPermission(User, "Receiving.Post");
     var canPost = canPostPermission && Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
     var canSaveDraft = Model.PurchaseOrderLookup.Any() && Model.PurchaseOrderId.HasValue;
     var postBlockedReason = canPost
@@ -229,7 +228,7 @@
                                     <div class="receiving-line-entry-grid">
                                         <div class="receiving-entry-block">
                                             <label class="detail-label">Qty Receive</label>
-                                        <input type="number" step="0.01" min="0" max="@Model.Details[i].RemainingQty.ToString("0.##")" name="Details[@i].QtyReceivedInput" value="@Model.Details[i].QtyReceivedInput.ToString("0.##")" class="form-control js-receive-qty" />
+                                        <input type="number" step="1" min="0" data-qty-min="0" max="@Model.Details[i].RemainingQty.ToString("0.##")" name="Details[@i].QtyReceivedInput" value="@Model.Details[i].QtyReceivedInput.ToString("0.##")" class="form-control js-receive-qty js-integer-qty" />
                                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].QtyReceivedInput" data-valmsg-replace="true"></span>
                                         </div>
 
@@ -538,7 +537,7 @@
                             <div class="receiving-line-entry-grid">
                                 <div class="receiving-entry-block">
                                     <label class="detail-label">Qty Receive</label>
-                                    <input type="number" step="0.01" min="0" max="${line.RemainingQty}" name="Details[${index}].QtyReceivedInput" value="0" class="form-control js-receive-qty" />
+                                    <input type="number" step="1" min="0" data-qty-min="0" max="${line.RemainingQty}" name="Details[${index}].QtyReceivedInput" value="0" class="form-control js-receive-qty js-integer-qty" />
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].QtyReceivedInput" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="receiving-entry-block">

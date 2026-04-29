@@ -36,4 +36,6 @@ public class QuotationLineEditorViewModel
 
     [Display(Name = "Line Total")]
     public decimal LineTotal { get; set; }
+
+    public decimal NetUnitPrice => Quantity > 0 ? Math.Round(LineTotal / Quantity, 2, MidpointRounding.AwayFromZero) : 0m;
 }

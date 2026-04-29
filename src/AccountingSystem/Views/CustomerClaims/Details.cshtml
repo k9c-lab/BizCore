@@ -92,9 +92,19 @@
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
         @if (canReceiveItem)
         {
-            <form asp-action="ReceiveItem" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline">
+            <form asp-action="ReceiveItem" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Receive this item from customer?');">Receive Item</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="receiveCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Receive Item</button>
+                    <div class="confirm-popover" id="receiveCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                        <div class="confirm-popover-title">Receive this item?</div>
+                        <div class="confirm-popover-text">This will mark the customer item as received into the claim workflow.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -107,11 +117,24 @@
         }
         @if (canReturn)
         {
-            <form asp-action="ReturnToCustomer" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2">
+            <form asp-action="ReturnToCustomer" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <input type="date" name="returnedDate" value="@dateValue" class="form-control form-control-sm" title="Return date" />
-                <input type="hidden" name="resolutionRemark" />
-                <button type="submit" class="btn btn-outline-success" onclick="const remark = prompt('Resolution remark (optional):'); if (remark === null) return false; this.form.resolutionRemark.value = remark; return confirm('Return this item to customer?');">Return To Customer</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-success js-confirm-popover-toggle" data-confirm-target="returnCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Return To Customer</button>
+                    <div class="confirm-popover" id="returnCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                        <div class="confirm-popover-title">Return this item to customer?</div>
+                        <div class="confirm-popover-text">Optional resolution remark helps document the return outcome.</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="returnCustomerClaimRemark_@Model.CustomerClaimId">Resolution Remark</label>
+                            <textarea id="returnCustomerClaimRemark_@Model.CustomerClaimId" name="resolutionRemark" class="form-control" rows="3" placeholder="Optional remark"></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -120,10 +143,20 @@
         }
         @if (canClose)
         {
-            <form asp-action="CloseClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2">
+            <form asp-action="CloseClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
-                <button type="submit" class="btn btn-primary" onclick="return confirm('Close this customer claim?');">Close Claim</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Close Claim</button>
+                    <div class="confirm-popover" id="closeCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                        <div class="confirm-popover-title">Close this customer claim?</div>
+                        <div class="confirm-popover-text">This will close the claim after return or rejection is complete.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -132,10 +165,23 @@
         }
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="cancelReason" />
-                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this customer claim (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this customer claim and restore serial status to Sold?');">Cancel Claim</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Cancel Claim</button>
+                    <div class="confirm-popover" id="cancelCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                        <div class="confirm-popover-title">Cancel this customer claim?</div>
+                        <div class="confirm-popover-text">This will cancel the claim and restore the original serial status to Sold.</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="cancelCustomerClaimReason_@Model.CustomerClaimId">Cancel Reason</label>
+                            <textarea id="cancelCustomerClaimReason_@Model.CustomerClaimId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -254,14 +300,24 @@
                             }
                             else
                             {
-                                <form asp-action="SendToSupplier" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end">
+                                <form asp-action="SendToSupplier" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end confirm-popover-form">
                                     @Html.AntiForgeryToken()
                                     <div class="col">
                                         <label class="quotation-info-label" for="sentToSupplierDate">Sent Date</label>
                                         <input id="sentToSupplierDate" name="sentToSupplierDate" type="date" value="@dateValue" class="form-control" disabled="@(!canSendToSupplier)" />
                                     </div>
                                     <div class="col-auto">
-                                        <button type="submit" class="btn btn-outline-primary" disabled="@(!canSendToSupplier)" title="@sendSupplierBlockedReason" onclick="return confirm('Send this item to supplier and create supplier claim?');">Send Supplier</button>
+                                        <div class="confirm-popover-shell">
+                                            <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" disabled="@(!canSendToSupplier)" title="@sendSupplierBlockedReason" data-confirm-target="sendSupplierCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Send Supplier</button>
+                                            <div class="confirm-popover" id="sendSupplierCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                                                <div class="confirm-popover-title">Send this item to supplier?</div>
+                                                <div class="confirm-popover-text">This will create a linked supplier claim for the claimed serial.</div>
+                                                <div class="confirm-popover-actions">
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </form>
                                 @if (!string.IsNullOrWhiteSpace(sendSupplierBlockedReason))
@@ -290,7 +346,7 @@
                             }
                             else
                             {
-                                <form asp-action="AssignReplacement" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end">
+                                <form asp-action="AssignReplacement" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end confirm-popover-form">
                                     @Html.AntiForgeryToken()
                                     <div class="col">
                                         <label class="quotation-info-label" for="replacementSerialId">Replacement Serial</label>
@@ -303,7 +359,17 @@
                                         </select>
                                     </div>
                                     <div class="col-auto">
-                                        <button type="submit" class="btn btn-outline-primary" disabled="@(!canAssignReplacement)" title="@replacementBlockedReason" onclick="return confirm('Assign this replacement serial to the customer claim?');">Assign Replacement</button>
+                                        <div class="confirm-popover-shell">
+                                            <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" disabled="@(!canAssignReplacement)" title="@replacementBlockedReason" data-confirm-target="assignReplacementCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Assign Replacement</button>
+                                            <div class="confirm-popover" id="assignReplacementCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                                                <div class="confirm-popover-title">Assign this replacement serial?</div>
+                                                <div class="confirm-popover-text">This will link the selected replacement serial to the customer claim.</div>
+                                                <div class="confirm-popover-actions">
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </form>
                                 @if (!string.IsNullOrWhiteSpace(replacementBlockedReason))
@@ -317,14 +383,24 @@
                     <div class="quotation-party-column">
                         <div class="quotation-info-card">
                             <div class="quotation-info-card-title">Reject Claim</div>
-                            <form asp-action="RejectClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end">
+                            <form asp-action="RejectClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end confirm-popover-form">
                                 @Html.AntiForgeryToken()
                                 <div class="col">
                                     <label class="quotation-info-label" for="rejectResolutionRemark">Reject Reason</label>
                                     <input id="rejectResolutionRemark" name="resolutionRemark" class="form-control" disabled="@(!canReject)" />
                                 </div>
                                 <div class="col-auto">
-                                    <button type="submit" class="btn btn-outline-danger" disabled="@(!canReject)" title="@rejectBlockedReason" onclick="return confirm('Reject this customer claim and restore serial status to Sold?');">Reject</button>
+                                    <div class="confirm-popover-shell">
+                                        <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" disabled="@(!canReject)" title="@rejectBlockedReason" data-confirm-target="rejectCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Reject</button>
+                                        <div class="confirm-popover" id="rejectCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                                            <div class="confirm-popover-title">Reject this customer claim?</div>
+                                            <div class="confirm-popover-text">This will reject the claim and restore the original serial status to Sold.</div>
+                                            <div class="confirm-popover-actions">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                             @if (!string.IsNullOrWhiteSpace(rejectBlockedReason))
@@ -337,14 +413,24 @@
                     <div class="quotation-party-column">
                         <div class="quotation-info-card">
                             <div class="quotation-info-card-title">Repair Complete / Ready To Return</div>
-                            <form asp-action="RepairComplete" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end">
+                            <form asp-action="RepairComplete" asp-route-id="@Model.CustomerClaimId" method="post" class="row g-2 align-items-end confirm-popover-form">
                                 @Html.AntiForgeryToken()
                                 <div class="col">
                                     <label class="quotation-info-label" for="readyResolutionRemark">Result Remark</label>
                                     <input id="readyResolutionRemark" name="resolutionRemark" class="form-control" disabled="@(!canRepairComplete)" />
                                 </div>
                                 <div class="col-auto">
-                                    <button type="submit" class="btn btn-outline-primary" disabled="@(!canRepairComplete)" title="@repairCompleteBlockedReason" onclick="return confirm('Mark this customer claim ready to return?');">Mark Ready</button>
+                                    <div class="confirm-popover-shell">
+                                        <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" disabled="@(!canRepairComplete)" title="@repairCompleteBlockedReason" data-confirm-target="readyCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Mark Ready</button>
+                                        <div class="confirm-popover" id="readyCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
+                                            <div class="confirm-popover-title">Mark this claim ready?</div>
+                                            <div class="confirm-popover-text">This will move the customer claim to Ready To Return.</div>
+                                            <div class="confirm-popover-actions">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                             @if (!string.IsNullOrWhiteSpace(repairCompleteBlockedReason))

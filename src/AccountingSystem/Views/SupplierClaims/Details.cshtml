@@ -30,10 +30,20 @@
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
         @if (canMarkSent)
         {
-            <form asp-action="MarkSent" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2">
+            <form asp-action="MarkSent" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <input type="date" name="sentDate" value="@dateValue" class="form-control form-control-sm" title="Sent date" />
-                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Mark this supplier claim as sent?');">Mark Sent</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="markSentSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Mark Sent</button>
+                    <div class="confirm-popover" id="markSentSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
+                        <div class="confirm-popover-title">Mark this supplier claim as sent?</div>
+                        <div class="confirm-popover-text">This will mark the claim as sent out to the supplier.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -42,10 +52,20 @@
         }
         @if (canClose)
         {
-            <form asp-action="Close" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2">
+            <form asp-action="Close" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
-                <button type="submit" class="btn btn-primary" onclick="return confirm('Close this supplier claim?');">Close Claim</button>
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Close Claim</button>
+                    <div class="confirm-popover" id="closeSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
+                        <div class="confirm-popover-title">Close this supplier claim?</div>
+                        <div class="confirm-popover-text">This will close the supplier claim after the result has been recorded.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -173,13 +193,23 @@
                             <span class="quotation-info-label">Result</span>
                             <span class="quotation-info-value">Receive the same serial back from supplier after repair.</span>
                         </div>
-                        <form asp-action="ReceiveRepairedOriginal" asp-route-id="@Model.SerialClaimLogId" method="post">
+                        <form asp-action="ReceiveRepairedOriginal" asp-route-id="@Model.SerialClaimLogId" method="post" class="confirm-popover-form">
                             @Html.AntiForgeryToken()
                             <label class="quotation-info-label" for="repairedReceivedDate">Received Date</label>
                             <input id="repairedReceivedDate" name="receivedDate" type="date" value="@dateValue" class="form-control mb-2" disabled="@(!canReceiveResult)" />
                             <label class="quotation-info-label" for="repairedRemark">Remark</label>
                             <textarea id="repairedRemark" name="remark" class="form-control mb-2" rows="2" disabled="@(!canReceiveResult)"></textarea>
-                            <button type="submit" class="btn btn-outline-primary" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Receive repaired original serial from supplier?');">Receive Repaired Original</button>
+                            <div class="confirm-popover-shell">
+                                <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" data-confirm-target="receiveRepairedSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Receive Repaired Original</button>
+                                <div class="confirm-popover" id="receiveRepairedSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
+                                    <div class="confirm-popover-title">Receive repaired original serial?</div>
+                                    <div class="confirm-popover-text">This will record the original serial as returned from the supplier.</div>
+                                    <div class="confirm-popover-actions">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                         @if (!string.IsNullOrWhiteSpace(receiveBlockedReason))
                         {
@@ -205,7 +235,7 @@
                         }
                         else
                         {
-                            <form asp-action="ReceiveReplacement" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2">
+                            <form asp-action="ReceiveReplacement" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2 confirm-popover-form">
                                 @Html.AntiForgeryToken()
                                 <div class="col-12">
                                     <label class="quotation-info-label" for="replacementSerialNo">Replacement Serial No.</label>
@@ -228,7 +258,17 @@
                                     <textarea id="replacementRemark" name="remark" class="form-control" rows="2" disabled="@(!canReceiveResult)"></textarea>
                                 </div>
                                 <div class="col-12">
-                                    <button type="submit" class="btn btn-outline-primary" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Receive replacement serial from supplier into stock?');">Receive Replacement</button>
+                                    <div class="confirm-popover-shell">
+                                        <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" data-confirm-target="receiveReplacementSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Receive Replacement</button>
+                                        <div class="confirm-popover" id="receiveReplacementSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
+                                            <div class="confirm-popover-title">Receive replacement serial?</div>
+                                            <div class="confirm-popover-text">This will bring the replacement serial into stock and link it to the supplier claim result.</div>
+                                            <div class="confirm-popover-actions">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                             @if (!string.IsNullOrWhiteSpace(receiveBlockedReason))
@@ -241,7 +281,7 @@
             </div>
             <div class="quotation-info-card mt-3">
                 <div class="quotation-info-card-title">Supplier Rejects Claim</div>
-                <form asp-action="SupplierRejected" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2 align-items-end">
+                <form asp-action="SupplierRejected" asp-route-id="@Model.SerialClaimLogId" method="post" class="row g-2 align-items-end confirm-popover-form">
                     @Html.AntiForgeryToken()
                     <div class="col-auto">
                         <label class="quotation-info-label" for="rejectedDate">Rejected Date</label>
@@ -252,7 +292,17 @@
                         <input id="rejectRemark" name="remark" class="form-control" disabled="@(!canReceiveResult)" />
                     </div>
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-outline-danger" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" onclick="return confirm('Mark supplier claim as rejected and original serial as Defective?');">Supplier Rejected</button>
+                        <div class="confirm-popover-shell">
+                            <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" disabled="@(!canReceiveResult)" title="@receiveBlockedReason" data-confirm-target="supplierRejectedClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Supplier Rejected</button>
+                            <div class="confirm-popover" id="supplierRejectedClaimConfirm_@Model.SerialClaimLogId" hidden>
+                                <div class="confirm-popover-title">Mark supplier claim as rejected?</div>
+                                <div class="confirm-popover-text">This will record the claim as rejected and keep the original serial in defective status.</div>
+                                <div class="confirm-popover-actions">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
                 @if (!string.IsNullOrWhiteSpace(receiveBlockedReason))

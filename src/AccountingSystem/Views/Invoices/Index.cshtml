@@ -87,7 +87,10 @@
                             <td class="fw-semibold">@invoice.Customer?.CustomerName</td>
                             <td>@(invoice.Branch?.BranchName ?? "-")</td>
                             <td>@invoice.TotalAmount.ToString("N2")</td>
-                            <td>@await Html.PartialAsync("_StatusPill", invoice.Status)</td>
+                            <td>
+                                <div>@await Html.PartialAsync("_StatusPill", invoice.Status)</div>
+                                <div class="table-meta">Paid @invoice.PaidAmount.ToString("N2") / @invoice.TotalAmount.ToString("N2")</div>
+                            </td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-secondary">View</a>
@@ -98,16 +101,46 @@
                                     @if (invoice.Status == "Draft")
                                     {
                                         <a asp-action="Edit" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                        <form asp-action="Issue" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline">
+                                        <form asp-action="Issue" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-primary">Issue</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="issueInvoiceListConfirm_@invoice.InvoiceId"
+                                                        aria-expanded="false">
+                                                    Issue
+                                                </button>
+                                                <div class="confirm-popover" id="issueInvoiceListConfirm_@invoice.InvoiceId" hidden>
+                                                    <div class="confirm-popover-title">Issue this invoice?</div>
+                                                    <div class="confirm-popover-text">This will change the invoice status to Issued.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     @if ((invoice.Status == "Draft" || invoice.Status == "Issued") && invoice.PaidAmount <= 0 && !invoice.PaymentAllocations.Any())
                                     {
-                                        <form asp-action="Cancel" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline">
+                                        <form asp-action="Cancel" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
+                                                        data-confirm-target="cancelInvoiceListConfirm_@invoice.InvoiceId"
+                                                        aria-expanded="false">
+                                                    Cancel
+                                                </button>
+                                                <div class="confirm-popover" id="cancelInvoiceListConfirm_@invoice.InvoiceId" hidden>
+                                                    <div class="confirm-popover-title">Cancel this invoice?</div>
+                                                    <div class="confirm-popover-text">This will mark the invoice as cancelled and keep the document in history.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                 </div>

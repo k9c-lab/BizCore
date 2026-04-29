@@ -1573,3 +1573,263 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - `040_supplier_payments_lightweight.sql`
   - `041_overview_menu_permissions.sql`
   - `042_announcements_menu.sql`
+
+## 2026-04-24 Print Header Document Number Wrap Fix
+- Updated print layouts to reduce header wrapping for long document numbers.
+- Applied to:
+  - `Views/Quotations/Print.cshtml`
+  - `Views/Invoices/Print.cshtml`
+  - `Views/PurchaseOrders/Print.cshtml`
+  - `Views/Receivings/Print.cshtml`
+  - `Views/Receipts/Print.cshtml`
+- Changes:
+  - changed print label from `Document No.` to `Doc No.`
+  - added no-wrap styling for the document number value in the header meta table
+  - increased `.document-block` minimum width from `280px` to `300px`
+- Purpose:
+  - prevent long document numbers from breaking onto a new line in printed documents
+- Verification:
+  - checked the updated Razor print views and confirmed `Document No.` was replaced in the five target print pages
+  - no build was run because this was a print-view label/CSS-only change
+
+## 2026-04-25 Invoice / Quotation Flexible Billing Flow
+- Reworked invoice behavior to support flexible sales flow without forcing strict document dependency.
+- Business rule now used:
+  - `Quotation` can stand alone
+  - `Invoice` can stand alone
+  - `Payment` can stand alone
+  - document linking is optional and used mainly for convenience / reference
+- `Convert to Invoice` was changed into a prefill shortcut instead of a one-time locked conversion.
+- `Quotation -> many Invoice` is now supported in workflow terms.
+- `Invoice` created from quotation can still be edited before save / issue.
+
+## 2026-04-25 Invoice Draft / Validation Updates
+- Restored `Save Draft` on `Invoices/Create`.
+- Draft rule now works as intended:
+  - draft invoice does not require enough stock
+  - draft invoice does not require complete serial selection
+  - stock / serial enforcement still applies on `Issue Invoice`
+- `Add to List` on invoice line entry was relaxed for draft workflow:
+  - no stock block during line add
+  - serial-controlled items can be added without full serial selection
+  - serial quantity still cannot exceed invoice quantity
+- Invoice create/edit line handling was improved:
+  - create page now edits line values directly in the row
+  - edit page has `Invoice Line Entry` again for adding new rows
+
+## 2026-04-25 Invoice Quoted Qty / Actual Qty Separation
+- Added `QuotedQty` to `InvoiceDetail` to separate:
+  - quoted / referenced quantity
+  - actual invoice quantity for this round
+- New database script:
+  - `database/045_invoice_detail_quoted_qty.sql`
+- Important behavior:
+  - `QuotedQty` = ordered / referenced quantity
+  - `Qty` = quantity billed / delivered on this invoice
+  - print shows `QuotedQty` as main quantity
+  - if `QuotedQty != Qty`, print also shows `Qty This Invoice`
+- For quotation-linked invoices:
+  - `Issued Before` excludes `Draft`
+  - only previously issued, non-cancelled invoices are counted
+
+## 2026-04-25 Quotation-Linked Invoice Amount Logic
+- `Amount Due This Invoice` now autofills with the remaining amount from quotation, not the full quotation amount.
+- Applied to:
+  - `Convert to Invoice`
+  - `New Invoice` when user selects a quotation
+- Validation was updated:
+  - amount due is checked against quotation remaining amount
+  - `Draft` and `Cancelled` invoices are excluded from remaining-amount calculation
+- For quotation-linked invoices:
+  - invoice discount is disabled
+  - invoice lines default to `DiscountAmount = 0`
+  - quotation net amount is treated as the pricing reference
+- Standalone invoices still support discount normally.
+
+## 2026-04-25 Quotation Net Price
+- Added `Net Price` / price after discount to quotation screens.
+- Applied to:
+  - `Views/Quotations/Create.cshtml`
+  - `Views/Quotations/Edit.cshtml`
+  - `Views/Quotations/Details.cshtml`
+  - `Views/Quotations/Print.cshtml`
+- Also added summary display for:
+  - `Net After Discount`
+
+## 2026-04-25 Invoice Quotation Reference Summary
+- Invoice summary presentation was redesigned for quotation-linked invoices only.
+- Applied to:
+  - `Views/Invoices/Create.cshtml` via shared `_Form`
+  - `Views/Invoices/Edit.cshtml` via shared `_Form`
+  - `Views/Invoices/Details.cshtml`
+  - `Views/Invoices/Print.cshtml`
+- New presentation rule for quotation-linked invoices:
+  - left side = `Quotation Reference Summary`
+    - `Subtotal`
+    - `Discount`
+    - `Net After Discount`
+    - `VAT`
+    - `Total`
+  - right side = `Invoice Summary`
+    - `Amount Due This Invoice`
+    - `VAT`
+    - `Total`
+- Purpose:
+  - separate quotation reference totals from the actual invoice charge
+  - reduce confusion in partial billing / installment-style invoice cases
+- Supporting code:
+  - added reference summary fields to `InvoiceFormViewModel`
+  - mapped quotation totals into the view model from both quotation prefill and stored invoice reference totals
+  - added new summary layout CSS in `wwwroot/css/site.css`
+- Verification:
+  - `dotnet build .\src\AccountingSystem\BizCore.csproj --no-restore -p:UseAppHost=false -p:OutputPath=$env:TEMP\BizCoreInvoiceReferenceSummaryBuild`
+  - result: `0 warnings, 0 errors`
+
+## 2026-04-25 Follow-up Rules And Open Issues
+- Confirmed business rule for quotation-linked invoices:
+  - `Amount Due This Invoice` should default to the quotation remaining amount, not the full quotation amount
+- Additional summary requirement agreed:
+  - `Quotation Reference Summary` should also show `Balance` / remaining amount from the quotation
+- Important calculation rule clarified:
+  - user should enter `Amount Due This Invoice` as the amount before VAT
+  - system should then calculate VAT on top according to `VAT` / `NoVAT`
+  - final invoice total should be derived from that amount plus VAT when applicable
+- Known bug to fix next:
+  - `Quotation Reference Summary` on invoice does not show quotation discount correctly in some quotation-linked cases
+  - `Net After Discount` is showing incorrect value in some invoice conversion cases
+- Scope note:
+  - the issue above was observed on invoice flows created from quotation reference
+  - next round should verify both:
+    - `Convert to Invoice`
+    - `New Invoice` + selecting quotation manually
+
+## 2026-04-29 Production Login 403 Root Cause And Fix
+- Production login issue was traced to oversized auth cookies.
+- Observed behavior:
+  - `/Account/Login` opened normally
+  - after login, users with many permissions were redirected into `403 Forbidden`
+  - users with very limited permissions could still log in
+- Root cause:
+  - login cookie stored one `Permission` claim per permission
+  - large roles produced oversized auth cookies on production / Plesk
+- Fix implemented:
+  - removed permission claims from auth cookie
+  - introduced server-side permission checks via `IUserPermissionService` / `UserPermissionService`
+  - updated layout / controllers / views to use permission service instead of `User.HasClaim("Permission", ...)`
+- Result:
+  - production login works again for high-permission users
+  - future permission growth should not recreate this cookie-size issue
+
+## 2026-04-29 Welcome Announcement Post-It Board
+- Welcome page announcement area was redesigned from full-width full-content blocks into smaller post-it style cards.
+- New behavior:
+  - welcome page shows short announcement cards
+  - cards show headline / status / date summary
+  - click through to detail page for full content
+- Purpose:
+  - reduce clutter on landing page
+  - keep announcements visible without making welcome page too heavy
+
+## 2026-04-29 Invoice Print Fixes
+- Fixed unwanted top spacing in `Invoices/Print` description column.
+- Root cause:
+  - whitespace / linebreaks inside Razor combined with `white-space: pre-wrap`
+- Fix:
+  - changed description rendering structure and text wrapping behavior
+- Also fixed missing branch display in `Invoices/Print` by loading `Branch` in the print action query.
+
+## 2026-04-29 Integer Qty UI Guardrails
+- Added UI-only integer quantity restriction for main document entry screens.
+- Applied pattern:
+  - `step="1"`
+  - non-negative integer sanitizing in shared JS
+  - block `-`, `.`, `,`, `e`
+- Applied first to key workflows:
+  - `Quotation`
+  - `Invoice`
+  - `Purchase Request`
+  - `Purchase Order`
+  - `Receiving`
+- Note:
+  - backend / database types were intentionally not changed in this round
+
+## 2026-04-29 Confirm Popover Pattern
+- Built reusable confirm popover UI in shared `site.js` + `site.css`.
+- Initial positioning issue inside tables was fixed by switching popovers to `position: fixed` with JS-based placement.
+- Pattern now replaces plain `confirm()` / `prompt()` in many workflow actions.
+
+## 2026-04-29 Confirm Popover Coverage
+- Confirm popovers now cover major workflow status actions across modules:
+  - `Invoices`
+    - `Issue`
+    - `Cancel`
+  - `Receivings`
+    - `Post`
+    - `Cancel`
+  - `Purchase Requests`
+    - `Submit`
+    - `Approve`
+    - `Reject`
+    - `Cancel`
+  - `Purchase Orders`
+    - `Submit`
+    - `Approve`
+    - `Reject`
+    - `Cancel`
+  - `Quotations`
+    - `Approve`
+    - `Convert to Invoice`
+  - `Payments`
+    - `Generate Receipt`
+    - `Cancel`
+  - `Receipts`
+    - `Cancel`
+  - `Stock Issues`
+    - `Post`
+    - `Cancel`
+  - `Stock Transfers`
+    - `Post`
+    - `Cancel`
+  - `Supplier Payments`
+    - `Cancel`
+  - `Customer Claims`
+    - `Receive Item`
+    - `Send Supplier`
+    - `Assign Replacement`
+    - `Reject`
+    - `Mark Ready`
+    - `Return To Customer`
+    - `Close Claim`
+    - `Cancel Claim`
+  - `Supplier Claims`
+    - `Mark Sent`
+    - `Receive Repaired Original`
+    - `Receive Replacement`
+    - `Supplier Rejected`
+    - `Close Claim`
+  - `Users`
+    - `Activate / Deactivate`
+
+## 2026-04-29 Quotation To Invoice Branch Stock Display Fix
+- Found issue on `Quotation -> Convert to Invoice`:
+  - invoice line stock sometimes showed total item stock across all branches
+  - example observed:
+    - `ITEM-001 - Business Laptop 14-inch` showed `13`
+    - but `Main Branch` actual stock was `0`
+- Root cause:
+  - quotation-prefill line model used `Item.CurrentStock` before branch-specific stock lookup was synchronized back to line rows
+- Fix:
+  - after `PopulateLookupsAsync(model)` loads branch-specific stock, line `CurrentStock` is synced from branch item lookup into `model.Details`
+- Result:
+  - invoice form now shows stock for the selected branch correctly during quotation conversion
+
+## 2026-04-29 Suggested Next Checks
+- Re-test quotation-linked invoice flow for:
+  - `Convert to Invoice`
+  - `New Invoice` + selecting quotation manually
+- Sanity-check stock display on:
+  - direct invoice create
+  - invoice edit draft
+  - quotation conversion from branches other than `Main Branch`
+- If continuing confirm-popover cleanup later:
+  - audit remaining low-risk admin / support actions not yet converted

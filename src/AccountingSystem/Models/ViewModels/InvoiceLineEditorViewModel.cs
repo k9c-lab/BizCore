@@ -11,6 +11,8 @@ public class InvoiceLineEditorViewModel
     [Display(Name = "Item")]
     public int? ItemId { get; set; }
 
+    public int? QuotationDetailId { get; set; }
+
     public string ItemCode { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
     public string PartNumber { get; set; } = string.Empty;
@@ -18,6 +20,11 @@ public class InvoiceLineEditorViewModel
     public bool TrackStock { get; set; }
     public bool IsSerialControlled { get; set; }
     public decimal CurrentStock { get; set; }
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Quoted quantity must be greater than zero.")]
+    public decimal QuotedQty { get; set; } = 1m;
+
+    public decimal? PreviouslyInvoicedQty { get; set; }
+    public decimal? RemainingQuotedQty { get; set; }
 
     [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Quantity must be greater than zero.")]
     public decimal Qty { get; set; } = 1m;

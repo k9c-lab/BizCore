@@ -9,11 +9,20 @@
     var payment = Model.PaymentHeader;
     var allocations = payment?.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo)
         ?? Enumerable.Empty<BizCore.Models.Entities.PaymentAllocation>();
-    var appliedAmount = allocations.Sum(x => x.AppliedAmount);
-    var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
-    var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
+    var allocationList = allocations.ToList();
+    var hasAllocations = allocationList.Any();
+    var appliedAmount = allocationList.Sum(x => x.AppliedAmount);
+    var invoiceTotal = allocationList.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
+    var invoiceVatTotal = allocationList.Sum(x => x.InvoiceHeader?.VatAmount ?? 0m);
+    var invoiceSubtotal = invoiceTotal - invoiceVatTotal;
+    var remainingBalance = allocationList.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
     var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalReceivedAmount);
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
+    var printCopies = new[]
+    {
+        "ต้นฉบับ",
+        "สำเนา"
+    };
 }
 <!DOCTYPE html>
 <html lang="th">
@@ -36,8 +45,9 @@
             min-height: 100vh;
             padding: 24px;
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
         }
         .print-shell {
             width: 210mm;
@@ -48,10 +58,19 @@
             padding: 14mm;
             box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
         }
+        .print-copy {
+            position: relative;
+        }
+        .copy-badge {
+            margin: 0 0 6px;
+            color: #374151;
+            font-size: 15px;
+            font-weight: 700;
+        }
         .screen-actions {
             display: flex;
             justify-content: flex-end;
-            margin: 0 0 14px;
+            width: 210mm;
         }
         .screen-actions button {
             border: 1px solid #cbd5e1;
@@ -95,7 +114,7 @@
             white-space: pre-line;
         }
         .document-block {
-            min-width: 280px;
+            min-width: 300px;
             text-align: right;
         }
         .document-title-th {
@@ -106,7 +125,7 @@
         }
         .document-title-en {
             margin: 2px 0 12px;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             color: #1f2937;
             letter-spacing: 0.04em;
@@ -121,6 +140,9 @@
             color: #111827;
         }
         .document-meta td:first-child {
+            white-space: nowrap;
+        }
+        .meta-value-nowrap {
             white-space: nowrap;
         }
         .print-section { margin-top: 16px; }
@@ -140,26 +162,8 @@
             color: #111827;
         }
         .party-value,
-        .remark-value,
         .signature-date {
             white-space: pre-wrap;
-            color: #111827;
-        }
-        .reference-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .reference-box {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 12px;
-            min-height: 58px;
-        }
-        .reference-value {
-            margin-top: 3px;
-            font-weight: 700;
-            font-size: 13px;
             color: #111827;
         }
         .line-table {
@@ -242,8 +246,13 @@
             font-size: 14px;
             color: #0f172a;
         }
-        .payment-summary {
-            min-width: 260px;
+        .workflow-note {
+            margin-top: 16px;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            color: #374151;
+            background: #f8fafc;
         }
         .remark-box {
             white-space: pre-wrap;
@@ -279,17 +288,23 @@
                 padding: 0;
                 box-shadow: none;
             }
+            .print-copy.page-break {
+                break-after: page;
+                page-break-after: always;
+            }
             .screen-actions { display: none; }
         }
     </style>
 </head>
 <body>
     <div class="print-page">
-        <div class="print-shell">
-            <div class="screen-actions">
-                <button type="button" onclick="window.print()">Print</button>
-            </div>
-
+        <div class="screen-actions">
+            <button type="button" onclick="window.print()">Print</button>
+        </div>
+        @for (var copyIndex = 0; copyIndex < printCopies.Length; copyIndex++)
+        {
+            var copyClass = copyIndex < printCopies.Length - 1 ? "print-shell print-copy page-break" : "print-shell print-copy";
+        <div class="@copyClass">
             <header class="print-header">
                 <div class="company-block">
                     <h1 class="company-name">@companyName</h1>
@@ -304,10 +319,11 @@
                     </div>
                 </div>
                 <div class="document-block">
+                    <div class="copy-badge">@printCopies[copyIndex]</div>
                     <h2 class="document-title-th">ใบเสร็จรับเงิน</h2>
                     <div class="document-title-en">Receipt</div>
                     <table class="document-meta">
-                        <tr><td class="meta-label">เลขที่เอกสาร / Document No.</td><td>@Model.ReceiptNo</td></tr>
+                        <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.ReceiptNo</td></tr>
                         <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
                         <tr><td class="meta-label">เลขที่รับชำระ / Payment No.</td><td>@(payment?.PaymentNo ?? "-")</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
@@ -333,81 +349,95 @@
                 </div>
             </section>
 
-            <section class="print-section reference-grid">
-                <div class="reference-box">
-                    <div class="section-label">วิธีชำระเงิน / Payment Method</div>
-                    <div class="reference-value">@(payment?.PaymentMethod ?? "-")</div>
-                </div>
-                <div class="reference-box">
-                    <div class="section-label">วันที่รับชำระ / Payment Date</div>
-                    <div class="reference-value">@(payment?.PaymentDate.ToString("dd/MM/yyyy") ?? "-")</div>
-                </div>
-                <div class="reference-box">
-                    <div class="section-label">ยอดรับชำระ / Payment Amount</div>
-                    <div class="reference-value">@((payment?.Amount ?? 0m).ToString("N2"))</div>
-                </div>
-            </section>
-
-            <section class="print-section">
-                <table class="line-table">
-                    <thead>
-                        <tr>
-                            <th class="col-no"><span class="bi-label-th">ลำดับ</span><span class="bi-label-en">No.</span></th>
-                            <th class="col-description"><span class="bi-label-th">รายการ</span><span class="bi-label-en">Description</span></th>
-                            <th class="col-qty"><span class="bi-label-th">จำนวน</span><span class="bi-label-en">Qty</span></th>
-                            <th class="col-price"><span class="bi-label-th">ราคาต่อหน่วย</span><span class="bi-label-en">Unit Price</span></th>
-                            <th class="col-amount"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @{
-                        var rowNo = 1;
-                    }
-                    @foreach (var allocation in allocations)
-                    {
-                        var invoice = allocation.InvoiceHeader;
-                        if (invoice is null)
-                        {
-                            continue;
-                        }
-
-                        <tr class="invoice-row">
-                            <td colspan="5">ใบกำกับสินค้า / Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
-                        </tr>
-                        foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
-                        {
+            @if (hasAllocations)
+            {
+                <section class="print-section">
+                    <table class="line-table">
+                        <thead>
                             <tr>
-                                <td class="col-no">@rowNo</td>
-                                <td class="col-description">
-                                    @(line.Item?.ItemName ?? "-")
-                                    <span class="item-code">@line.Item?.ItemCode</span>
-                                </td>
-                                <td class="col-qty">@line.Qty.ToString("N2")</td>
-                                <td class="col-price">@line.UnitPrice.ToString("N2")</td>
-                                <td class="col-amount">@line.LineTotal.ToString("N2")</td>
+                                <th class="col-no"><span class="bi-label-th">ลำดับ</span><span class="bi-label-en">No.</span></th>
+                                <th class="col-description"><span class="bi-label-th">รายการ</span><span class="bi-label-en">Description</span></th>
+                                <th class="col-qty"><span class="bi-label-th">จำนวน</span><span class="bi-label-en">Qty</span></th>
+                                <th class="col-price"><span class="bi-label-th">ราคาต่อหน่วย</span><span class="bi-label-en">Unit Price</span></th>
+                                <th class="col-amount"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
                             </tr>
-                            rowNo++;
+                        </thead>
+                        <tbody>
+                        @{
+                            var rowNo = 1;
                         }
-                    }
-                    </tbody>
-                </table>
+                        @foreach (var allocation in allocationList)
+                        {
+                            var invoice = allocation.InvoiceHeader;
+                            if (invoice is null)
+                            {
+                                continue;
+                            }
 
-                <div class="summary-wrap">
-                    <div class="amount-text">@totalAmountText</div>
-                    <table class="summary-table payment-summary">
-                        <tr><td class="summary-label">ยอดรวมใบกำกับสินค้า / Invoice Total</td><td>@invoiceTotal.ToString("N2")</td></tr>
-                        <tr><td class="summary-label">ชำระแล้วสะสม / Paid to Date</td><td>@((invoiceTotal - remainingBalance).ToString("N2"))</td></tr>
-                        <tr class="summary-total"><td>ยอดคงเหลือ / Outstanding</td><td>@remainingBalance.ToString("N2")</td></tr>
+                            <tr class="invoice-row">
+                                <td colspan="5">ใบแจ้งหนี้ / Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
+                            </tr>
+                            foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
+                            {
+                                <tr>
+                                    <td class="col-no">@rowNo</td>
+                                    <td class="col-description">
+                                        @(line.Item?.ItemName ?? "-")
+                                        <span class="item-code">@line.Item?.ItemCode</span>
+                                    </td>
+                                    <td class="col-qty">@line.Qty.ToString("N2")</td>
+                                    <td class="col-price">@line.UnitPrice.ToString("N2")</td>
+                                    <td class="col-amount">@line.LineTotal.ToString("N2")</td>
+                                </tr>
+                                rowNo++;
+                            }
+                        }
+                        </tbody>
                     </table>
-                    <table class="summary-table">
-                        <tr><td class="summary-label">วิธีชำระเงิน / Payment Method</td><td>@(payment?.PaymentMethod ?? "-")</td></tr>
-                        <tr><td class="summary-label">เลขที่อ้างอิงการชำระ / Payment Ref.</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
-                        <tr><td class="summary-label">วันที่ใบเสร็จ / Receipt Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
-                        <tr class="summary-total"><td>รับชำระครั้งนี้ / Received This Time</td><td>@appliedAmount.ToString("N2")</td></tr>
-                        <tr><td class="summary-label">ยอดตามใบเสร็จ / Receipt Total</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+
+                    <div class="summary-wrap">
+                        <div class="amount-text">@totalAmountText</div>
+                        <table class="summary-table">
+                            <tr><td class="summary-label">ยอดก่อนภาษี / Subtotal</td><td>@invoiceSubtotal.ToString("N2")</td></tr>
+                            <tr><td class="summary-label">ภาษีมูลค่าเพิ่ม / VAT</td><td>@invoiceVatTotal.ToString("N2")</td></tr>
+                            <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@invoiceTotal.ToString("N2")</td></tr>
+                        </table>
+                    </div>
+                </section>
+
+            }
+            else
+            {
+                <section class="print-section">
+                    <table class="line-table">
+                        <thead>
+                            <tr>
+                                <th class="col-description"><span class="bi-label-th">รายละเอียด</span><span class="bi-label-en">Description</span></th>
+                                <th class="col-amount"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="col-description">รับชำระเงินโดยไม่มีการอ้างอิงใบแจ้งหนี้ / Standalone payment without invoice allocation</td>
+                                <td class="col-amount">@Model.TotalReceivedAmount.ToString("N2")</td>
+                            </tr>
+                        </tbody>
                     </table>
-                </div>
-            </section>
+
+                    <div class="summary-wrap">
+                        <div class="amount-text">@totalAmountText</div>
+                        <table class="summary-table">
+                            <tr><td class="summary-label">ยอดรับชำระ / Payment Amount</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+                            <tr><td class="summary-label">จัดสรรให้ใบแจ้งหนี้ / Applied Amount</td><td>@appliedAmount.ToString("N2")</td></tr>
+                            <tr class="summary-total"><td>เงินรับลอย / Unapplied Amount</td><td>@Math.Max(Model.TotalReceivedAmount - appliedAmount, 0m).ToString("N2")</td></tr>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="workflow-note">
+                    This receipt was issued from a standalone payment with no invoice allocations.
+                </section>
+            }
 
             @if (hasRemark)
             {
@@ -431,6 +461,7 @@
                 </div>
             </section>
         </div>
+        }
     </div>
     <script>
         window.addEventListener("load", () => {
@@ -439,4 +470,3 @@
     </script>
 </body>
 </html>
-

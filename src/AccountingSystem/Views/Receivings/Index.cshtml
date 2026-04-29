@@ -1,3 +1,4 @@
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.ReceivingHeader>
 
 @{
@@ -6,10 +7,8 @@
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
-    var hasPermissionClaims = User.HasClaim(x => x.Type == "Permission");
-    var oldReceivingOperatorFallback = !hasPermissionClaims && (User.IsInRole("BranchAdmin") || User.IsInRole("Warehouse"));
-    var canEditReceiving = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Edit") || oldReceivingOperatorFallback;
-    var canCancelReceiving = User.IsInRole("Admin") || User.HasClaim("Permission", "Receiving.Cancel") || oldReceivingOperatorFallback;
+    var canEditReceiving = PermissionService.HasPermission(User, "Receiving.Edit");
+    var canCancelReceiving = PermissionService.HasPermission(User, "Receiving.Cancel");
 }
 
 <div class="page-header">
@@ -116,10 +115,28 @@
                                     }
                                     @if (canCancelReceiving && (isDraft || isPosted))
                                     {
-                                        <form asp-action="Cancel" asp-route-id="@receiving.ReceivingId" method="post" class="d-inline">
+                                        <form asp-action="Cancel" asp-route-id="@receiving.ReceivingId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="cancelReason" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this receiving document (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this receiving document?');">Cancel</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
+                                                        data-confirm-target="cancelReceivingListConfirm_@receiving.ReceivingId"
+                                                        aria-expanded="false">
+                                                    Cancel
+                                                </button>
+                                                <div class="confirm-popover" id="cancelReceivingListConfirm_@receiving.ReceivingId" hidden>
+                                                    <div class="confirm-popover-title">Cancel this receiving?</div>
+                                                    <div class="confirm-popover-text">Optional reason helps explain why this receiving document was cancelled.</div>
+                                                    <div class="confirm-popover-field">
+                                                        <label class="confirm-popover-label" for="cancelReceivingListReason_@receiving.ReceivingId">Cancel Reason</label>
+                                                        <textarea id="cancelReceivingListReason_@receiving.ReceivingId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                                                    </div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                     else if (isDraft || isPosted)

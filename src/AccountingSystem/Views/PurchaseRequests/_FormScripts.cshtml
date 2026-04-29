@@ -72,7 +72,7 @@
                 </td>
                 <td><span class="js-serial-flag badge-soft">No</span></td>
                 <td>
-                    <input type="number" step="0.01" min="0.01" name="Details[${index}].RequestedQty" id="Details_${index}__RequestedQty" value="1" class="form-control" />
+                    <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].RequestedQty" id="Details_${index}__RequestedQty" value="1" class="form-control js-integer-qty" />
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].RequestedQty" data-valmsg-replace="true"></span>
                 </td>
                 <td><input type="text" name="Details[${index}].Remark" id="Details_${index}__Remark" class="form-control" /></td>

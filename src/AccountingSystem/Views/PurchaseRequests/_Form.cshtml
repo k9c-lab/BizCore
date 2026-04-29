@@ -110,7 +110,7 @@
                         </td>
                         <td><span class="js-serial-flag badge-soft">@(selectedItem?.IsSerialControlled == true ? "Yes" : "No")</span></td>
                         <td>
-                            <input type="number" step="0.01" min="0.01" name="Details[@i].RequestedQty" id="Details_@(i)__RequestedQty" value="@Model.Details[i].RequestedQty.ToString("0.##")" class="form-control" />
+                            <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].RequestedQty" id="Details_@(i)__RequestedQty" value="@Model.Details[i].RequestedQty.ToString("0.##")" class="form-control js-integer-qty" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].RequestedQty" data-valmsg-replace="true"></span>
                         </td>
                         <td>

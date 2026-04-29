@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Payment Details";
     var appliedAmount = Model.PaymentAllocations.Sum(x => x.AppliedAmount);
+    var unappliedAmount = Math.Max(Model.Amount - appliedAmount, 0m);
+    var hasAllocations = Model.PaymentAllocations.Any();
     var canGenerateReceipt = Model.Status == "Posted" && Model.ReceiptHeader is null;
     var generateReceiptBlockedReason = canGenerateReceipt
         ? string.Empty
@@ -26,7 +28,7 @@
     <div>
         <div class="page-eyebrow">AR Module</div>
         <h1 class="page-title">Payment Details</h1>
-        <p class="page-subtitle">Review posted payment information, invoice allocations, and the issued receipt.</p>
+        <p class="page-subtitle">Review posted payment information, optional invoice allocations, and the issued receipt.</p>
     </div>
     <div class="page-actions">
         @if (Model.ReceiptHeader is not null)
@@ -35,9 +37,24 @@
         }
         @if (canGenerateReceipt)
         {
-            <form asp-action="GenerateReceipt" asp-route-id="@Model.PaymentId" method="post" class="d-inline">
+            <form asp-action="GenerateReceipt" asp-route-id="@Model.PaymentId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-primary">Generate Receipt</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-primary js-confirm-popover-toggle"
+                            data-confirm-target="generateReceiptPaymentDetailsConfirm_@Model.PaymentId"
+                            aria-expanded="false">
+                        Generate Receipt
+                    </button>
+                    <div class="confirm-popover" id="generateReceiptPaymentDetailsConfirm_@Model.PaymentId" hidden>
+                        <div class="confirm-popover-title">Generate receipt for this payment?</div>
+                        <div class="confirm-popover-text">This will create one receipt linked to this posted payment.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -46,9 +63,24 @@
         }
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.PaymentId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.PaymentId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this payment and reverse invoice allocations?');">Cancel Payment</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-danger js-confirm-popover-toggle"
+                            data-confirm-target="cancelPaymentDetailsConfirm_@Model.PaymentId"
+                            aria-expanded="false">
+                        Cancel Payment
+                    </button>
+                    <div class="confirm-popover" id="cancelPaymentDetailsConfirm_@Model.PaymentId" hidden>
+                        <div class="confirm-popover-title">Cancel this payment?</div>
+                        <div class="confirm-popover-text">This will cancel the payment and reverse any invoice allocations linked to it.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -153,7 +185,7 @@
                             </div>
                             <div class="quotation-info-field">
                                 <span class="quotation-info-label">Allocations</span>
-                                <span class="quotation-info-value">@Model.PaymentAllocations.Count invoice(s)</span>
+                                <span class="quotation-info-value">@(hasAllocations ? $"{Model.PaymentAllocations.Count} invoice(s)" : "Unapplied payment")</span>
                             </div>
                         </div>
                     </div>
@@ -164,35 +196,42 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Invoice Allocation</h2>
-                        <p class="section-subtitle">Each allocation updates invoice paid amount, balance amount, and status.</p>
+                        <p class="section-subtitle">Each allocation updates invoice paid amount, balance amount, and status. Payments can also remain unapplied.</p>
                     </div>
                     <div class="table-meta">@Model.PaymentAllocations.Count allocation(s)</div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table entity-table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Invoice No.</th>
-                                <th>Invoice Date</th>
-                                <th>Total</th>
-                                <th>Updated Status</th>
-                                <th class="text-end">Applied Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var allocation in Model.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo))
-                        {
-                            <tr>
-                                <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
-                                <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
-                                <td>@allocation.InvoiceHeader?.TotalAmount.ToString("N2")</td>
-                                <td><span class="status-pill active">@allocation.InvoiceHeader?.Status</span></td>
-                                <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
+                @if (hasAllocations)
+                {
+                    <div class="table-responsive">
+                        <table class="table entity-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Invoice No.</th>
+                                    <th>Invoice Date</th>
+                                    <th>Total</th>
+                                    <th>Updated Status</th>
+                                    <th class="text-end">Applied Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var allocation in Model.PaymentAllocations.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceHeader!.InvoiceNo))
+                            {
+                                <tr>
+                                    <td><span class="code-chip">@allocation.InvoiceHeader?.InvoiceNo</span></td>
+                                    <td>@allocation.InvoiceHeader?.InvoiceDate.ToString("dd MMM yyyy")</td>
+                                    <td>@allocation.InvoiceHeader?.TotalAmount.ToString("N2")</td>
+                                    <td><span class="status-pill active">@allocation.InvoiceHeader?.Status</span></td>
+                                    <td class="text-end">@allocation.AppliedAmount.ToString("N2")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="workflow-info">This payment was posted without any invoice allocation. The full amount is currently unapplied.</div>
+                }
             </div>
 
             <div class="quotation-summary-wrap">
@@ -207,7 +246,7 @@
                     </div>
                     <div class="quotation-summary-row">
                         <span class="quotation-summary-name">Unapplied</span>
-                        <span class="quotation-summary-amount">@Math.Max(Model.Amount - appliedAmount, 0m).ToString("N2")</span>
+                        <span class="quotation-summary-amount">@unappliedAmount.ToString("N2")</span>
                     </div>
                 </div>
             </div>

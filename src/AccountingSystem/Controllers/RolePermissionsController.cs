@@ -67,7 +67,7 @@ public class RolePermissionsController : CrudControllerBase
 
         await _context.SaveChangesAsync();
 
-        TempData["RolePermissionNotice"] = $"Permissions for {role} were updated. Users with this role should log out and log in again.";
+        TempData["RolePermissionNotice"] = $"Permissions for {role} were updated. Signed-in users should refresh the page if they are currently using this role.";
         return RedirectToAction(nameof(Index), new { role });
     }
 

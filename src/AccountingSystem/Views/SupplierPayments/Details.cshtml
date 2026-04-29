@@ -1,3 +1,4 @@
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.Entities.SupplierPaymentHeader
 
 @{
@@ -7,7 +8,7 @@
         ?? new List<BizCore.Models.Entities.SupplierPaymentHeader>();
     var paidToDate = postedPayments.Sum(x => x.Amount);
     var remaining = order is null ? 0m : Math.Max(order.TotalAmount - paidToDate, 0m);
-    var canCancel = (User.IsInRole("Admin") || User.HasClaim("Permission", "SupplierPayment.Cancel")) && Model.Status == "Posted";
+    var canCancel = PermissionService.HasPermission(User, "SupplierPayment.Cancel") && Model.Status == "Posted";
 }
 
 @if (TempData["SupplierPaymentNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -24,10 +25,28 @@
     <div class="page-actions">
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.SupplierPaymentId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.SupplierPaymentId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="cancelReason" />
-                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this supplier payment (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this supplier payment?');">Cancel Payment</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-danger js-confirm-popover-toggle"
+                            data-confirm-target="cancelSupplierPaymentDetailsConfirm_@Model.SupplierPaymentId"
+                            aria-expanded="false">
+                        Cancel Payment
+                    </button>
+                    <div class="confirm-popover" id="cancelSupplierPaymentDetailsConfirm_@Model.SupplierPaymentId" hidden>
+                        <div class="confirm-popover-title">Cancel this supplier payment?</div>
+                        <div class="confirm-popover-text">Optional reason helps explain why this supplier payment was cancelled.</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId">Cancel Reason</label>
+                            <textarea id="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else

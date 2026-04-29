@@ -2,6 +2,18 @@
 
 @{
     ViewData["Title"] = "Invoice Details";
+    var referenceSubtotal = Model.ReferenceLineSubtotal
+        ?? Model.InvoiceDetails.Sum(x => x.Qty * x.UnitPrice);
+    var referenceDiscount = Model.ReferenceLineDiscountAmount
+        ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount);
+    var referenceVat = Model.ReferenceLineVatAmount
+        ?? (Model.VatType == "VAT"
+            ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
+            : 0m);
+    var referenceTotal = Model.ReferenceLineTotalAmount
+        ?? (referenceSubtotal - referenceDiscount + referenceVat);
+    var referenceNet = referenceSubtotal - referenceDiscount;
+    var showsInstallmentBilling = Model.QuotationId.HasValue && Math.Abs(referenceTotal - Model.TotalAmount) > 0.01m;
     var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") &&
         Model.PaidAmount <= 0 &&
         !Model.PaymentAllocations.Any();
@@ -61,9 +73,24 @@
             <a asp-action="Edit" asp-route-id="@Model.InvoiceId" class="btn btn-primary">Edit Invoice</a>
             @if (canIssue)
             {
-                <form asp-action="Issue" asp-route-id="@Model.InvoiceId" method="post" class="d-inline">
+                <form asp-action="Issue" asp-route-id="@Model.InvoiceId" method="post" class="d-inline confirm-popover-form">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-primary">Issue Invoice</button>
+                    <div class="confirm-popover-shell">
+                        <button type="button"
+                                class="btn btn-primary js-confirm-popover-toggle"
+                                data-confirm-target="issueInvoiceConfirm"
+                                aria-expanded="false">
+                            Issue Invoice
+                        </button>
+                        <div class="confirm-popover" id="issueInvoiceConfirm" hidden>
+                            <div class="confirm-popover-title">Issue this invoice?</div>
+                            <div class="confirm-popover-text">This will change the status to Issued and continue the invoice workflow.</div>
+                            <div class="confirm-popover-actions">
+                                <button type="submit" class="btn btn-sm btn-primary">Confirm</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             }
             else
@@ -73,9 +100,24 @@
         }
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.InvoiceId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.InvoiceId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger">Cancel Invoice</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-danger js-confirm-popover-toggle"
+                            data-confirm-target="cancelInvoiceConfirm"
+                            aria-expanded="false">
+                        Cancel Invoice
+                    </button>
+                    <div class="confirm-popover" id="cancelInvoiceConfirm" hidden>
+                        <div class="confirm-popover-title">Cancel this invoice?</div>
+                        <div class="confirm-popover-text">This will mark the invoice as cancelled and keep it in document history.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -146,6 +188,10 @@
                     <div class="col-md-3">
                         <div class="detail-label">Paid Amount</div>
                         <div class="form-control readonly-detail">@Model.PaidAmount.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">Amount Due This Invoice</div>
+                        <div class="form-control readonly-detail">@Model.TotalAmount.ToString("N2")</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">Balance</div>
@@ -285,28 +331,75 @@
                 </div>
 
                 <div class="quotation-summary-wrap">
-                    <div class="quotation-summary-stack">
-                        <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Subtotal</span>
-                            <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                    @if (Model.QuotationId.HasValue)
+                    {
+                        <div class="quotation-summary-grid">
+                            <div class="quotation-summary-stack quotation-summary-stack-reference">
+                                <div class="quotation-summary-title">Quotation Reference Summary</div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">ยอดก่อนส่วนลด / Subtotal</span>
+                                    <span class="quotation-summary-amount">@referenceSubtotal.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">ส่วนลด / Discount</span>
+                                    <span class="quotation-summary-amount">@referenceDiscount.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">ราคาหลังส่วนลด / Net After Discount</span>
+                                    <span class="quotation-summary-amount">@referenceNet.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">ภาษีมูลค่าเพิ่ม / VAT</span>
+                                    <span class="quotation-summary-amount">@referenceVat.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row total">
+                                    <span class="quotation-summary-name">ยอดรวมอ้างอิง / Total</span>
+                                    <span class="quotation-summary-amount">@referenceTotal.ToString("N2")</span>
+                                </div>
+                            </div>
+
+                            <div class="quotation-summary-stack">
+                                <div class="quotation-summary-title">Invoice Summary</div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">Amount Due This Invoice</span>
+                                    <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">VAT</span>
+                                    <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
+                                </div>
+                                <div class="quotation-summary-row total">
+                                    <span class="quotation-summary-name">Total</span>
+                                    <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Discount</span>
-                            <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                    }
+                    else
+                    {
+                        <div class="quotation-summary-stack">
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Subtotal</span>
+                                <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Discount</span>
+                                <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">VAT</span>
+                                <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
+                            </div>
+                            <div class="quotation-summary-row total">
+                                <span class="quotation-summary-name">Total</span>
+                                <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                            </div>
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">Balance</span>
+                                <span class="quotation-summary-amount">@Model.BalanceAmount.ToString("N2")</span>
+                            </div>
                         </div>
-                        <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">VAT</span>
-                            <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
-                        </div>
-                        <div class="quotation-summary-row total">
-                            <span class="quotation-summary-name">Total</span>
-                            <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
-                        </div>
-                        <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Balance</span>
-                            <span class="quotation-summary-amount">@Model.BalanceAmount.ToString("N2")</span>
-                        </div>
-                    </div>
+                    }
                 </div>
             </div>
 

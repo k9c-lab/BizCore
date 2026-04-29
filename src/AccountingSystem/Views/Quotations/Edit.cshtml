@@ -82,7 +82,7 @@
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
                     </td>
                     <td>
-                        <input type="number" step="0.01" min="0.01" name="Details[${index}].Quantity" id="Details_${index}__Quantity" value="1" class="form-control js-line-quantity" />
+                        <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].Quantity" id="Details_${index}__Quantity" value="1" class="form-control js-line-quantity js-integer-qty" />
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Quantity" data-valmsg-replace="true"></span>
                     </td>
                     <td>
@@ -105,6 +105,9 @@
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountAmount" data-valmsg-replace="true"></span>
                     </td>
                     <td>
+                        <input type="number" step="0.01" name="Details[${index}].NetUnitPrice" value="0" class="form-control js-line-net-price" readonly />
+                    </td>
+                    <td>
                         <input type="number" step="0.01" name="Details[${index}].LineTotal" id="Details_${index}__LineTotal" value="0" class="form-control js-line-total" readonly />
                     </td>
                     <td class="text-end">
@@ -114,7 +117,7 @@
                 const detailRow = document.createElement("tr");
                 detailRow.className = "quotation-line-row quotation-line-row-detail";
                 detailRow.innerHTML = `
-                    <td colspan="8">
+                    <td colspan="9">
                         <label class="form-label">Description</label>
                         <textarea name="Details[${index}].Description" id="Details_${index}__Description" class="form-control js-line-description" rows="3"></textarea>
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Description" data-valmsg-replace="true"></span>
@@ -361,6 +364,7 @@
                 const discountType = row.querySelector(".js-line-discount-type");
                 const discountPercent = row.querySelector(".js-line-discount-percent");
                 const discount = row.querySelector(".js-line-discount");
+                const netPrice = row.querySelector(".js-line-net-price");
                 const total = row.querySelector(".js-line-total");
                 const stockHint = row.querySelector(".js-stock-hint");
                 const selectedItem = resolveItem(row);
@@ -398,6 +402,8 @@
                     }
                 }
                 const lineTotal = Math.max((qty * price) - discountValue, 0);
+                const netUnitPrice = qty > 0 ? lineTotal / qty : 0;
+                netPrice.value = netUnitPrice.toFixed(2);
                 total.value = lineTotal.toFixed(2);
             };
 
@@ -432,8 +438,14 @@
 
                 const netBeforeVat = isLineMode ? subtotal : Math.max(subtotal - headerDiscount, 0);
                 const vat = vatTypeInput.value === "VAT" ? (netBeforeVat * 0.07) : 0;
+                document.getElementById("quotationHeaderSubtotal").textContent = subtotal.toFixed(2);
+                document.getElementById("quotationHeaderDiscount").textContent = (isLineMode ? discount : headerDiscount).toFixed(2);
+                document.getElementById("quotationHeaderNet").textContent = netBeforeVat.toFixed(2);
+                document.getElementById("quotationHeaderVat").textContent = vat.toFixed(2);
+                document.getElementById("quotationHeaderTotal").textContent = (netBeforeVat + vat).toFixed(2);
                 document.getElementById("quotationSubtotal").textContent = subtotal.toFixed(2);
                 document.getElementById("quotationDiscount").textContent = (isLineMode ? discount : headerDiscount).toFixed(2);
+                document.getElementById("quotationNet").textContent = netBeforeVat.toFixed(2);
                 document.getElementById("quotationVat").textContent = vat.toFixed(2);
                 document.getElementById("quotationTotal").textContent = (netBeforeVat + vat).toFixed(2);
             };

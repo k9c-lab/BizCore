@@ -36,9 +36,24 @@
         }
         @if (canPost)
         {
-            <form asp-action="Post" asp-route-id="@Model.StockIssueId" method="post" class="d-inline">
+            <form asp-action="Post" asp-route-id="@Model.StockIssueId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-success">Post Issue</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-success js-confirm-popover-toggle"
+                            data-confirm-target="postStockIssueDetailsConfirm_@Model.StockIssueId"
+                            aria-expanded="false">
+                        Post Issue
+                    </button>
+                    <div class="confirm-popover" id="postStockIssueDetailsConfirm_@Model.StockIssueId" hidden>
+                        <div class="confirm-popover-title">Post this stock issue?</div>
+                        <div class="confirm-popover-text">This will deduct stock from the selected branch and finalize the issue document.</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else
@@ -47,10 +62,28 @@
         }
         @if (canCancel)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.StockIssueId" method="post" class="d-inline">
+            <form asp-action="Cancel" asp-route-id="@Model.StockIssueId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="cancelReason" />
-                <button type="submit" class="btn btn-outline-danger" onclick="const reason = prompt('Reason for cancelling this stock issue (optional):'); if (reason === null) return false; this.form.cancelReason.value = reason; return confirm('Cancel this stock issue?');">Cancel Issue</button>
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-danger js-confirm-popover-toggle"
+                            data-confirm-target="cancelStockIssueDetailsConfirm_@Model.StockIssueId"
+                            aria-expanded="false">
+                        Cancel Issue
+                    </button>
+                    <div class="confirm-popover" id="cancelStockIssueDetailsConfirm_@Model.StockIssueId" hidden>
+                        <div class="confirm-popover-title">Cancel this stock issue?</div>
+                        <div class="confirm-popover-text">Optional reason helps explain why this stock issue was cancelled.</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="cancelStockIssueDetailsReason_@Model.StockIssueId">Cancel Reason</label>
+                            <textarea id="cancelStockIssueDetailsReason_@Model.StockIssueId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         }
         else

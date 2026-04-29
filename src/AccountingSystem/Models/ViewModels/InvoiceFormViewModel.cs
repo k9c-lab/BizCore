@@ -31,7 +31,7 @@ public class InvoiceFormViewModel
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
 
-    [Display(Name = "Quotation No.")]
+    [Display(Name = "Quotation No. (Optional)")]
     public string? QuotationNo { get; set; }
 
     [Display(Name = "Reference No.")]
@@ -52,6 +52,10 @@ public class InvoiceFormViewModel
     [Display(Name = "Header Discount")]
     public decimal HeaderDiscountAmount { get; set; }
 
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Amount due must be greater than zero.")]
+    [Display(Name = "Amount Due This Invoice")]
+    public decimal? AmountDueThisInvoice { get; set; }
+
     [StringLength(500)]
     public string? Remark { get; set; }
 
@@ -59,6 +63,10 @@ public class InvoiceFormViewModel
     public decimal DiscountAmount { get; set; }
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }
+    public decimal ReferenceSubtotal { get; set; }
+    public decimal ReferenceDiscountAmount { get; set; }
+    public decimal ReferenceVatAmount { get; set; }
+    public decimal ReferenceTotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal BalanceAmount { get; set; }
     public string Status { get; set; } = "Issued";
@@ -68,6 +76,7 @@ public class InvoiceFormViewModel
     public IEnumerable<SelectListItem> CustomerOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> SalespersonOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> QuotationOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<InvoiceItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<InvoiceItemLookupViewModel>();

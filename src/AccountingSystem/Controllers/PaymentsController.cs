@@ -451,13 +451,10 @@ public class PaymentsController : CrudControllerBase
             ModelState.AddModelError(nameof(model.CustomerId), "Selected customer was not found.");
         }
 
-        if (model.Allocations.Count == 0)
-        {
-            ModelState.AddModelError(nameof(model.Allocations), "Please allocate payment to at least one invoice.");
-        }
-
         if (!ModelState.IsValid)
         {
+            model.TotalAppliedAmount = 0m;
+            model.UnappliedAmount = model.Amount;
             return false;
         }
 
@@ -469,13 +466,13 @@ public class PaymentsController : CrudControllerBase
         var branchIds = invoiceMap.Values.Select(x => x.BranchId).Distinct().ToList();
         var paymentBranchId = branchIds.FirstOrDefault(x => x.HasValue) ?? model.BranchId ?? CurrentBranchId();
 
-        if (!paymentBranchId.HasValue)
-        {
-            ModelState.AddModelError(nameof(model.BranchId), "Payment branch could not be determined.");
-        }
-        else if (!CanAccessBranch(paymentBranchId))
+        if (paymentBranchId.HasValue && !CanAccessBranch(paymentBranchId))
         {
             ModelState.AddModelError(nameof(model.BranchId), "You cannot post payment for this branch.");
+        }
+        else if (!paymentBranchId.HasValue && !CurrentUserCanAccessAllBranches())
+        {
+            ModelState.AddModelError(nameof(model.BranchId), "Payment branch could not be determined.");
         }
 
         if (branchIds.Count > 1)
@@ -536,10 +533,6 @@ public class PaymentsController : CrudControllerBase
         if (totalApplied > model.Amount)
         {
             ModelState.AddModelError(nameof(model.Amount), "Total applied amount cannot exceed payment amount.");
-        }
-        else if (totalApplied != model.Amount)
-        {
-            ModelState.AddModelError(nameof(model.Amount), "Payment amount must be fully allocated before posting");
         }
 
         model.TotalAppliedAmount = totalApplied;

@@ -91,18 +91,21 @@
                 }
             </div>
 
-            <div class="welcome-announcements">
+            <div class="welcome-postit-board">
                 @foreach (var announcement in Model.Announcements)
                 {
-                    <article class="welcome-announcement-card">
-                        <div class="welcome-announcement-head">
-                            <div>
-                                <h3 class="welcome-announcement-title">@announcement.Title</h3>
-                                <div class="table-meta">@announcement.DateRangeLabel</div>
+                    <article class="welcome-postit @announcement.AccentClass">
+                        <div class="welcome-postit-pin"></div>
+                        <div class="welcome-postit-body">
+                            <div class="welcome-postit-meta">
+                                <span class="welcome-postit-date">@announcement.DateRangeLabel</span>
+                                @await Html.PartialAsync("_StatusPill", announcement.StatusLabel)
                             </div>
-                            @await Html.PartialAsync("_StatusPill", announcement.StatusLabel)
+                            <h3 class="welcome-postit-title">@announcement.Title</h3>
+                            <a asp-controller="Welcome" asp-action="Announcement" asp-route-id="@announcement.AnnouncementId" class="welcome-postit-link">
+                                Read details
+                            </a>
                         </div>
-                        <p class="welcome-announcement-message">@announcement.Message</p>
                     </article>
                 }
             </div>

@@ -12,6 +12,11 @@ public class InvoiceDetail
     [Display(Name = "Item")]
     public int ItemId { get; set; }
 
+    public int? QuotationDetailId { get; set; }
+
+    [Range(typeof(decimal), "0.01", "9999999999999999.99")]
+    public decimal QuotedQty { get; set; } = 1m;
+
     [Range(typeof(decimal), "0.01", "9999999999999999.99")]
     public decimal Qty { get; set; } = 1m;
 

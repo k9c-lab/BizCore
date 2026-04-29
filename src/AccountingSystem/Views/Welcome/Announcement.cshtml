@@ -1,0 +1,30 @@
+@model BizCore.Models.ViewModels.WelcomeAnnouncementViewModel
+
+@{
+    ViewData["Title"] = "Announcement";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Announcement</div>
+        <h1 class="page-title">@Model.Title</h1>
+        <p class="page-subtitle">Published notice for BizCore users.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Welcome" asp-action="Index" class="btn btn-outline-secondary">Back to Welcome</a>
+    </div>
+</div>
+
+<div class="welcome-announcement-detail-shell">
+    <article class="welcome-postit welcome-postit-detail @Model.AccentClass">
+        <div class="welcome-postit-pin"></div>
+        <div class="welcome-postit-body">
+            <div class="welcome-postit-meta welcome-postit-meta-detail">
+                <span class="welcome-postit-date">@Model.DateRangeLabel</span>
+                @await Html.PartialAsync("_StatusPill", Model.StatusLabel)
+            </div>
+            <h2 class="welcome-postit-title welcome-postit-title-detail">@Model.Title</h2>
+            <div class="welcome-announcement-detail-message">@Model.Message</div>
+        </div>
+    </article>
+</div>

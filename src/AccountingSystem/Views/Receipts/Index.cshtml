@@ -81,9 +81,24 @@
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = receipt.ReceiptId })', '_blank', 'noopener');">Print</button>
                                     @if (canCancel)
                                     {
-                                        <form asp-action="Cancel" asp-route-id="@receipt.ReceiptId" method="post" class="d-inline">
+                                        <form asp-action="Cancel" asp-route-id="@receipt.ReceiptId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this receipt? Payment and invoice balances will not change.');">Cancel</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
+                                                        data-confirm-target="cancelReceiptConfirm_@receipt.ReceiptId"
+                                                        aria-expanded="false">
+                                                    Cancel
+                                                </button>
+                                                <div class="confirm-popover" id="cancelReceiptConfirm_@receipt.ReceiptId" hidden>
+                                                    <div class="confirm-popover-title">Cancel this receipt?</div>
+                                                    <div class="confirm-popover-text">Payment and invoice balances will not change when this receipt is cancelled.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                 </div>

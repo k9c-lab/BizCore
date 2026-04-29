@@ -1,8 +1,15 @@
 @model BizCore.Models.ViewModels.InvoiceFormViewModel
+@{
+    var hasQuotationReference = Model.QuotationId.HasValue;
+    var referenceNetAmount = Model.ReferenceSubtotal - Model.ReferenceDiscountAmount;
+}
 
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
-<input asp-for="QuotationId" type="hidden" />
+@if (Model.InvoiceId.HasValue)
+{
+    <input asp-for="QuotationId" type="hidden" />
+}
 @if (!Model.CanAccessAllBranches)
 {
     <input asp-for="BranchId" type="hidden" />
@@ -29,12 +36,34 @@
                 <span asp-validation-for="ReferenceNo" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
-                <label asp-for="QuotationNo" class="form-label"></label>
-                <input asp-for="QuotationNo" class="form-control" readonly />
+                @if (!Model.InvoiceId.HasValue)
+                {
+                    <label asp-for="QuotationId" class="form-label">Quotation (Optional)</label>
+                    <select asp-for="QuotationId" asp-items="Model.QuotationOptions" class="form-select" id="QuotationId">
+                        <option value="">No quotation</option>
+                    </select>
+                    <div class="form-text">Select a quotation to prefill this invoice.</div>
+                }
+                else
+                {
+                    <label asp-for="QuotationNo" class="form-label"></label>
+                    <input asp-for="QuotationNo" class="form-control" readonly />
+                }
+            </div>
+            <div class="col-lg-3 col-md-6" id="invoiceAmountDueSection" style="@(Model.QuotationId.HasValue ? null : "display:none;")">
+                <label asp-for="AmountDueThisInvoice" class="form-label"></label>
+                <input asp-for="AmountDueThisInvoice" class="form-control" id="AmountDueThisInvoice" />
+                <div class="form-text">Use this when one quotation is billed across multiple invoice documents.</div>
+                <span asp-validation-for="AmountDueThisInvoice" class="text-danger"></span>
             </div>
             <div class="col-md-2">
                 <label asp-for="DiscountMode" class="form-label"></label>
                 <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
+                <div class="form-text" id="invoiceDiscountModeHelp">
+                    @(Model.QuotationId.HasValue
+                        ? "Invoices linked to a quotation use the quotation net amount and do not allow invoice discounts."
+                        : "Choose line discount or header discount for standalone invoices.")
+                </div>
                 <span asp-validation-for="DiscountMode" class="text-danger"></span>
             </div>
             <div class="col-md-2">
@@ -161,8 +190,12 @@
                     </div>
                 </div>
                 <div class="invoice-entry-field">
-                    <label class="form-label" for="invoiceEntryQty">Qty</label>
-                    <input type="number" step="0.01" min="0.01" id="invoiceEntryQty" class="form-control" value="1" />
+                    <label class="form-label" for="invoiceEntryQuotedQty">Quoted Qty</label>
+                    <input type="number" step="1" min="1" data-qty-min="1" id="invoiceEntryQuotedQty" class="form-control js-integer-qty" value="1" />
+                </div>
+                <div class="invoice-entry-field">
+                    <label class="form-label" for="invoiceEntryQty">Qty This Invoice</label>
+                    <input type="number" step="1" min="1" data-qty-min="1" id="invoiceEntryQty" class="form-control js-integer-qty" value="1" />
                 </div>
                 <div class="invoice-entry-field">
                     <label class="form-label" for="invoiceEntryUnitPrice">Unit Price</label>
@@ -187,7 +220,7 @@
                     <div class="invoice-entry-conditional js-entry-serial-section" style="display:none;">
                         <label class="form-label">Serial Numbers</label>
                         <div id="invoiceEntrySerials" class="serial-checkbox-list"></div>
-                        <div class="form-text">Select available InStock serials for serial-controlled product items.</div>
+                        <div class="form-text">Serials can be selected later for draft invoices, but they must be complete before issue.</div>
                     </div>
 
                     <div class="invoice-entry-conditional js-entry-warranty-section" style="display:none;">
@@ -226,16 +259,21 @@
                     <tr>
                         <th style="width: 30%;">Item</th>
                         <th style="width: 10%;">Type</th>
-                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 10%;">Quoted Qty</th>
+                        <th style="width: 10%;">Qty This Invoice</th>
                         <th style="width: 12%;">Unit Price</th>
                         <th style="width: 10%;">Discount</th>
-                        <th style="width: 12%;">Line Total</th>
-                        <th style="width: 16%;" class="text-end">Action</th>
+                        <th style="width: 10%;">Line Total</th>
+                        <th style="width: 18%;" class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody id="invoiceLineBody">
                 @for (var i = 0; i < Model.Details.Count; i++)
                 {
+                    var availableSerials = Model.SerialLookup
+                        .Where(x => x.ItemId == Model.Details[i].ItemId)
+                        .OrderBy(x => x.SerialNo)
+                        .ToList();
                     var serialTexts = Model.SerialLookup
                         .Where(x => Model.Details[i].SelectedSerialIds.Contains(x.SerialId))
                         .Select(x => x.DisplayText)
@@ -255,45 +293,41 @@
                             <input type="hidden" name="Details[@i].TrackStock" value="@Model.Details[i].TrackStock.ToString().ToLowerInvariant()" class="js-track-stock-hidden" />
                             <input type="hidden" name="Details[@i].IsSerialControlled" value="@Model.Details[i].IsSerialControlled.ToString().ToLowerInvariant()" class="js-is-serial-hidden" />
                             <input type="hidden" name="Details[@i].CurrentStock" value="@Model.Details[i].CurrentStock.ToString("0.##")" class="js-current-stock-hidden" />
-                            <input type="hidden" name="Details[@i].Qty" value="@Model.Details[i].Qty.ToString("0.##")" class="js-qty-hidden" />
-                            <input type="hidden" name="Details[@i].UnitPrice" value="@Model.Details[i].UnitPrice.ToString("0.##")" class="js-unit-price-hidden" />
-                            <input type="hidden" name="Details[@i].DiscountAmount" value="@Model.Details[i].DiscountAmount.ToString("0.##")" class="js-discount-hidden" />
-                            <input type="hidden" name="Details[@i].LineTotal" value="@Model.Details[i].LineTotal.ToString("0.##")" class="js-line-total-hidden" />
-                            <input type="hidden" name="Details[@i].Remark" value="@Model.Details[i].Remark" class="js-remark-hidden" />
-                            <input type="hidden" name="Details[@i].CustomerWarrantyStartDate" value="@Model.Details[i].CustomerWarrantyStartDate?.ToString("yyyy-MM-dd")" class="js-warranty-start-hidden" />
-                            <input type="hidden" name="Details[@i].CustomerWarrantyEndDate" value="@Model.Details[i].CustomerWarrantyEndDate?.ToString("yyyy-MM-dd")" class="js-warranty-end-hidden" />
-                            <div class="js-selected-serial-hidden-wrap">
-                                @foreach (var serialId in Model.Details[i].SelectedSerialIds)
-                                {
-                                    <input type="hidden" name="Details[@i].SelectedSerialIds" value="@serialId" class="js-serial-id-hidden" />
-                                }
-                            </div>
+                            <input type="hidden" name="Details[@i].QuotationDetailId" value="@Model.Details[i].QuotationDetailId" class="js-quotation-detail-id-hidden" />
+                            <input type="hidden" name="Details[@i].PreviouslyInvoicedQty" value="@Model.Details[i].PreviouslyInvoicedQty?.ToString("0.##")" class="js-previously-invoiced-qty-hidden" />
+                            <input type="hidden" name="Details[@i].RemainingQuotedQty" value="@Model.Details[i].RemainingQuotedQty?.ToString("0.##")" class="js-remaining-quoted-qty-hidden" />
 
                             <div class="fw-semibold js-item-display">@(string.IsNullOrWhiteSpace(Model.Details[i].ItemName) ? "-" : $"{Model.Details[i].ItemCode} - {Model.Details[i].ItemName}")</div>
                             <div class="table-meta js-item-part-display">Part No.: @(string.IsNullOrWhiteSpace(Model.Details[i].PartNumber) ? "-" : Model.Details[i].PartNumber)</div>
+                            <div class="table-meta js-quotation-progress-display" style="@(Model.Details[i].QuotationDetailId.HasValue ? null : "display:none;")">
+                                Ordered from quotation: @(Model.Details[i].QuotedQty.ToString("N2")) | Issued Before: @(Model.Details[i].PreviouslyInvoicedQty?.ToString("N2") ?? "0.00") | Remaining: @(Model.Details[i].RemainingQuotedQty?.ToString("N2") ?? "-")
+                            </div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
                         </td>
                         <td>
                             <span class="js-item-type-display">@Model.Details[i].ItemType</span>
                         </td>
                         <td>
-                            <span class="js-qty-display">@Model.Details[i].Qty.ToString("N2")</span>
+                            <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].QuotedQty" value="@Model.Details[i].QuotedQty.ToString("0.##")" class="form-control js-quoted-qty-input js-integer-qty" />
+                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].QuotedQty" data-valmsg-replace="true"></span>
+                        </td>
+                        <td>
+                            <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].Qty" value="@Model.Details[i].Qty.ToString("0.##")" class="form-control js-qty-input js-integer-qty" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Qty" data-valmsg-replace="true"></span>
                         </td>
                         <td>
-                            <span class="js-unit-price-display">@Model.Details[i].UnitPrice.ToString("N2")</span>
+                            <input type="number" step="0.01" min="0" name="Details[@i].UnitPrice" value="@Model.Details[i].UnitPrice.ToString("0.##")" class="form-control js-unit-price-input" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].UnitPrice" data-valmsg-replace="true"></span>
                         </td>
                         <td>
-                            <span class="js-discount-display">@Model.Details[i].DiscountAmount.ToString("N2")</span>
+                            <input type="number" step="0.01" min="0" name="Details[@i].DiscountAmount" value="@Model.Details[i].DiscountAmount.ToString("0.##")" class="form-control js-discount-input" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].DiscountAmount" data-valmsg-replace="true"></span>
                         </td>
                         <td>
-                            <span class="js-line-total-display">@Model.Details[i].LineTotal.ToString("N2")</span>
+                            <input type="number" step="0.01" name="Details[@i].LineTotal" value="@Model.Details[i].LineTotal.ToString("0.##")" class="form-control js-line-total-input" readonly />
                         </td>
                         <td class="text-end">
                             <div class="table-actions">
-                                <button type="button" class="btn btn-sm btn-outline-secondary js-edit-line">Edit</button>
                                 <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
                             </div>
                         </td>
@@ -303,7 +337,7 @@
                             <div class="invoice-line-detail-shell">
                                 <div class="invoice-line-detail-block js-line-detail-text-block">
                                     <div class="detail-label js-line-detail-label">@detailLabel</div>
-                                    <div class="detail-value js-line-detail-value">@(string.IsNullOrWhiteSpace(Model.Details[i].Remark) ? "-" : Model.Details[i].Remark)</div>
+                                    <textarea name="Details[@i].Remark" class="form-control js-remark-input" rows="3">@Model.Details[i].Remark</textarea>
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Remark" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-stock-block" style="@(Model.Details[i].TrackStock ? null : "display:none;")">
@@ -312,12 +346,35 @@
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-serial-block" style="@(Model.Details[i].IsSerialControlled ? null : "display:none;")">
                                     <div class="detail-label">Serial Numbers</div>
-                                    <div class="detail-value js-line-serial-value">@(serialTexts.Count == 0 ? "-" : string.Join(", ", serialTexts))</div>
+                                    @if (availableSerials.Any())
+                                    {
+                                        <div class="serial-checkbox-list">
+                                            @foreach (var serial in availableSerials)
+                                            {
+                                                var isChecked = Model.Details[i].SelectedSerialIds.Contains(serial.SerialId);
+                                                <label class="serial-checkbox-item">
+                                                    <input type="checkbox"
+                                                           class="form-check-input js-line-serial-checkbox"
+                                                           name="Details[@i].SelectedSerialIds"
+                                                           value="@serial.SerialId"
+                                                           checked="@isChecked" />
+                                                    <span>@serial.DisplayText</span>
+                                                </label>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="detail-value js-line-serial-value">@(serialTexts.Count == 0 ? "-" : string.Join(", ", serialTexts))</div>
+                                    }
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SelectedSerialIds" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-warranty-block" style="@(Model.Details[i].IsSerialControlled ? null : "display:none;")">
                                     <div class="detail-label">Warranty</div>
-                                    <div class="detail-value js-line-warranty-value">@((Model.Details[i].CustomerWarrantyStartDate.HasValue || Model.Details[i].CustomerWarrantyEndDate.HasValue) ? $"{Model.Details[i].CustomerWarrantyStartDate:yyyy-MM-dd} to {Model.Details[i].CustomerWarrantyEndDate:yyyy-MM-dd}" : "-")</div>
+                                    <div class="invoice-warranty-row">
+                                        <input type="date" name="Details[@i].CustomerWarrantyStartDate" value="@Model.Details[i].CustomerWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control js-warranty-start-input" />
+                                        <input type="date" name="Details[@i].CustomerWarrantyEndDate" value="@Model.Details[i].CustomerWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control js-warranty-end-input" />
+                                    </div>
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].CustomerWarrantyStartDate" data-valmsg-replace="true"></span>
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].CustomerWarrantyEndDate" data-valmsg-replace="true"></span>
                                 </div>
@@ -332,28 +389,75 @@
     </div>
 
     <div class="quotation-summary-wrap">
-        <div class="quotation-summary-stack">
-            <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Subtotal</span>
-                <span class="quotation-summary-amount" id="invoiceSubtotal">@Model.Subtotal.ToString("N2")</span>
+        @if (hasQuotationReference)
+        {
+            <div class="quotation-summary-grid">
+                <div class="quotation-summary-stack quotation-summary-stack-reference">
+                    <div class="quotation-summary-title">Quotation Reference Summary</div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">ยอดก่อนส่วนลด / Subtotal</span>
+                        <span class="quotation-summary-amount" id="invoiceReferenceSubtotal">@Model.ReferenceSubtotal.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">ส่วนลด / Discount</span>
+                        <span class="quotation-summary-amount" id="invoiceReferenceDiscount">@Model.ReferenceDiscountAmount.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">ราคาหลังส่วนลด / Net After Discount</span>
+                        <span class="quotation-summary-amount" id="invoiceReferenceNet">@referenceNetAmount.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">ภาษีมูลค่าเพิ่ม / VAT</span>
+                        <span class="quotation-summary-amount" id="invoiceReferenceVat">@Model.ReferenceVatAmount.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row total">
+                        <span class="quotation-summary-name">ยอดรวมอ้างอิง / Total</span>
+                        <span class="quotation-summary-amount" id="invoiceReferenceTotal">@Model.ReferenceTotalAmount.ToString("N2")</span>
+                    </div>
+                </div>
+
+                <div class="quotation-summary-stack">
+                    <div class="quotation-summary-title">Invoice Summary</div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">Amount Due This Invoice</span>
+                        <span class="quotation-summary-amount" id="invoiceAmountDueSummary">@((Model.AmountDueThisInvoice ?? Model.TotalAmount).ToString("N2"))</span>
+                    </div>
+                    <div class="quotation-summary-row">
+                        <span class="quotation-summary-name">VAT</span>
+                        <span class="quotation-summary-amount" id="invoiceVat">@Model.VatAmount.ToString("N2")</span>
+                    </div>
+                    <div class="quotation-summary-row total">
+                        <span class="quotation-summary-name">Total</span>
+                        <span class="quotation-summary-amount" id="invoiceTotal">@Model.TotalAmount.ToString("N2")</span>
+                    </div>
+                </div>
             </div>
-            <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Discount</span>
-                <span class="quotation-summary-amount" id="invoiceDiscount">@Model.DiscountAmount.ToString("N2")</span>
+        }
+        else
+        {
+            <div class="quotation-summary-stack">
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">Subtotal</span>
+                    <span class="quotation-summary-amount" id="invoiceSubtotal">@Model.Subtotal.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">Discount</span>
+                    <span class="quotation-summary-amount" id="invoiceDiscount">@Model.DiscountAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">VAT</span>
+                    <span class="quotation-summary-amount" id="invoiceVat">@Model.VatAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row total">
+                    <span class="quotation-summary-name">Total</span>
+                    <span class="quotation-summary-amount" id="invoiceTotal">@Model.TotalAmount.ToString("N2")</span>
+                </div>
+                <div class="quotation-summary-row">
+                    <span class="quotation-summary-name">Balance</span>
+                    <span class="quotation-summary-amount" id="invoiceBalance">@Model.BalanceAmount.ToString("N2")</span>
+                </div>
             </div>
-            <div class="quotation-summary-row">
-                <span class="quotation-summary-name">VAT</span>
-                <span class="quotation-summary-amount" id="invoiceVat">@Model.VatAmount.ToString("N2")</span>
-            </div>
-            <div class="quotation-summary-row total">
-                <span class="quotation-summary-name">Total</span>
-                <span class="quotation-summary-amount" id="invoiceTotal">@Model.TotalAmount.ToString("N2")</span>
-            </div>
-            <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Balance</span>
-                <span class="quotation-summary-amount" id="invoiceBalance">@Model.BalanceAmount.ToString("N2")</span>
-            </div>
-        </div>
+        }
     </div>
 </div>
 

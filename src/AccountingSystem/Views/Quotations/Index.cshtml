@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Quotations";
+    var paymentStatusMap = ViewData["PaymentStatusMap"] as IReadOnlyDictionary<int, BizCore.Models.ViewModels.QuotationPaymentStatusViewModel>
+        ?? new Dictionary<int, BizCore.Models.ViewModels.QuotationPaymentStatusViewModel>();
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -23,7 +25,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Quotation Register</h2>
-            <p class="section-subtitle">Approved quotations can be converted to invoice. Converted quotations stay read-only.</p>
+            <p class="section-subtitle">Approved quotations can be used to prefill invoices, and the same quotation can be reused when needed.</p>
         </div>
         <div class="table-meta">@Model.TotalCount records</div>
     </div>
@@ -67,6 +69,7 @@
                         <th>Salesperson</th>
                         <th>Total</th>
                         <th>Status</th>
+                        <th>Invoice Coverage</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -75,6 +78,15 @@
                 {
                     @foreach (var quotation in Model)
                     {
+                        var paymentStatus = paymentStatusMap.TryGetValue(quotation.QuotationHeaderId, out var summary)
+                            ? summary
+                            : new BizCore.Models.ViewModels.QuotationPaymentStatusViewModel
+                            {
+                                QuotationHeaderId = quotation.QuotationHeaderId,
+                                QuotationTotalAmount = quotation.TotalAmount,
+                                RemainingAmount = quotation.TotalAmount,
+                                Status = "Not Invoiced"
+                            };
                         <tr>
                             <td><span class="code-chip">@quotation.QuotationNumber</span></td>
                             <td>@(string.IsNullOrWhiteSpace(quotation.ReferenceNo) ? "-" : quotation.ReferenceNo)</td>
@@ -83,6 +95,10 @@
                             <td>@quotation.Salesperson?.SalespersonName</td>
                             <td>@quotation.TotalAmount.ToString("N2")</td>
                             <td>@await Html.PartialAsync("_StatusPill", quotation.Status)</td>
+                            <td>
+                                <div>@await Html.PartialAsync("_StatusPill", paymentStatus.Status)</div>
+                                <div class="table-meta">Invoiced @paymentStatus.InvoicedAmount.ToString("N2") / @quotation.TotalAmount.ToString("N2")</div>
+                            </td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary">View</a>
@@ -90,12 +106,46 @@
                                     @if (quotation.Status == "Draft")
                                     {
                                         <a asp-action="Edit" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                    }
-                                    @if (quotation.Status == "Approved")
-                                    {
-                                        <form asp-action="ConvertToInvoice" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline">
+                                        <form asp-action="Approve" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-primary">Convert</button>
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="approveQuotationConfirm_@quotation.QuotationHeaderId"
+                                                        aria-expanded="false">
+                                                    Approve
+                                                </button>
+                                                <div class="confirm-popover" id="approveQuotationConfirm_@quotation.QuotationHeaderId" hidden>
+                                                    <div class="confirm-popover-title">Approve this quotation?</div>
+                                                    <div class="confirm-popover-text">This will approve the quotation and allow it to be converted into an invoice.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    }
+                                    @if (quotation.Status == "Approved" || quotation.Status == "Converted")
+                                    {
+                                        <form asp-action="ConvertToInvoice" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
+                                            @Html.AntiForgeryToken()
+                                            <div class="confirm-popover-shell">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary js-confirm-popover-toggle"
+                                                        data-confirm-target="convertQuotationConfirm_@quotation.QuotationHeaderId"
+                                                        aria-expanded="false">
+                                                    Convert
+                                                </button>
+                                                <div class="confirm-popover" id="convertQuotationConfirm_@quotation.QuotationHeaderId" hidden>
+                                                    <div class="confirm-popover-title">Convert this quotation?</div>
+                                                    <div class="confirm-popover-text">This will open the quotation into a draft invoice flow for further review before issuing.</div>
+                                                    <div class="confirm-popover-actions">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </form>
                                     }
                                 </div>
@@ -106,7 +156,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="8" class="table-empty">No quotations yet. Create the first quotation to start the sales module.</td>
+                        <td colspan="9" class="table-empty">No quotations yet. Create the first quotation to start the sales module.</td>
                     </tr>
                 }
                 </tbody>

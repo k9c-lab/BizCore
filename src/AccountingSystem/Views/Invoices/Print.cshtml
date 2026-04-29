@@ -7,6 +7,18 @@
     var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
     var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
     var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalAmount);
+    var referenceSubtotal = Model.ReferenceLineSubtotal
+        ?? Model.InvoiceDetails.Sum(x => (x.QuotedQty > 0 ? x.QuotedQty : x.Qty) * x.UnitPrice);
+    var referenceDiscount = Model.ReferenceLineDiscountAmount
+        ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount);
+    var referenceVat = Model.ReferenceLineVatAmount
+        ?? (Model.VatType == "VAT"
+            ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
+            : 0m);
+    var referenceTotal = Model.ReferenceLineTotalAmount
+        ?? (referenceSubtotal - referenceDiscount + referenceVat);
+    var referenceNet = referenceSubtotal - referenceDiscount;
+    var showsInstallmentBilling = Model.QuotationId.HasValue && Math.Abs(referenceTotal - Model.TotalAmount) > 0.01m;
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
 }
 <!DOCTYPE html>
@@ -89,7 +101,7 @@
             white-space: pre-line;
         }
         .document-block {
-            min-width: 280px;
+            min-width: 300px;
             text-align: right;
         }
         .document-title-th {
@@ -100,7 +112,7 @@
         }
         .document-title-en {
             margin: 2px 0 12px;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 600;
             color: #1f2937;
             letter-spacing: 0.04em;
@@ -115,6 +127,9 @@
             color: #111827;
         }
         .document-meta td:first-child {
+            white-space: nowrap;
+        }
+        .meta-value-nowrap {
             white-space: nowrap;
         }
         .salesperson-meta {
@@ -186,7 +201,15 @@
             font-weight: 600;
         }
         .col-no { width: 48px; text-align: center; }
-        .col-description { width: auto; white-space: pre-wrap; word-break: break-word; }
+        .col-description { width: auto; word-break: break-word; }
+        .line-description-text {
+            white-space: pre-line;
+        }
+        .line-description-extra {
+            margin-top: 4px;
+            color: #4b5563;
+            white-space: normal;
+        }
         .col-qty { width: 70px; text-align: right; }
         .col-price, .col-discount, .col-total { width: 96px; text-align: right; }
         .summary-wrap {
@@ -207,6 +230,18 @@
             min-width: 300px;
             border-collapse: collapse;
         }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            align-items: start;
+        }
+        .summary-card-title {
+            margin: 0 0 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e3a8a;
+        }
         .summary-table td {
             padding: 4px 0 4px 18px;
         }
@@ -224,6 +259,11 @@
             font-weight: 700;
             font-size: 14px;
             color: #0f172a;
+        }
+        .summary-separator td {
+            padding: 0;
+            height: 8px;
+            border-bottom: 1px solid #cbd5e1;
         }
         .remark-box {
             white-space: pre-wrap;
@@ -284,10 +324,10 @@
                     </div>
                 </div>
                 <div class="document-block">
-                    <h2 class="document-title-th">ใบกำกับสินค้า</h2>
+                    <h2 class="document-title-th">ใบแจ้งหนี้</h2>
                     <div class="document-title-en">Invoice</div>
                     <table class="document-meta">
-                        <tr><td class="meta-label">เลขที่เอกสาร / Document No.</td><td>@Model.InvoiceNo</td></tr>
+                        <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.InvoiceNo</td></tr>
                         <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.InvoiceDate.ToString("dd/MM/yyyy")</td></tr>
                         <tr><td class="meta-label">เลขที่ใบเสนอราคา / Quotation No.</td><td>@(string.IsNullOrWhiteSpace(Model.Quotation?.QuotationNumber) ? "-" : Model.Quotation!.QuotationNumber)</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
@@ -336,10 +376,18 @@
                         var description = string.IsNullOrWhiteSpace(line.Remark)
                             ? $"{line.Item?.ItemCode} - {line.Item?.ItemName}"
                             : line.Remark;
+                        var quotedQty = line.QuotedQty > 0 ? line.QuotedQty : line.Qty;
+                        var showsActualQty = Math.Abs(quotedQty - line.Qty) > 0.01m;
                         <tr>
                             <td class="col-no">@line.LineNumber</td>
-                            <td class="col-description">@description</td>
-                            <td class="col-qty">@line.Qty.ToString("N2")</td>
+                            <td class="col-description">
+                                <div class="line-description-text">@description</div>
+                                @if (showsActualQty)
+                                {
+                                    <div class="line-description-extra">จำนวนออกบิลครั้งนี้ / Qty This Invoice: @line.Qty.ToString("N2")</div>
+                                }
+                            </td>
+                            <td class="col-qty">@quotedQty.ToString("N2")</td>
                             <td class="col-price">@line.UnitPrice.ToString("N2")</td>
                             <td class="col-discount">@line.DiscountAmount.ToString("N2")</td>
                             <td class="col-total">@line.LineTotal.ToString("N2")</td>
@@ -350,12 +398,44 @@
 
                 <div class="summary-wrap">
                     <div class="amount-text">@totalAmountText</div>
-                    <table class="summary-table">
+                    @if (Model.QuotationId.HasValue)
+                    {
+                        <div class="summary-grid">
+                            <div>
+                                <div class="summary-card-title">Quotation Reference Summary</div>
+                                <table class="summary-table">
+                                    <tr><td class="summary-label">ยอดก่อนส่วนลด / Subtotal</td><td>@referenceSubtotal.ToString("N2")</td></tr>
+                                    <tr><td class="summary-label">ส่วนลด / Discount</td><td>@referenceDiscount.ToString("N2")</td></tr>
+                                    <tr><td class="summary-label">ราคาหลังส่วนลด / Net After Discount</td><td>@referenceNet.ToString("N2")</td></tr>
+                                    <tr><td class="summary-label">VAT</td><td>@referenceVat.ToString("N2")</td></tr>
+                                    <tr class="summary-separator"><td colspan="2"></td></tr>
+                                    <tr class="summary-total"><td>ยอดรวมอ้างอิง / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
+                                </table>
+                            </div>
+                            <div>
+                                <div class="summary-card-title">Invoice Summary</div>
+                                <table class="summary-table">
+                                    <tr><td class="summary-label">Amount Due This Invoice</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
+                                    <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
+                                    <tr class="summary-total"><td>Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="summary-table">
+                            @if (showsInstallmentBilling)
+                        {
+                            <tr><td class="summary-label">ยอดอ้างอิงตามรายการ / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
+                            <tr class="summary-separator"><td colspan="2"></td></tr>
+                        }
                         <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
                         <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
                         <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
                         <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
-                    </table>
+                        </table>
+                    }
                 </div>
             </section>
 
