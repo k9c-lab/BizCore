@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -13,10 +14,12 @@ public class ItemsController : CrudControllerBase
 {
     private static readonly string[] ItemTypes = { "Product", "Service", "Spare Part" };
     private readonly AccountingDbContext _context;
+    private readonly ISystemSettingService _systemSettingService;
 
-    public ItemsController(AccountingDbContext context)
+    public ItemsController(AccountingDbContext context, ISystemSettingService systemSettingService)
     {
         _context = context;
+        _systemSettingService = systemSettingService;
     }
 
     public async Task<IActionResult> Index(string? search, string? itemType, string? status, int page = 1, int pageSize = 20)
@@ -148,6 +151,91 @@ public class ItemsController : CrudControllerBase
         return item is null ? NotFound() : View(item);
     }
 
+    public async Task<IActionResult> Pricing(int? id, CancellationToken cancellationToken)
+    {
+        if (id is null)
+        {
+            return NotFound();
+        }
+
+        var item = await _context.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ItemId == id.Value, cancellationToken);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        return View(await BuildPricingViewModelAsync(item, cancellationToken));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pricing(ItemPricingViewModel model, CancellationToken cancellationToken)
+    {
+        var item = await _context.Items
+            .FirstOrDefaultAsync(x => x.ItemId == model.ItemId, cancellationToken);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        var priceLevels = await _context.PriceLevels
+            .AsNoTracking()
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.PriceLevelCode)
+            .ToListAsync(cancellationToken);
+        var validLevelIds = priceLevels.Select(x => x.PriceLevelId).ToHashSet();
+
+        foreach (var row in model.PriceRows)
+        {
+            if (!validLevelIds.Contains(row.PriceLevelId))
+            {
+                ModelState.AddModelError(string.Empty, "One or more price levels are no longer valid. Please reload and try again.");
+                break;
+            }
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(await BuildPricingViewModelAsync(item, cancellationToken));
+        }
+
+        var existingPrices = await _context.ItemPrices
+            .Where(x => x.ItemId == item.ItemId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var level in priceLevels)
+        {
+            var row = model.PriceRows.FirstOrDefault(x => x.PriceLevelId == level.PriceLevelId);
+            if (row is null)
+            {
+                continue;
+            }
+
+            var existing = existingPrices.FirstOrDefault(x => x.PriceLevelId == level.PriceLevelId);
+            if (existing is null)
+            {
+                _context.ItemPrices.Add(new ItemPrice
+                {
+                    ItemId = item.ItemId,
+                    PriceLevelId = level.PriceLevelId,
+                    UnitPrice = row.UnitPrice,
+                    IsActive = row.IsActive
+                });
+            }
+            else
+            {
+                existing.UnitPrice = row.UnitPrice;
+                existing.IsActive = row.IsActive;
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        TempData["ItemPriceNotice"] = "Selling prices were updated successfully.";
+        return RedirectToAction(nameof(Pricing), new { id = item.ItemId });
+    }
+
     public async Task<IActionResult> Delete(int? id)
     {
         if (id is null)
@@ -219,6 +307,46 @@ public class ItemsController : CrudControllerBase
             .AsNoTracking()
             .Where(x => x.ItemId == itemId)
             .SumAsync(x => (decimal?)x.QtyOnHand) ?? 0m;
+    }
+
+    private async Task<ItemPricingViewModel> BuildPricingViewModelAsync(Item item, CancellationToken cancellationToken)
+    {
+        var pricingMode = await _systemSettingService.GetPricingModeAsync(cancellationToken);
+        var levels = await _context.PriceLevels
+            .AsNoTracking()
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.PriceLevelCode)
+            .ToListAsync(cancellationToken);
+        var existingPrices = await _context.ItemPrices
+            .AsNoTracking()
+            .Where(x => x.ItemId == item.ItemId)
+            .ToListAsync(cancellationToken);
+
+        return new ItemPricingViewModel
+        {
+            ItemId = item.ItemId,
+            ItemCode = item.ItemCode,
+            ItemName = item.ItemName,
+            PartNumber = item.PartNumber,
+            BaseUnitPrice = item.UnitPrice,
+            PricingMode = pricingMode,
+            PriceRows = levels
+                .Select(level =>
+                {
+                    var existing = existingPrices.FirstOrDefault(x => x.PriceLevelId == level.PriceLevelId);
+                    return new ItemPriceEditorRowViewModel
+                    {
+                        ItemPriceId = existing?.ItemPriceId,
+                        PriceLevelId = level.PriceLevelId,
+                        PriceLevelCode = level.PriceLevelCode,
+                        PriceLevelName = level.PriceLevelName,
+                        Description = level.Description,
+                        UnitPrice = existing?.UnitPrice ?? 0m,
+                        IsActive = existing?.IsActive ?? level.IsActive
+                    };
+                })
+                .ToList()
+        };
     }
 
     private void PopulateItemTypeOptions(string? selectedType)

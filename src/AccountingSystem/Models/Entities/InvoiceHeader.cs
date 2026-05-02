@@ -26,6 +26,9 @@ public class InvoiceHeader
     [Display(Name = "Branch")]
     public int? BranchId { get; set; }
 
+    [Display(Name = "Price Level")]
+    public int? PriceLevelId { get; set; }
+
     [Display(Name = "Quotation")]
     public int? QuotationId { get; set; }
 
@@ -71,6 +74,7 @@ public class InvoiceHeader
     public Customer? Customer { get; set; }
     public Salesperson? Salesperson { get; set; }
     public Branch? Branch { get; set; }
+    public PriceLevel? PriceLevel { get; set; }
     public QuotationHeader? Quotation { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }

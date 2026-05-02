@@ -23,6 +23,8 @@
         const discountModeInput = byId("DiscountMode");
         const headerDiscountInput = byId("HeaderDiscountAmount");
         const headerDiscountHelp = byId("invoiceHeaderDiscountHelp");
+        const pricingModeInput = byId("invoicePricingMode");
+        const priceLevelInput = byId("PriceLevelId");
         const entryAlert = byId("invoiceEntryAlert");
         const entryItemSearch = byId("invoiceEntryItemSearch");
         const entryItemResults = byId("invoiceEntryItemResults");
@@ -83,6 +85,23 @@
         };
         const getMainRows = () => [...lineBody.querySelectorAll(".invoice-line-main")];
         const isLineDiscountMode = () => !hasLinkedQuotation() && discountModeInput && discountModeInput.value === "Line";
+        const isMultiPriceMode = () => pricingModeInput && pricingModeInput.value === "MultiPrice";
+        const getSelectedPriceLevelId = () => priceLevelInput && priceLevelInput.value ? String(priceLevelInput.value) : "";
+        const getResolvedUnitPrice = item => {
+            if (!item) {
+                return 0;
+            }
+
+            const levelId = getSelectedPriceLevelId();
+            if (isMultiPriceMode() && levelId && item.PriceLevelPrices && Object.prototype.hasOwnProperty.call(item.PriceLevelPrices, levelId)) {
+                const levelPrice = Number(item.PriceLevelPrices[levelId] || 0);
+                if (levelPrice > 0) {
+                    return levelPrice;
+                }
+            }
+
+            return Number(item.UnitPrice || 0);
+        };
         const escapeHtml = value => String(value ?? "")
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -326,7 +345,7 @@
                 .map(item => `
                     <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
                         <span class="search-dropdown-title">${escapeHtml(item.ItemCode)} - ${escapeHtml(item.ItemName)}</span>
-                        <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")}</span>
+                        <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")} | ${formatAmount(getResolvedUnitPrice(item))}</span>
                     </button>`)
                 .join("");
             entryItemResults.style.display = "";
@@ -372,7 +391,7 @@
             hideEntryResults();
             renderEntryMode(item);
             if (entryUnitPrice) {
-                entryUnitPrice.value = item.UnitPrice;
+                entryUnitPrice.value = formatAmount(getResolvedUnitPrice(item));
             }
         };
 
@@ -408,6 +427,11 @@
                     lineNumber.value = String(index + 1);
                 }
             });
+        };
+
+        const getRowItem = row => {
+            const itemId = row?.querySelector(".js-item-id-hidden")?.value;
+            return itemId && itemMap[itemId] ? itemMap[itemId] : null;
         };
 
         const recalculateLine = row => {
@@ -546,7 +570,13 @@
         };
 
         const appendLine = line => {
-            createRow(getMainRows().length, line).forEach(row => lineBody.appendChild(row));
+            const rows = createRow(getMainRows().length, line);
+            rows.forEach(row => lineBody.appendChild(row));
+            const mainRow = rows[0];
+            const item = itemMap[String(line.ItemId)];
+            if (mainRow && item) {
+                mainRow.dataset.resolvedUnitPrice = formatAmount(getResolvedUnitPrice(item));
+            }
         };
 
         const updateSummary = () => {
@@ -594,6 +624,38 @@
             if (amountDueSection) {
                 amountDueSection.style.display = hasQuotation ? "" : "none";
             }
+        };
+
+        const refreshLinePricesForPriceLevel = () => {
+            if (hasLinkedQuotation()) {
+                return;
+            }
+
+            const selectedEntryItem = getSelectedEntryItem();
+            if (selectedEntryItem && entryUnitPrice) {
+                entryUnitPrice.value = formatAmount(getResolvedUnitPrice(selectedEntryItem));
+            }
+
+            getMainRows().forEach(row => {
+                const item = getRowItem(row);
+                if (!item) {
+                    return;
+                }
+
+                const priceInput = row.querySelector(".js-unit-price-input");
+                const previousAutoPrice = parseFloat(row.dataset.resolvedUnitPrice || "0");
+                const currentPrice = parseFloat(priceInput?.value || "0");
+                const nextAutoPrice = getResolvedUnitPrice(item);
+
+                if (priceInput && (currentPrice <= 0 || Math.abs(currentPrice - previousAutoPrice) < 0.0001)) {
+                    priceInput.value = formatAmount(nextAutoPrice);
+                }
+
+                row.dataset.resolvedUnitPrice = formatAmount(nextAutoPrice);
+                recalculateLine(row);
+            });
+
+            updateSummary();
         };
 
         const updateDiscountModeState = () => {
@@ -891,6 +953,7 @@
         headerDiscountInput?.addEventListener("input", updateSummary);
         amountDueInput?.addEventListener("input", updateSummary);
         salespersonSelect?.addEventListener("change", updateSalespersonInfo);
+        priceLevelInput?.addEventListener("change", refreshLinePricesForPriceLevel);
 
         invoiceForm?.addEventListener("submit", () => {
             const zeroIfBlankSelectors = [
@@ -917,6 +980,12 @@
         updateSalespersonInfo();
         updateDiscountModeState();
         renderEntryMode(null);
+        getMainRows().forEach(row => {
+            const item = getRowItem(row);
+            if (item) {
+                row.dataset.resolvedUnitPrice = formatAmount(getResolvedUnitPrice(item));
+            }
+        });
         updateSummary();
     })();
 </script>

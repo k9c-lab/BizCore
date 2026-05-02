@@ -2083,3 +2083,22 @@ textarea.form-control {
   line-height: 1.35;
   margin-top: 0.15rem;
 }
+
+.pricing-path-card {
+  background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%);
+  border: 1px solid #d6e7fb;
+  border-radius: 12px;
+  padding: 0.95rem 1rem;
+}
+
+.pricing-path-title {
+  color: #16345f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.pricing-path-text {
+  color: #51657f;
+  line-height: 1.5;
+}

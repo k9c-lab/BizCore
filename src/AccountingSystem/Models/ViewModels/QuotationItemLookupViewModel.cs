@@ -9,6 +9,7 @@ public class QuotationItemLookupViewModel
     public string PartNumber { get; set; } = string.Empty;
     public string ItemType { get; set; } = "Product";
     public decimal UnitPrice { get; set; }
+    public Dictionary<int, decimal> PriceLevelPrices { get; set; } = new();
     public decimal CurrentStock { get; set; }
     public bool TrackStock { get; set; }
     public bool IsSerialControlled { get; set; }

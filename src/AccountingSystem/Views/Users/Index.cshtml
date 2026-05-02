@@ -21,6 +21,11 @@
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary">New User</a>
         <a asp-controller="RolePermissions" asp-action="Index" class="btn btn-outline-secondary">Role Permissions</a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="PriceLevels" asp-action="Index" class="btn btn-outline-secondary">Price Levels</a>
+            <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">Settings</a>
+        }
     </div>
 </div>
 

@@ -1,0 +1,146 @@
+@model BizCore.Models.ViewModels.PricingSettingsViewModel
+
+@{
+    ViewData["Title"] = "Settings";
+}
+
+@if (TempData["SettingsNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Administration</div>
+        <h1 class="page-title">System Settings</h1>
+        <p class="page-subtitle">Manage product behavior switches without changing the legacy workflow for existing customers.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">Users</a>
+        <a asp-controller="RolePermissions" asp-action="Index" class="btn btn-outline-secondary">Role Permissions</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="form-shell">
+                <div class="form-section">
+                    <div class="form-section-title">Sales Pricing</div>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-5">
+                            <label asp-for="PricingMode" class="form-label"></label>
+                            <select asp-for="PricingMode" asp-items="Model.PricingModeOptions" class="form-select"></select>
+                            <span asp-validation-for="PricingMode" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="workflow-info workflow-info-info mb-0">
+                                <strong>Single Price</strong> keeps the current behavior and continues to use `Items.UnitPrice` as the only default selling price.
+                                <br />
+                                <strong>Multi Price</strong> is the future-ready mode for price levels such as retail, wholesale, or online. This setting is saved now so the product can grow without forcing the old workflow to change first.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary px-4">Save Settings</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card content-card mt-4">
+    <div class="card-body">
+        <div class="table-card-header px-0 pt-0">
+            <div>
+                <h2 class="section-title">Database Upgrade</h2>
+                <p class="section-subtitle">Run safe system migrations for this customer instance without touching customer business data.</p>
+            </div>
+            <div class="table-meta">@Model.MigrationStatus.PendingScripts.Count pending / @Model.MigrationStatus.AppliedScripts.Count applied</div>
+        </div>
+
+        <div class="workflow-info workflow-info-warning mb-4">
+            Review pending scripts and take a database backup before running production upgrades.
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-6">
+                <div class="form-section h-100">
+                    <div class="form-section-title">Pending Scripts</div>
+                    @if (Model.MigrationStatus.PendingScripts.Count == 0)
+                    {
+                        <div class="workflow-info workflow-info-success mb-0">This database is already up to date.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table entity-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Script</th>
+                                        <th>Hash</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var script in Model.MigrationStatus.PendingScripts)
+                                {
+                                    <tr>
+                                        <td><span class="code-chip">@script.ScriptName</span></td>
+                                        <td class="text-muted small">@script.ScriptHash</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <form asp-action="RunMigrations" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary">Run Pending Migrations</button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="col-xl-6">
+                <div class="form-section h-100">
+                    <div class="form-section-title">Recently Applied</div>
+                    @if (Model.MigrationStatus.AppliedScripts.Count == 0)
+                    {
+                        <div class="workflow-info workflow-info-info mb-0">No migration history has been recorded yet for this instance.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table entity-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Script</th>
+                                        <th>Applied</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var script in Model.MigrationStatus.AppliedScripts.Take(12))
+                                {
+                                    <tr>
+                                        <td><span class="code-chip">@script.ScriptName</span></td>
+                                        <td>@(script.AppliedAtUtc?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

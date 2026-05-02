@@ -1,0 +1,79 @@
+@model IReadOnlyList<BizCore.Models.Entities.PriceLevel>
+
+@{
+    ViewData["Title"] = "Price Levels";
+}
+
+@if (TempData["PriceLevelNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Setup</div>
+        <h1 class="page-title">Price Levels</h1>
+        <p class="page-subtitle">Define selling price types such as retail, wholesale, or online without changing the single-price flow for customers that do not use them.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">New Price Level</a>
+        <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">Settings</a>
+    </div>
+</div>
+
+<div class="workflow-info workflow-info-info mb-3">
+    Create the price types here first, then open an item and click <strong>Selling Prices</strong> to assign item-specific prices for each level.
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">Configured Price Levels</h2>
+            <p class="section-subtitle">These levels become the available selling price slots per item when multi-price is used.</p>
+        </div>
+        <div class="table-meta">@Model.Count level(s)</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Sort</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="table-empty">No price levels yet. Add retail, wholesale, online, or any customer-specific pricing category you need.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var level in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@level.PriceLevelCode</span></td>
+                            <td class="fw-semibold">@level.PriceLevelName</td>
+                            <td>@(string.IsNullOrWhiteSpace(level.Description) ? "-" : level.Description)</td>
+                            <td>@level.SortOrder</td>
+                            <td><span class="status-pill @(level.IsActive ? "active" : "inactive")">@(level.IsActive ? "Active" : "Inactive")</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Edit" asp-route-id="@level.PriceLevelId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="Delete" asp-route-id="@level.PriceLevelId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -49,7 +49,9 @@
     var canUseItems = CanUseMenu("MasterData.Items.Menu");
     var canUseUsers = CanUseMenu("MasterData.Users.Menu");
     var canUseRolePermissions = CanUseMenu("MasterData.RolePermissions.Menu");
-    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseItems || canUseUsers || canUseRolePermissions;
+    var canUsePriceLevels = User.IsInRole("Admin");
+    var canUseSettings = User.IsInRole("Admin");
+    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
         : User.FindFirst("BranchName")?.Value;
@@ -194,7 +196,7 @@
 
                 @if (showMasterDataSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "Items", "Users", "RolePermissions"))">
+                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
                         <div class="sidebar-section-title">Master Data</div>
                         @if (canUseBranches)
                         {
@@ -223,6 +225,14 @@
                         @if (canUseRolePermissions)
                         {
                             <a class="sidebar-link@(ActiveLink("RolePermissions"))" asp-controller="RolePermissions" asp-action="Index" aria-current="@AriaCurrent("RolePermissions")">Role Permissions</a>
+                        }
+                        @if (canUsePriceLevels)
+                        {
+                            <a class="sidebar-link@(ActiveLink("PriceLevels"))" asp-controller="PriceLevels" asp-action="Index" aria-current="@AriaCurrent("PriceLevels")">Price Levels</a>
+                        }
+                        @if (canUseSettings)
+                        {
+                            <a class="sidebar-link@(ActiveLink("Settings"))" asp-controller="Settings" asp-action="Index" aria-current="@AriaCurrent("Settings")">Settings</a>
                         }
                     </div>
                 }

@@ -1,0 +1,43 @@
+@model BizCore.Models.Entities.PriceLevel
+
+@{
+    var codeReadOnly = (bool?)ViewData["CodeReadOnly"] == true;
+}
+
+<div asp-validation-summary="All" class="form-alert"></div>
+
+<div class="form-shell">
+    <div class="form-section">
+        <div class="form-section-title">Price Level Profile</div>
+        <div class="row g-3 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="PriceLevelCode" class="form-label"></label>
+                <input asp-for="PriceLevelCode" class="form-control" readonly="@codeReadOnly" />
+                <div class="form-text">Auto-generated as `PRL-0001`, `PRL-0002`, and so on when creating a new price level.</div>
+                <span asp-validation-for="PriceLevelCode" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PriceLevelName" class="form-label"></label>
+                <input asp-for="PriceLevelName" class="form-control" />
+                <span asp-validation-for="PriceLevelName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label asp-for="SortOrder" class="form-label"></label>
+                <input asp-for="SortOrder" class="form-control" />
+                <span asp-validation-for="SortOrder" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Status</label>
+                <label class="quotation-inline-check d-flex align-items-center h-100">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <span>Active</span>
+                </label>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+</div>

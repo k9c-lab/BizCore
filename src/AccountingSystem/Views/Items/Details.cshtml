@@ -15,6 +15,7 @@
         {
             <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@Model.ItemId" class="btn btn-outline-primary">View Ledger</a>
         }
+        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Selling Prices</a>
         <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">Edit Item</a>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
     </div>
@@ -54,6 +55,13 @@
                         <div class="detail-label">Unit Price</div>
                         <div class="form-control readonly-detail">@Model.UnitPrice.ToString("N2")</div>
                     </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Multi-Price Setup Path</div>
+                <div class="workflow-info workflow-info-info mb-0">
+                    Base selling price is still managed with <strong>Unit Price</strong>. If this customer uses multiple selling prices, open <a asp-action="Pricing" asp-route-id="@Model.ItemId">Selling Prices</a> to assign prices by level after configuring <a asp-controller="PriceLevels" asp-action="Index">Price Levels</a>.
                 </div>
             </div>
 

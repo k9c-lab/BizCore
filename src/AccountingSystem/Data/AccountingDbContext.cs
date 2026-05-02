@@ -15,10 +15,14 @@ public class AccountingDbContext : DbContext
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<AppliedScript> AppliedScripts => Set<AppliedScript>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Salesperson> Salespersons => Set<Salesperson>();
     public DbSet<Item> Items => Set<Item>();
+    public DbSet<PriceLevel> PriceLevels => Set<PriceLevel>();
+    public DbSet<ItemPrice> ItemPrices => Set<ItemPrice>();
     public DbSet<SerialNumber> SerialNumbers => Set<SerialNumber>();
     public DbSet<StockBalance> StockBalances => Set<StockBalance>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -101,6 +105,31 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasKey(x => x.SystemSettingId);
+            entity.Property(x => x.SettingKey).HasMaxLength(100);
+            entity.Property(x => x.SettingValue).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.HasIndex(x => x.SettingKey).IsUnique();
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AppliedScript>(entity =>
+        {
+            entity.HasKey(x => x.AppliedScriptId);
+            entity.Property(x => x.ScriptName).HasMaxLength(200);
+            entity.Property(x => x.ScriptHash).HasMaxLength(64);
+            entity.HasIndex(x => x.ScriptName).IsUnique();
+            entity.HasOne(x => x.AppliedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.AppliedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<Branch>(entity =>
         {
             entity.HasKey(x => x.BranchId);
@@ -139,6 +168,30 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.CurrentStock).HasPrecision(18, 2);
             entity.HasIndex(x => x.ItemCode).IsUnique();
             entity.HasIndex(x => x.PartNumber).IsUnique();
+        });
+
+        modelBuilder.Entity<PriceLevel>(entity =>
+        {
+            entity.HasKey(x => x.PriceLevelId);
+            entity.Property(x => x.PriceLevelCode).HasMaxLength(30);
+            entity.Property(x => x.PriceLevelName).HasMaxLength(80);
+            entity.Property(x => x.Description).HasMaxLength(250);
+            entity.HasIndex(x => x.PriceLevelCode).IsUnique();
+        });
+
+        modelBuilder.Entity<ItemPrice>(entity =>
+        {
+            entity.HasKey(x => x.ItemPriceId);
+            entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.ItemId, x.PriceLevelId }).IsUnique();
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.PriceLevel)
+                .WithMany(x => x.ItemPrices)
+                .HasForeignKey(x => x.PriceLevelId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SerialNumber>(entity =>
@@ -363,6 +416,10 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PriceLevel)
+                .WithMany()
+                .HasForeignKey(x => x.PriceLevelId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
                 .HasForeignKey(x => x.CreatedByUserId)
@@ -427,6 +484,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Branch)
                 .WithMany()
                 .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PriceLevel)
+                .WithMany()
+                .HasForeignKey(x => x.PriceLevelId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Quotation)
                 .WithMany()

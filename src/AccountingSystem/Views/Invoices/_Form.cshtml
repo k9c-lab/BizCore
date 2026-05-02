@@ -6,9 +6,14 @@
 
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
+<input asp-for="PricingMode" type="hidden" id="invoicePricingMode" />
 @if (Model.InvoiceId.HasValue)
 {
     <input asp-for="QuotationId" type="hidden" />
+}
+@if (!Model.ShowPriceLevelSelector && Model.PriceLevelId.HasValue)
+{
+    <input asp-for="PriceLevelId" type="hidden" />
 }
 @if (!Model.CanAccessAllBranches)
 {
@@ -18,6 +23,20 @@
 <div class="form-shell">
     <div class="form-section quotation-header-section">
         <div class="form-section-title">Invoice Header</div>
+        <div class="workflow-info workflow-info-info mb-3">
+            @if (Model.ShowPriceLevelSelector && !hasQuotationReference)
+            {
+                <span>Pricing source for the current flow: choose one <strong>Price Level</strong> for the invoice, then item prices are filled from that selling price. If a level price is missing, the system falls back to each item's default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+            }
+            else if (hasQuotationReference)
+            {
+                <span>Pricing source for the current flow: this invoice follows the quotation pricing that was already approved.</span>
+            }
+            else
+            {
+                <span>Pricing source for the current flow: invoice lines start from each item's default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+            }
+        </div>
         <div class="row g-2 quotation-header-grid">
             <div class="col-lg-3 col-md-6">
                 <label asp-for="InvoiceNo" class="form-label"></label>
@@ -95,6 +114,17 @@
                 }
                 <span asp-validation-for="BranchId" class="text-danger"></span>
             </div>
+            @if (Model.ShowPriceLevelSelector && !hasQuotationReference)
+            {
+                <div class="col-md-3">
+                    <label asp-for="PriceLevelId" class="form-label"></label>
+                    <select asp-for="PriceLevelId" asp-items="Model.PriceLevelOptions" class="form-select" id="PriceLevelId">
+                        <option value="">Use default item price</option>
+                    </select>
+                    <div class="form-text">Apply one selling-price level to new lines in this invoice.</div>
+                    <span asp-validation-for="PriceLevelId" class="text-danger"></span>
+                </div>
+            }
             <div class="col-12">
                 <label asp-for="Remark" class="form-label"></label>
                 <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
@@ -173,7 +203,11 @@
 
     <div class="form-section">
         <div class="form-section-title mb-1">Invoice Line Entry</div>
-        <div class="table-meta mb-3">Add items from the entry form first, then review the invoice line list below before issuing the invoice.</div>
+        <div class="table-meta mb-3">
+            @(Model.ShowPriceLevelSelector && !hasQuotationReference
+                ? "Add items from the entry form first. The line unit price starts from the selected price level and can be adjusted here before issuing the invoice."
+                : "Add items from the entry form first. The line unit price starts from item master data and can be adjusted here before issuing the invoice.")
+        </div>
         <div id="invoiceEntryAlert" class="danger-banner" style="display:none;"></div>
 
         <div class="invoice-entry-shell">

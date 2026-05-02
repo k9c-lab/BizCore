@@ -1,5 +1,106 @@
 # Session Notes
 
+## Latest Session Update - 2026-05-02 MultiPrice Document Flow and Migration Loader Fix
+- Extended multi-price from setup screens into live sales document entry while preserving legacy behavior.
+- Added sales document price-level support:
+  - `QuotationHeaders.PriceLevelId`
+  - `InvoiceHeaders.PriceLevelId`
+- New SQL scripts:
+  - `database/048_quotation_invoice_price_levels.sql`
+  - `database/system-migrations/048_quotation_invoice_price_levels.sql`
+- Multi-price document behavior now works as follows:
+  - `Settings -> Pricing Mode = MultiPrice`
+  - quotation/invoice header shows `Price Level`
+  - item lookup resolves line price from `ItemPrices`
+  - fallback remains `Items.UnitPrice` if a level-specific price is missing
+  - manual line price override is still allowed
+- Safety rules preserved:
+  - `SinglePrice` mode keeps old quotation/invoice behavior
+  - quotation-to-invoice conversion carries quotation pricing context forward
+  - no forced customer-level default price level yet
+- Found and fixed a migration loader bug on local dev:
+  - symptom:
+    - `Settings -> Database Upgrade` said `This database is already up to date.`
+    - but local `BizcoreDb` still did not have `048`
+    - `InvoiceHeaders.PriceLevelId` and `QuotationHeaders.PriceLevelId` were missing
+  - root cause:
+    - `DatabaseMigrationService` only checked `ContentRootPath\\DatabaseMigrations`
+    - under `dotnet run`, migration files were available under runtime output path instead
+  - fix:
+    - `DatabaseMigrationService` now checks both:
+      - `ContentRootPath\\DatabaseMigrations`
+      - `AppContext.BaseDirectory\\DatabaseMigrations`
+  - result:
+    - dev runtime can discover pending scripts correctly before deploy
+
+## Latest Session Update - 2026-05-02 Pricing Settings Foundation
+- Added pricing settings foundation for SaaS-friendly optional pricing behavior.
+- New database script:
+  - `database/046_system_settings_pricing_mode.sql`
+- Added SQL-based migration system foundation for safe post-go-live upgrades:
+  - migration history table: `AppliedScripts`
+  - runtime migration source folder: `database/system-migrations`
+  - admin UI in `Settings` for viewing pending scripts and running them
+- Safe migration scope rule:
+  - intended for schema updates and system-owned setup data only
+  - not for demo data, cleanup scripts, or customer business data
+- Added `SystemSettings` table for database-backed product configuration.
+- Added admin-only `Settings` screen:
+  - `SettingsController`
+  - `Views/Settings/Index.cshtml`
+- Added first managed setting:
+  - `Sales.PricingMode`
+  - supported values:
+    - `SinglePrice`
+    - `MultiPrice`
+- Safety rule for current customer:
+  - default remains `SinglePrice`
+  - existing `Items.UnitPrice` workflow is unchanged
+  - no sales document pricing logic was switched in this round
+- UI access:
+  - admin-only for now
+  - sidebar + Users page link added for `Settings`
+- Added training prep checklist for first live customer:
+  - `docs/TRAINING_CHECKLIST_NEURA_2026-05-04.md`
+  - focused on verifying `neura` remains on `SinglePrice` and legacy sales flow before training
+- Added multi-price setup UI foundation without changing current sales posting logic:
+  - `PriceLevels` master screen for admin
+  - `Items -> Selling Prices` screen for assigning per-item prices by level
+  - new tables:
+    - `PriceLevels`
+    - `ItemPrices`
+  - new scripts:
+    - `database/047_price_levels_item_prices.sql`
+    - `database/system-migrations/047_price_levels_item_prices.sql`
+- Current safety rule:
+  - existing quotation/invoice pricing still uses `Items.UnitPrice`
+  - multi-price screens are setup-only at this stage
+- New issue observed on deployed customer site `neura` on 2026-05-02:
+  - tested the already-deployed site before publishing the newest build
+  - issue reappeared:
+    - `403 - Forbidden: Access is denied.`
+    - `You do not have permission to view this directory or page using the credentials that you supplied.`
+  - important context:
+    - this was observed on the customer deployment before deploying the latest local changes
+    - issue should be treated as a recurring deployment/production access problem, not automatically assumed to be caused by the newest pricing/settings work
+  - follow-up needed:
+    - re-check production login/access flow on `neura`
+    - compare with the previous `2026-04-29 Production Login 403 Root Cause And Fix` note
+    - confirm whether this recurrence is cookie-size related again or a different hosting/auth issue
+
+## Latest Session Update - 2026-05-01 SaaS Product Direction Note
+- Added long-term product/design reference:
+  - `docs/ARCHITECTURE_SAAS_NOTES.md`
+- Agreed guiding direction:
+  - product should be designed with SaaS mindset
+  - deployment model is currently single-tenant per customer
+  - each customer has separate database and separate web deployment
+- Important design rule going forward:
+  - prefer one shared codebase with per-instance configuration
+  - new features should be optional/configurable where appropriate
+  - avoid locking core design to one customer's workflow or pricing model
+  - preserve simple default flows for customers that do not need advanced options
+
 ## Latest Session Update - 2026-04-23 PR/PO Reject and Flexible Permissions
 - Added quotation percent discount support:
   - new SQL script `database/039_quotation_discount_percent.sql`

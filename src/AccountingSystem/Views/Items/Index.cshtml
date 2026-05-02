@@ -11,11 +11,15 @@
     <div>
         <div class="page-eyebrow">Core Module</div>
         <h1 class="page-title">Items</h1>
-        <p class="page-subtitle">Manage stock and sellable items with a more readable catalog-style table.</p>
+        <p class="page-subtitle">Manage stock items and maintain the default selling price used by the current single-price sales flow.</p>
     </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary px-4">New Item</a>
     </div>
+</div>
+
+<div class="workflow-info workflow-info-info mb-3">
+    This is the current item pricing setup screen. In the active single-price flow, sales documents use each item's <strong>Unit Price</strong> as the default selling price.
 </div>
 
 <div class="card content-card table-card">
@@ -66,6 +70,7 @@
                         <th>Unit Price</th>
                         <th>Stock</th>
                         <th>Serial</th>
+                        <th>Pricing</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -83,9 +88,11 @@
                         <td>@item.UnitPrice.ToString("N2")</td>
                         <td>@(item.TrackStock ? item.CurrentStock.ToString("N2") : "-")</td>
                         <td>@(item.IsSerialControlled ? "Serial" : "Standard")</td>
+                        <td><span class="table-meta">Base price + optional level prices</span></td>
                         <td class="text-end">
                             <div class="table-actions">
                                 <a asp-action="Details" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                <a asp-action="Pricing" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">Selling Prices</a>
                                 @if (item.TrackStock)
                                 {
                                     <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" class="btn btn-sm btn-outline-primary">Ledger</a>
@@ -100,7 +107,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="9" class="table-empty">No items yet. Add products or services to start testing sales and inventory flows.</td>
+                        <td colspan="10" class="table-empty">No items yet. Add products or services to start testing sales and inventory flows.</td>
                     </tr>
                 }
                 </tbody>

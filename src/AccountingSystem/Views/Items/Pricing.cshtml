@@ -1,0 +1,112 @@
+@model BizCore.Models.ViewModels.ItemPricingViewModel
+
+@{
+    ViewData["Title"] = "Item Selling Prices";
+}
+
+@if (TempData["ItemPriceNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Sales Setup</div>
+        <h1 class="page-title">Item Selling Prices</h1>
+        <p class="page-subtitle">Maintain multiple selling prices for one item without changing the legacy single-price workflow.</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="itemPricingForm" class="btn btn-primary px-4">Save Selling Prices</button>
+        <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Item Details</a>
+        <a asp-controller="PriceLevels" asp-action="Index" class="btn btn-outline-secondary">Price Levels</a>
+    </div>
+</div>
+
+<div class="workflow-info workflow-info-@(Model.PricingMode == BizCore.Services.PricingModes.MultiPrice ? "success" : "warning") mb-3">
+    Current pricing mode: <strong>@Model.PricingMode</strong>.
+    @if (Model.PricingMode == BizCore.Services.PricingModes.MultiPrice)
+    {
+        <span> These prices are ready for future multi-price sales flow integration.</span>
+    }
+    else
+    {
+        <span> The active sales flow still uses the item's base <strong>Unit Price</strong>. These rows are setup data only until multi-price is turned on.</span>
+    }
+</div>
+
+<div class="card content-card mb-4">
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Item Code</span><p class="detail-value">@Model.ItemCode</p></div>
+            <div class="detail-item"><span class="detail-label">Item Name</span><p class="detail-value">@Model.ItemName</p></div>
+            <div class="detail-item"><span class="detail-label">Part Number</span><p class="detail-value">@Model.PartNumber</p></div>
+            <div class="detail-item"><span class="detail-label">Base Unit Price</span><p class="detail-value">@Model.BaseUnitPrice.ToString("N2")</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        @if (Model.PriceRows.Count == 0)
+        {
+            <div class="workflow-info workflow-info-warning mb-0">
+                No price levels exist yet. Create them first in <a asp-controller="PriceLevels" asp-action="Index">Price Levels</a>, then return to this item to assign selling prices.
+            </div>
+        }
+        else
+        {
+            <form asp-action="Pricing" method="post" id="itemPricingForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ItemId" value="@Model.ItemId" />
+
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Price Level</th>
+                                <th>Description</th>
+                                <th>Unit Price</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @for (var i = 0; i < Model.PriceRows.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="PriceRows[@i].ItemPriceId" value="@Model.PriceRows[i].ItemPriceId" />
+                                    <input type="hidden" name="PriceRows[@i].PriceLevelId" value="@Model.PriceRows[i].PriceLevelId" />
+                                    <input type="hidden" name="PriceRows[@i].PriceLevelCode" value="@Model.PriceRows[i].PriceLevelCode" />
+                                    <input type="hidden" name="PriceRows[@i].PriceLevelName" value="@Model.PriceRows[i].PriceLevelName" />
+                                    <input type="hidden" name="PriceRows[@i].Description" value="@Model.PriceRows[i].Description" />
+                                    <span class="code-chip">@Model.PriceRows[i].PriceLevelCode</span>
+                                    <div class="fw-semibold mt-1">@Model.PriceRows[i].PriceLevelName</div>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(Model.PriceRows[i].Description) ? "-" : Model.PriceRows[i].Description)</td>
+                                <td style="min-width: 180px;">
+                                    <input type="number" step="0.01" min="0" name="PriceRows[@i].UnitPrice" value="@Model.PriceRows[i].UnitPrice.ToString("0.##")" class="form-control" />
+                                </td>
+                                <td style="min-width: 140px;">
+                                    <input type="hidden" name="PriceRows[@i].IsActive" value="false" />
+                                    <label class="quotation-inline-check d-flex align-items-center">
+                                        <input type="checkbox" name="PriceRows[@i].IsActive" value="true" class="form-check-input" @(Model.PriceRows[i].IsActive ? "checked" : null) />
+                                        <span>Active</span>
+                                    </label>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-actions mt-3">
+                    <span class="table-meta">Leaving a price at 0.00 is allowed while preparing setup, but sales should still rely on the item base unit price until multi-price is activated in live flow.</span>
+                    <div class="page-actions">
+                        <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Back</a>
+                        <button type="submit" class="btn btn-primary px-4">Save Selling Prices</button>
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</div>

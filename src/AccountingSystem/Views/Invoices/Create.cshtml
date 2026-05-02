@@ -17,6 +17,23 @@
 
 <div class="card content-card">
     <div class="card-body">
+        <div class="pricing-path-card mb-3">
+            <div class="pricing-path-title">Where invoice prices come from</div>
+            <div class="pricing-path-text">
+                @if (Model.ShowPriceLevelSelector && !Model.QuotationId.HasValue)
+                {
+                    <span>Current mode: <strong>Multiple Price</strong>. Set up selling prices in <a asp-controller="Items" asp-action="Index">Master Data &gt; Items</a>, choose one price level on the invoice header, and the system will prefill new lines from that level with fallback to the default item price.</span>
+                }
+                else if (Model.QuotationId.HasValue)
+                {
+                    <span>Current mode: <strong>Quotation-Based</strong>. Prices follow the approved quotation that is being converted to this invoice.</span>
+                }
+                else
+                {
+                    <span>Current mode: <strong>Single Price</strong>. Default item prices are maintained in <a asp-controller="Items" asp-action="Index">Master Data &gt; Items</a>, then copied into invoice lines for review and override if needed.</span>
+                }
+            </div>
+        </div>
         <form asp-action="Create" method="post" id="invoiceForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">

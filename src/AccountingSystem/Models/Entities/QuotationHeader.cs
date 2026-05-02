@@ -29,6 +29,9 @@ public class QuotationHeader
     [Display(Name = "Branch")]
     public int? BranchId { get; set; }
 
+    [Display(Name = "Price Level")]
+    public int? PriceLevelId { get; set; }
+
     [Display(Name = "Reference No.")]
     [StringLength(50)]
     public string? ReferenceNo { get; set; }
@@ -84,6 +87,7 @@ public class QuotationHeader
     public Customer? Customer { get; set; }
     public Salesperson? Salesperson { get; set; }
     public Branch? Branch { get; set; }
+    public PriceLevel? PriceLevel { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? ApprovedByUser { get; set; }

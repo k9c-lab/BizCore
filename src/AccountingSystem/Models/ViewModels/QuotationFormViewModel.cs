@@ -31,8 +31,13 @@ public class QuotationFormViewModel
     [Display(Name = "Branch")]
     public int? BranchId { get; set; }
 
+    [Display(Name = "Price Level")]
+    public int? PriceLevelId { get; set; }
+
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
+    public string PricingMode { get; set; } = string.Empty;
+    public bool ShowPriceLevelSelector { get; set; }
 
     [Display(Name = "Reference No.")]
     [StringLength(50)]
@@ -78,6 +83,7 @@ public class QuotationFormViewModel
     public IEnumerable<SelectListItem> CustomerOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> SalespersonOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> PriceLevelOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> StatusOptions { get; set; } = Enumerable.Empty<SelectListItem>();

@@ -1,6 +1,11 @@
 @model BizCore.Models.ViewModels.QuotationFormViewModel
 
 <div asp-validation-summary="All" class="form-alert"></div>
+<input asp-for="PricingMode" type="hidden" id="quotationPricingMode" />
+@if (!Model.ShowPriceLevelSelector && Model.PriceLevelId.HasValue)
+{
+    <input asp-for="PriceLevelId" type="hidden" />
+}
 @if (!Model.CanAccessAllBranches)
 {
     <input asp-for="BranchId" type="hidden" />
@@ -51,6 +56,16 @@
 
             <div class="quotation-header-card">
                 <div class="quotation-header-card-title">Pricing & Approval Rules</div>
+                <div class="workflow-info workflow-info-info mb-3">
+                    @if (Model.ShowPriceLevelSelector)
+                    {
+                        <span>Pricing source for the current flow: choose one <strong>Price Level</strong> for the document, then quotation lines start from that item's selling price. If a level price is missing, the system falls back to the default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+                    }
+                    else
+                    {
+                        <span>Pricing source for the current flow: quotation lines start from each item's default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+                    }
+                </div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-4 col-md-6">
                         <label asp-for="BranchId" class="form-label"></label>
@@ -66,6 +81,17 @@
                         }
                         <span asp-validation-for="BranchId" class="text-danger"></span>
                     </div>
+                    @if (Model.ShowPriceLevelSelector)
+                    {
+                        <div class="col-lg-4 col-md-6">
+                            <label asp-for="PriceLevelId" class="form-label"></label>
+                            <select asp-for="PriceLevelId" asp-items="Model.PriceLevelOptions" class="form-select" id="PriceLevelId">
+                                <option value="">Use default item price</option>
+                            </select>
+                            <div class="form-text">Choose one pricing level for the whole quotation. You can still override each line if needed.</div>
+                            <span asp-validation-for="PriceLevelId" class="text-danger"></span>
+                        </div>
+                    }
                     <div class="col-lg-4 col-md-6">
                         <label asp-for="DiscountMode" class="form-label"></label>
                         <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
@@ -204,7 +230,11 @@
         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
             <div>
                 <div class="form-section-title mb-1">Quotation Lines</div>
-                <div class="table-meta" id="quotationDiscountModeText">Search items by code, name, or part number. Descriptions support multi-line quotation text.</div>
+                <div class="table-meta" id="quotationDiscountModeText">
+                    @(Model.ShowPriceLevelSelector
+                        ? "Search items by code, name, or part number. Line unit price starts from the selected price level, then you can override it before saving."
+                        : "Search items by code, name, or part number. Line unit price starts from the item master and can be adjusted here before saving.")
+                </div>
             </div>
             <button type="button" class="btn btn-outline-primary btn-sm" id="addQuotationLine">Add Line</button>
         </div>

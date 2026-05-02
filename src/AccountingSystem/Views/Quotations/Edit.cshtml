@@ -60,6 +60,8 @@
             const headerDiscountPercentHelp = document.getElementById("quotationHeaderDiscountPercentHelp");
             const discountModeText = document.getElementById("quotationDiscountModeText");
             const branchInput = document.getElementById("BranchId");
+            const pricingModeInput = document.getElementById("quotationPricingMode");
+            const priceLevelInput = document.getElementById("PriceLevelId");
             const branchStockUrl = '@Url.Action("BranchStock", "Quotations")';
 
             const createRow = index => {
@@ -152,6 +154,23 @@
 
             const getValue = value => value && value.trim() ? value : "-";
             const hasSelectedBranch = () => branchInput && branchInput.value && branchInput.value.trim();
+            const isMultiPriceMode = () => pricingModeInput && pricingModeInput.value === "MultiPrice";
+            const getSelectedPriceLevelId = () => priceLevelInput && priceLevelInput.value ? String(priceLevelInput.value) : "";
+            const getResolvedUnitPrice = item => {
+                if (!item) {
+                    return 0;
+                }
+
+                const levelId = getSelectedPriceLevelId();
+                if (isMultiPriceMode() && levelId && item.PriceLevelPrices && Object.prototype.hasOwnProperty.call(item.PriceLevelPrices, levelId)) {
+                    const levelPrice = Number(item.PriceLevelPrices[levelId] || 0);
+                    if (levelPrice > 0) {
+                        return levelPrice;
+                    }
+                }
+
+                return Number(item.UnitPrice || 0);
+            };
             const formatStockHint = item => {
                 if (!item || !item.TrackStock) {
                     return "";
@@ -266,7 +285,7 @@
                     .map(item => `
                         <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
                             <span class="search-dropdown-title">${item.ItemCode} - ${item.ItemName}</span>
-                            <span class="search-dropdown-meta">${item.PartNumber || "-"} | ${item.ItemType || "Product"} | ${item.UnitPrice.toFixed(2)}</span>
+                            <span class="search-dropdown-meta">${item.PartNumber || "-"} | ${item.ItemType || "Product"} | ${getResolvedUnitPrice(item).toFixed(2)}</span>
                         </button>`)
                     .join("");
                 results.style.display = "";
@@ -369,17 +388,31 @@
                 const stockHint = row.querySelector(".js-stock-hint");
                 const selectedItem = resolveItem(row);
                 const isLineMode = discountModeInput.value === "Line";
+                const previousAutoPrice = parseFloat(row.dataset.resolvedUnitPrice || "0");
 
                 itemIdInput.value = selectedItem ? selectedItem.ItemId : "";
                 if (selectedItem && syncItemFields) {
                     itemSearch.value = selectedItem.DisplayText;
                 }
 
+                if (selectedItem) {
+                    const resolvedPrice = getResolvedUnitPrice(selectedItem);
+                    const currentPrice = parseFloat(unitPrice.value || "0");
+                    if (syncItemFields) {
+                        description.value = selectedItem.ItemName;
+                    }
+
+                    if (currentPrice <= 0 || Math.abs(currentPrice - previousAutoPrice) < 0.0001) {
+                        unitPrice.value = resolvedPrice.toFixed(2);
+                    }
+
+                    row.dataset.resolvedUnitPrice = resolvedPrice.toFixed(2);
+                } else {
+                    row.dataset.resolvedUnitPrice = "";
+                }
+
                 if (selectedItem && syncItemFields) {
                     description.value = selectedItem.ItemName;
-                    if (!parseFloat(unitPrice.value)) {
-                        unitPrice.value = selectedItem.UnitPrice;
-                    }
                 }
 
                 if (stockHint) {
@@ -450,6 +483,13 @@
                 document.getElementById("quotationTotal").textContent = (netBeforeVat + vat).toFixed(2);
             };
 
+            const refreshAutoPricedRows = () => {
+                lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {
+                    updateLine(row, false);
+                });
+                updateSummary();
+            };
+
             lineBody.addEventListener("click", event => {
                 if (!event.target.classList.contains("js-remove-line")) {
                     return;
@@ -488,6 +528,7 @@
             salespersonSelect.addEventListener("change", updateSalespersonInfo);
             noExpiryInput.addEventListener("change", updateExpiryState);
             branchInput?.addEventListener("change", refreshBranchStock);
+            priceLevelInput?.addEventListener("change", refreshAutoPricedRows);
             customerSearch.addEventListener("input", () => {
                 delete customerSearch.dataset.selectedCustomerId;
                 customerInput.value = "";

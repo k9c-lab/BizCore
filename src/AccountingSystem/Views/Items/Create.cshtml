@@ -18,10 +18,13 @@
 
 <div class="card content-card">
     <div class="card-body">
+        <div class="workflow-info workflow-info-info mb-3">
+            Set the item's <strong>Unit Price</strong> here. Quotations and invoices will use this value as the default selling price while the system stays in single-price mode.
+        </div>
         <form asp-action="Create" method="post" id="itemForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Use product-level fields like unit, stock, and unit price to prepare item records for sales testing.</span>
+                <span class="table-meta">Use product-level fields like unit, stock, and unit price to prepare item records for sales testing. After saving, open <strong>Selling Prices</strong> if this item needs retail, wholesale, online, or other price levels.</span>
                 <div class="page-actions">
                     <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Save Item</button>

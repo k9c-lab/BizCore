@@ -16,11 +16,16 @@ public class InvoicesController : CrudControllerBase
     private const string NumberPrefix = "INV";
     private readonly AccountingDbContext _context;
     private readonly CompanyProfileSettings _companyProfile;
+    private readonly ISystemSettingService _systemSettingService;
 
-    public InvoicesController(AccountingDbContext context, IOptions<CompanyProfileSettings> companyProfileOptions)
+    public InvoicesController(
+        AccountingDbContext context,
+        IOptions<CompanyProfileSettings> companyProfileOptions,
+        ISystemSettingService systemSettingService)
     {
         _context = context;
         _companyProfile = companyProfileOptions.Value;
+        _systemSettingService = systemSettingService;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -212,6 +217,7 @@ public class InvoicesController : CrudControllerBase
         invoice.CustomerId = model.CustomerId!.Value;
         invoice.SalespersonId = model.SalespersonId;
         invoice.BranchId = model.BranchId;
+        invoice.PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null;
         invoice.QuotationId = model.QuotationId;
         invoice.ReferenceNo = model.ReferenceNo?.Trim();
         invoice.Remark = model.Remark?.Trim();
@@ -290,6 +296,7 @@ public class InvoicesController : CrudControllerBase
                 CustomerId = model.CustomerId!.Value,
                 SalespersonId = model.SalespersonId,
                 BranchId = model.BranchId,
+                PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null,
                 QuotationId = model.QuotationId,
                 ReferenceNo = model.ReferenceNo?.Trim(),
                 Remark = model.Remark?.Trim(),
@@ -719,6 +726,14 @@ public class InvoicesController : CrudControllerBase
 
     private async Task PopulateLookupsAsync(InvoiceFormViewModel model)
     {
+        var pricingMode = await _systemSettingService.GetPricingModeAsync();
+        model.PricingMode = pricingMode;
+        model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
+        if (!model.ShowPriceLevelSelector || model.QuotationId.HasValue)
+        {
+            model.PriceLevelId = model.QuotationId.HasValue ? model.PriceLevelId : null;
+        }
+
         var canAccessAllBranches = CurrentUserCanAccessAllBranches();
         model.CanAccessAllBranches = canAccessAllBranches;
         if (!canAccessAllBranches)
@@ -735,6 +750,21 @@ public class InvoicesController : CrudControllerBase
         model.BranchOptions = branches
             .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
             .ToList();
+
+        model.PriceLevelOptions = model.ShowPriceLevelSelector && !model.QuotationId.HasValue
+            ? await _context.PriceLevels
+                .AsNoTracking()
+                .Where(x => x.IsActive || x.PriceLevelId == model.PriceLevelId)
+                .OrderBy(x => x.PriceLevelName)
+                .ThenBy(x => x.PriceLevelCode)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.PriceLevelId.ToString(),
+                    Text = $"{x.PriceLevelCode} - {x.PriceLevelName}",
+                    Selected = model.PriceLevelId.HasValue && x.PriceLevelId == model.PriceLevelId.Value
+                })
+                .ToListAsync()
+            : Array.Empty<SelectListItem>();
 
         model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
 
@@ -827,35 +857,42 @@ public class InvoicesController : CrudControllerBase
             })
             .ToListAsync();
 
+        var itemPriceMap = await _context.ItemPrices
+            .AsNoTracking()
+            .Include(x => x.PriceLevel)
+            .Where(x => x.PriceLevel != null && x.PriceLevel.IsActive)
+            .GroupBy(x => x.ItemId)
+            .ToDictionaryAsync(
+                x => x.Key,
+                x => x.ToDictionary(y => y.PriceLevelId, y => y.UnitPrice));
+
         var itemQuery = _context.Items
             .AsNoTracking()
             .Where(x => x.IsActive)
             .OrderBy(x => x.ItemCode);
 
+        List<InvoiceItemLookupViewModel> itemLookup;
         if (model.BranchId.HasValue)
         {
             var selectedBranchId = model.BranchId.Value;
-            model.ItemLookup = await itemQuery
-                .Select(x => new InvoiceItemLookupViewModel
+            var items = await itemQuery
+                .Select(x => new
                 {
-                    ItemId = x.ItemId,
-                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
-                    ItemCode = x.ItemCode,
-                    ItemName = x.ItemName,
-                    PartNumber = x.PartNumber,
-                    ItemType = x.ItemType,
-                    UnitPrice = x.UnitPrice,
-                    TrackStock = x.TrackStock,
-                    IsSerialControlled = x.IsSerialControlled,
+                    x.ItemId,
+                    x.ItemCode,
+                    x.ItemName,
+                    x.PartNumber,
+                    x.ItemType,
+                    x.UnitPrice,
+                    x.TrackStock,
+                    x.IsSerialControlled,
                     CurrentStock = _context.StockBalances
                         .Where(b => b.ItemId == x.ItemId && b.BranchId == selectedBranchId)
                         .Sum(b => (decimal?)b.QtyOnHand) ?? 0
                 })
                 .ToListAsync();
-        }
-        else
-        {
-            model.ItemLookup = await itemQuery
+
+            itemLookup = items
                 .Select(x => new InvoiceItemLookupViewModel
                 {
                     ItemId = x.ItemId,
@@ -869,7 +906,49 @@ public class InvoicesController : CrudControllerBase
                     IsSerialControlled = x.IsSerialControlled,
                     CurrentStock = x.CurrentStock
                 })
+                .ToList();
+        }
+        else
+        {
+            var items = await itemQuery
+                .Select(x => new
+                {
+                    x.ItemId,
+                    x.ItemCode,
+                    x.ItemName,
+                    x.PartNumber,
+                    x.ItemType,
+                    x.UnitPrice,
+                    x.TrackStock,
+                    x.IsSerialControlled,
+                    x.CurrentStock
+                })
                 .ToListAsync();
+
+            itemLookup = items
+                .Select(x => new InvoiceItemLookupViewModel
+                {
+                    ItemId = x.ItemId,
+                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
+                    ItemCode = x.ItemCode,
+                    ItemName = x.ItemName,
+                    PartNumber = x.PartNumber,
+                    ItemType = x.ItemType,
+                    UnitPrice = x.UnitPrice,
+                    TrackStock = x.TrackStock,
+                    IsSerialControlled = x.IsSerialControlled,
+                    CurrentStock = x.CurrentStock
+                })
+                .ToList();
+        }
+
+        model.ItemLookup = itemLookup;
+
+        foreach (var item in model.ItemLookup)
+        {
+            item.PriceLevelPrices = itemPriceMap.TryGetValue(item.ItemId, out var levelPrices)
+                ? levelPrices
+                : new Dictionary<int, decimal>();
         }
 
         var stockByItemId = model.ItemLookup
@@ -933,6 +1012,7 @@ public class InvoicesController : CrudControllerBase
             CustomerId = invoice.CustomerId,
             SalespersonId = invoice.SalespersonId,
             BranchId = invoice.BranchId,
+            PriceLevelId = invoice.PriceLevelId,
             BranchName = invoice.Branch?.BranchName ?? string.Empty,
             QuotationNo = invoice.Quotation?.QuotationNumber,
             ReferenceNo = invoice.ReferenceNo,
@@ -993,6 +1073,7 @@ public class InvoicesController : CrudControllerBase
         model.CustomerId = quotation.CustomerId;
         model.SalespersonId = quotation.SalespersonId;
         model.BranchId = quotation.BranchId;
+        model.PriceLevelId = quotation.PriceLevelId;
         model.BranchName = quotation.Branch?.BranchName ?? model.BranchName;
         model.ReferenceNo = quotation.ReferenceNo;
         model.Remark = quotation.Remarks;
@@ -1103,6 +1184,14 @@ public class InvoicesController : CrudControllerBase
 
     private async Task<bool> ValidateAndComputeAsync(InvoiceFormViewModel model, bool requireSerials, bool requireAvailableStock)
     {
+        var pricingMode = await _systemSettingService.GetPricingModeAsync();
+        model.PricingMode = pricingMode;
+        model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
+        if (!model.ShowPriceLevelSelector || model.QuotationId.HasValue)
+        {
+            model.PriceLevelId = model.QuotationId.HasValue ? model.PriceLevelId : null;
+        }
+
         model.Details = NormalizeDetails(model.Details);
 
         if (model.Details.Count == 0)
@@ -1137,6 +1226,7 @@ public class InvoicesController : CrudControllerBase
             else
             {
                 model.QuotationNo = quotation.QuotationNumber;
+                model.PriceLevelId = quotation.PriceLevelId;
                 quotationRemainingAmount = await GetQuotationRemainingAmountAsync(
                     quotation.QuotationHeaderId,
                     quotation.TotalAmount,
@@ -1175,6 +1265,16 @@ public class InvoicesController : CrudControllerBase
             }
         }
 
+        if (model.ShowPriceLevelSelector && !model.QuotationId.HasValue && model.PriceLevelId.HasValue)
+        {
+            var priceLevelExists = await _context.PriceLevels
+                .AnyAsync(x => x.PriceLevelId == model.PriceLevelId.Value && x.IsActive);
+            if (!priceLevelExists)
+            {
+                ModelState.AddModelError(nameof(model.PriceLevelId), "Selected price level was not found.");
+            }
+        }
+
         if (model.VatType is not ("VAT" or "NoVAT"))
         {
             ModelState.AddModelError(nameof(model.VatType), "VAT type must be VAT or NoVAT.");
@@ -1201,6 +1301,15 @@ public class InvoicesController : CrudControllerBase
             .AsNoTracking()
             .Where(x => itemIds.Contains(x.ItemId))
             .ToDictionaryAsync(x => x.ItemId);
+        var itemPriceMap = await _context.ItemPrices
+            .AsNoTracking()
+            .Where(x =>
+                itemIds.Contains(x.ItemId) &&
+                (!model.PriceLevelId.HasValue || x.PriceLevelId == model.PriceLevelId.Value))
+            .GroupBy(x => x.ItemId)
+            .ToDictionaryAsync(
+                x => x.Key,
+                x => x.ToDictionary(y => y.PriceLevelId, y => y.UnitPrice));
 
         var serialIds = model.Details.SelectMany(x => x.SelectedSerialIds).Distinct().ToList();
         var serialMap = serialIds.Count == 0
@@ -1256,7 +1365,7 @@ public class InvoicesController : CrudControllerBase
 
             if (detail.UnitPrice <= 0)
             {
-                detail.UnitPrice = item.UnitPrice;
+                detail.UnitPrice = ResolveUnitPrice(item, model.PriceLevelId, itemPriceMap);
             }
 
             if (requireAvailableStock && detail.TrackStock && detail.CurrentStock < detail.Qty)
@@ -1488,6 +1597,22 @@ public class InvoicesController : CrudControllerBase
                 })
                 .ToList()
         };
+    }
+
+    private static decimal ResolveUnitPrice(
+        Item item,
+        int? priceLevelId,
+        IReadOnlyDictionary<int, Dictionary<int, decimal>> itemPriceMap)
+    {
+        if (priceLevelId.HasValue &&
+            itemPriceMap.TryGetValue(item.ItemId, out var priceByLevel) &&
+            priceByLevel.TryGetValue(priceLevelId.Value, out var levelPrice) &&
+            levelPrice > 0)
+        {
+            return levelPrice;
+        }
+
+        return item.UnitPrice;
     }
 
     private Task<string> GetNextInvoiceNumberAsync(DateTime date)

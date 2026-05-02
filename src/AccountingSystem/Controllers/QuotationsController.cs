@@ -17,11 +17,16 @@ public class QuotationsController : CrudControllerBase
     private const string InvoiceNumberPrefix = "INV";
     private readonly AccountingDbContext _context;
     private readonly CompanyProfileSettings _companyProfile;
+    private readonly ISystemSettingService _systemSettingService;
 
-    public QuotationsController(AccountingDbContext context, IOptions<CompanyProfileSettings> companyProfileOptions)
+    public QuotationsController(
+        AccountingDbContext context,
+        IOptions<CompanyProfileSettings> companyProfileOptions,
+        ISystemSettingService systemSettingService)
     {
         _context = context;
         _companyProfile = companyProfileOptions.Value;
+        _systemSettingService = systemSettingService;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -149,6 +154,7 @@ public class QuotationsController : CrudControllerBase
             CustomerId = model.CustomerId!.Value,
             SalespersonId = model.SalespersonId,
             BranchId = model.BranchId,
+            PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null,
             ReferenceNo = model.ReferenceNo?.Trim(),
             Status = model.Status,
             Remarks = model.Remarks?.Trim(),
@@ -210,6 +216,7 @@ public class QuotationsController : CrudControllerBase
             CustomerId = header.CustomerId,
             SalespersonId = header.SalespersonId,
             BranchId = header.BranchId,
+            PriceLevelId = header.PriceLevelId,
             BranchName = header.Branch?.BranchName ?? string.Empty,
             ReferenceNo = header.ReferenceNo,
             Status = header.Status,
@@ -286,6 +293,7 @@ public class QuotationsController : CrudControllerBase
         header.CustomerId = model.CustomerId!.Value;
         header.SalespersonId = model.SalespersonId;
         header.BranchId = model.BranchId;
+        header.PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null;
         header.ReferenceNo = model.ReferenceNo?.Trim();
         header.Status = model.Status;
         header.VatType = model.VatType;
@@ -427,6 +435,14 @@ public class QuotationsController : CrudControllerBase
 
     private async Task PopulateLookupsAsync(QuotationFormViewModel model)
     {
+        var pricingMode = await _systemSettingService.GetPricingModeAsync();
+        model.PricingMode = pricingMode;
+        model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
+        if (!model.ShowPriceLevelSelector)
+        {
+            model.PriceLevelId = null;
+        }
+
         var canAccessAllBranches = CurrentUserCanAccessAllBranches();
         model.CanAccessAllBranches = canAccessAllBranches;
         if (!canAccessAllBranches)
@@ -443,6 +459,21 @@ public class QuotationsController : CrudControllerBase
         model.BranchOptions = branches
             .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
             .ToList();
+
+        model.PriceLevelOptions = model.ShowPriceLevelSelector
+            ? await _context.PriceLevels
+                .AsNoTracking()
+                .Where(x => x.IsActive || x.PriceLevelId == model.PriceLevelId)
+                .OrderBy(x => x.PriceLevelName)
+                .ThenBy(x => x.PriceLevelCode)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.PriceLevelId.ToString(),
+                    Text = $"{x.PriceLevelCode} - {x.PriceLevelName}",
+                    Selected = model.PriceLevelId.HasValue && x.PriceLevelId == model.PriceLevelId.Value
+                })
+                .ToListAsync()
+            : Array.Empty<SelectListItem>();
 
         model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
 
@@ -466,10 +497,38 @@ public class QuotationsController : CrudControllerBase
             })
             .ToListAsync();
 
+        var itemPriceMap = await _context.ItemPrices
+            .AsNoTracking()
+            .Include(x => x.PriceLevel)
+            .Where(x => x.PriceLevel != null && x.PriceLevel.IsActive)
+            .GroupBy(x => x.ItemId)
+            .ToDictionaryAsync(
+                x => x.Key,
+                x => x.ToDictionary(y => y.PriceLevelId, y => y.UnitPrice));
+
         var selectedBranchId = model.BranchId;
-        model.ItemLookup = await _context.Items
+        var items = await _context.Items
             .AsNoTracking()
             .OrderBy(x => x.ItemCode)
+            .Select(x => new
+            {
+                x.ItemId,
+                x.ItemCode,
+                x.ItemName,
+                x.PartNumber,
+                x.ItemType,
+                x.UnitPrice,
+                x.TrackStock,
+                x.IsSerialControlled,
+                CurrentStock = selectedBranchId.HasValue
+                    ? (_context.StockBalances
+                        .Where(b => b.ItemId == x.ItemId && b.BranchId == selectedBranchId.Value)
+                        .Sum(b => (decimal?)b.QtyOnHand) ?? 0m)
+                    : 0m
+            })
+            .ToListAsync();
+
+        model.ItemLookup = items
             .Select(x => new QuotationItemLookupViewModel
             {
                 ItemId = x.ItemId,
@@ -479,15 +538,14 @@ public class QuotationsController : CrudControllerBase
                 PartNumber = x.PartNumber,
                 ItemType = x.ItemType,
                 UnitPrice = x.UnitPrice,
-                CurrentStock = selectedBranchId.HasValue
-                    ? (_context.StockBalances
-                        .Where(b => b.ItemId == x.ItemId && b.BranchId == selectedBranchId.Value)
-                        .Sum(b => (decimal?)b.QtyOnHand) ?? 0m)
-                    : 0m,
+                PriceLevelPrices = itemPriceMap.TryGetValue(x.ItemId, out var levelPrices)
+                    ? levelPrices
+                    : new Dictionary<int, decimal>(),
+                CurrentStock = x.CurrentStock,
                 TrackStock = x.TrackStock,
                 IsSerialControlled = x.IsSerialControlled
             })
-            .ToListAsync();
+            .ToList();
 
         model.CustomerLookup = await _context.Customers
             .AsNoTracking()
@@ -546,6 +604,14 @@ public class QuotationsController : CrudControllerBase
 
     private async Task<bool> ValidateAndComputeAsync(QuotationFormViewModel model)
     {
+        var pricingMode = await _systemSettingService.GetPricingModeAsync();
+        model.PricingMode = pricingMode;
+        model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
+        if (!model.ShowPriceLevelSelector)
+        {
+            model.PriceLevelId = null;
+        }
+
         model.Details = NormalizeDetails(model.Details);
 
         if (model.Details.Count == 0)
@@ -592,6 +658,16 @@ public class QuotationsController : CrudControllerBase
             }
         }
 
+        if (model.ShowPriceLevelSelector && model.PriceLevelId.HasValue)
+        {
+            var priceLevelExists = await _context.PriceLevels
+                .AnyAsync(x => x.PriceLevelId == model.PriceLevelId.Value && x.IsActive);
+            if (!priceLevelExists)
+            {
+                ModelState.AddModelError(nameof(model.PriceLevelId), "Selected price level was not found.");
+            }
+        }
+
         if (model.VatType is not ("VAT" or "NoVAT"))
         {
             ModelState.AddModelError(nameof(model.VatType), "VAT type must be VAT or NoVAT.");
@@ -612,6 +688,15 @@ public class QuotationsController : CrudControllerBase
             .AsNoTracking()
             .Where(x => itemIds.Contains(x.ItemId))
             .ToDictionaryAsync(x => x.ItemId);
+        var itemPriceMap = await _context.ItemPrices
+            .AsNoTracking()
+            .Where(x =>
+                itemIds.Contains(x.ItemId) &&
+                (!model.PriceLevelId.HasValue || x.PriceLevelId == model.PriceLevelId.Value))
+            .GroupBy(x => x.ItemId)
+            .ToDictionaryAsync(
+                x => x.Key,
+                x => x.ToDictionary(y => y.PriceLevelId, y => y.UnitPrice));
 
         decimal subtotal = 0m;
         decimal discount = 0m;
@@ -634,7 +719,7 @@ public class QuotationsController : CrudControllerBase
 
             if (detail.UnitPrice <= 0)
             {
-                detail.UnitPrice = item.UnitPrice;
+                detail.UnitPrice = ResolveUnitPrice(item, model.PriceLevelId, itemPriceMap);
             }
 
             var gross = detail.Quantity * detail.UnitPrice;
@@ -786,6 +871,22 @@ public class QuotationsController : CrudControllerBase
             DiscountAmount = detail.DiscountAmount,
             LineTotal = detail.LineTotal
         };
+    }
+
+    private static decimal ResolveUnitPrice(
+        Item item,
+        int? priceLevelId,
+        IReadOnlyDictionary<int, Dictionary<int, decimal>> itemPriceMap)
+    {
+        if (priceLevelId.HasValue &&
+            itemPriceMap.TryGetValue(item.ItemId, out var priceByLevel) &&
+            priceByLevel.TryGetValue(priceLevelId.Value, out var levelPrice) &&
+            levelPrice > 0)
+        {
+            return levelPrice;
+        }
+
+        return item.UnitPrice;
     }
 
     private async Task<IReadOnlyList<string>> GetBranchStockShortageMessagesAsync(QuotationHeader quotation)

@@ -12,12 +12,16 @@
     </div>
     <div class="page-actions">
         <button type="submit" form="itemForm" class="btn btn-primary px-4">Save Changes</button>
+        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Selling Prices</a>
         <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">View Details</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
+        <div class="workflow-info workflow-info-info mb-3">
+            Update the item's <strong>Unit Price</strong> here when you want future quotations and invoices to default to a new selling price.
+        </div>
         <form asp-action="Edit" method="post" id="itemForm">
             <input type="hidden" asp-for="ItemId" />
             <partial name="_Form" model="Model" />
