@@ -1,14 +1,14 @@
 @model BizCore.Models.Entities.QuotationHeader
 
 @{
-    ViewData["Title"] = "Quotation Details";
+    ViewData["Title"] = "รายละเอียดใบเสนอราคา";
     var paymentStatus = ViewData["PaymentStatus"] as BizCore.Models.ViewModels.QuotationPaymentStatusViewModel
         ?? new BizCore.Models.ViewModels.QuotationPaymentStatusViewModel
         {
             QuotationHeaderId = Model.QuotationHeaderId,
             QuotationTotalAmount = Model.TotalAmount,
             RemainingAmount = Model.TotalAmount,
-            Status = "Not Invoiced"
+            Status = "NotInvoiced"
         };
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
     var netAfterDiscount = Model.Subtotal - appliedDiscount;
@@ -18,9 +18,9 @@
             : Model.HeaderDiscountAmount.ToString("N2")
         : "-";
     var canApprove = Model.Status == "Draft";
-    var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"Only Draft quotations can be approved. Current status is {Model.Status}.";
+    var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"อนุมัติได้เฉพาะใบเสนอราคาฉบับร่าง สถานะปัจจุบันคือ {Model.Status}";
     var canConvert = Model.Status == "Approved" || Model.Status == "Converted";
-    var convertBlockedReason = canConvert ? string.Empty : $"Convert to Invoice is available only after approval. Current status is {Model.Status}.";
+    var convertBlockedReason = canConvert ? string.Empty : $"จะสร้างใบแจ้งหนี้ได้หลังจากอนุมัติแล้วเท่านั้น สถานะปัจจุบันคือ {Model.Status}";
 }
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -30,14 +30,14 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Quotation Details</h1>
-        <p class="page-subtitle">Review quotation details, VAT totals, and conversion readiness before creating an invoice.</p>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">รายละเอียดใบเสนอราคา</h1>
+        <p class="page-subtitle">ตรวจสอบรายละเอียด ยอดรวม VAT และความพร้อมก่อนสร้างใบแจ้งหนี้</p>
     </div>
     <div class="page-actions">
         @if (canApprove)
         {
-            <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">Edit Quotation</a>
+            <a asp-action="Edit" asp-route-id="@Model.QuotationHeaderId" class="btn btn-primary">แก้ไขใบเสนอราคา</a>
             <form asp-action="Approve" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
@@ -45,14 +45,14 @@
                             class="btn btn-primary js-confirm-popover-toggle"
                             data-confirm-target="approveQuotationDetailsConfirm_@Model.QuotationHeaderId"
                             aria-expanded="false">
-                        Approve
+                        อนุมัติ
                     </button>
                     <div class="confirm-popover" id="approveQuotationDetailsConfirm_@Model.QuotationHeaderId" hidden>
-                        <div class="confirm-popover-title">Approve this quotation?</div>
-                        <div class="confirm-popover-text">This will approve the quotation and allow it to be converted into an invoice.</div>
+                        <div class="confirm-popover-title">อนุมัติใบเสนอราคานี้หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่ออนุมัติแล้ว จะสามารถนำไปสร้างใบแจ้งหนี้ได้</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -60,9 +60,9 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">อนุมัติ</button>
         }
-        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.QuotationHeaderId })', '_blank', 'noopener');">Print</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.QuotationHeaderId })', '_blank', 'noopener');">พิมพ์</button>
         @if (canConvert)
         {
             <form asp-action="ConvertToInvoice" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
@@ -72,14 +72,14 @@
                             class="btn btn-primary js-confirm-popover-toggle"
                             data-confirm-target="convertQuotationDetailsConfirm_@Model.QuotationHeaderId"
                             aria-expanded="false">
-                        Convert to Invoice
+                        สร้างใบแจ้งหนี้
                     </button>
                     <div class="confirm-popover" id="convertQuotationDetailsConfirm_@Model.QuotationHeaderId" hidden>
-                        <div class="confirm-popover-title">Convert this quotation?</div>
-                        <div class="confirm-popover-text">This will open the quotation into a draft invoice flow for further review before issuing.</div>
+                        <div class="confirm-popover-title">สร้างใบแจ้งหนี้จากใบเสนอราคานี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะเปิดเป็นใบแจ้งหนี้ฉบับร่างเพื่อให้ตรวจสอบก่อนออกเอกสาร</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -87,9 +87,9 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@convertBlockedReason">Convert to Invoice</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@convertBlockedReason">สร้างใบแจ้งหนี้</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -111,73 +111,73 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Quotation Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="quotation-header-stack">
                     <div class="quotation-header-card">
-                        <div class="quotation-header-card-title">Document Info</div>
+                        <div class="quotation-header-card-title">ข้อมูลเอกสาร</div>
                         <div class="row g-2 quotation-header-grid">
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Quotation No.</div>
+                                <div class="detail-label">เลขที่ใบเสนอราคา</div>
                                 <div class="form-control readonly-detail">@Model.QuotationNumber</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Quotation Date</div>
+                                <div class="detail-label">วันที่เอกสาร</div>
                                 <div class="form-control readonly-detail">@Model.QuotationDate.ToString("dd MMM yyyy")</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Reference No.</div>
+                                <div class="detail-label">เลขอ้างอิง</div>
                                 <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
                             </div>
                             <div class="col-lg-8 col-md-7">
-                                <div class="detail-label">Expiry Date</div>
-                                <div class="form-control readonly-detail">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "No expiry")</div>
+                                <div class="detail-label">วันหมดอายุ</div>
+                                <div class="form-control readonly-detail">@(Model.ExpiryDate?.ToString("dd MMM yyyy") ?? "ไม่กำหนดวันหมดอายุ")</div>
                             </div>
                             <div class="col-lg-4 col-md-5">
-                                <div class="detail-label">Status</div>
+                                <div class="detail-label">สถานะ</div>
                                 <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="quotation-header-card">
-                        <div class="quotation-header-card-title">Pricing & Approval Rules</div>
+                        <div class="quotation-header-card-title">ราคาและเงื่อนไขการอนุมัติ</div>
                         <div class="row g-2 quotation-header-grid">
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Branch</div>
+                                <div class="detail-label">สาขา</div>
                                 <div class="form-control readonly-detail">@Model.Branch?.BranchName</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Discount Mode</div>
+                                <div class="detail-label">รูปแบบส่วนลด</div>
                                 <div class="form-control readonly-detail">@Model.DiscountMode</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">VAT Type</div>
+                                <div class="detail-label">ประเภท VAT</div>
                                 <div class="form-control readonly-detail">@Model.VatType</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Header Discount Type</div>
+                                <div class="detail-label">ประเภทส่วนลดท้ายเอกสาร</div>
                                 <div class="form-control readonly-detail">@Model.HeaderDiscountType</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Header Discount</div>
+                                <div class="detail-label">ส่วนลดท้ายเอกสาร</div>
                                 <div class="form-control readonly-detail">@headerDiscountDisplay</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Applied Discount</div>
+                                <div class="detail-label">ส่วนลดที่ใช้จริง</div>
                                 <div class="form-control readonly-detail">@appliedDiscount.ToString("N2")</div>
                             </div>
                         </div>
                         <div class="quotation-summary-strip">
                             <div class="quotation-summary-chip">
-                                <span>Subtotal</span>
+                                <span>มูลค่าก่อนส่วนลด</span>
                                 <strong>@Model.Subtotal.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
-                                <span>Discount</span>
+                                <span>ส่วนลด</span>
                                 <strong>@appliedDiscount.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
-                                <span>Net After Discount</span>
+                                <span>ยอดสุทธิหลังหักส่วนลด</span>
                                 <strong>@netAfterDiscount.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
@@ -185,43 +185,43 @@
                                 <strong>@Model.VatAmount.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip is-total">
-                                <span>Total</span>
+                                <span>ยอดรวมทั้งสิ้น</span>
                                 <strong>@Model.TotalAmount.ToString("N2")</strong>
                             </div>
                         </div>
                     </div>
 
                     <div class="quotation-header-card">
-                        <div class="quotation-header-card-title">Remarks</div>
+                        <div class="quotation-header-card-title">หมายเหตุ</div>
                         <div class="row g-2 quotation-header-grid">
                             <div class="col-12">
-                                <div class="detail-label">Remarks</div>
+                                <div class="detail-label">หมายเหตุ</div>
                                 <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remarks) ? "-" : Model.Remarks)</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="quotation-header-card">
-                        <div class="quotation-header-card-title">Invoice Coverage</div>
+                        <div class="quotation-header-card-title">สถานะการออกใบแจ้งหนี้</div>
                         <div class="row g-2 quotation-header-grid">
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">สถานะการออก Invoice</div>
+                                <div class="detail-label">สถานะการออกบิล</div>
                                 <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", paymentStatus.Status)</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">ยอดวางบิล</div>
+                                <div class="detail-label">ยอดที่ออกบิลแล้ว</div>
                                 <div class="form-control readonly-detail">@paymentStatus.InvoicedAmount.ToString("N2")</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">ยอดตามใบเสนอราคา</div>
+                                <div class="detail-label">ยอดรวมใบเสนอราคา</div>
                                 <div class="form-control readonly-detail">@paymentStatus.QuotationTotalAmount.ToString("N2")</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">ยอดคงเหลือที่ยังไม่ได้ออก Invoice</div>
+                                <div class="detail-label">ยอดคงเหลือที่ยังไม่ได้ออกบิล</div>
                                 <div class="form-control readonly-detail">@paymentStatus.RemainingAmount.ToString("N2")</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
-                                <div class="detail-label">Invoice ที่อ้างอิง</div>
+                                <div class="detail-label">จำนวนใบแจ้งหนี้ที่อ้างอิง</div>
                                 <div class="form-control readonly-detail">@paymentStatus.InvoiceCount.ToString("N0")</div>
                             </div>
                         </div>
@@ -232,29 +232,29 @@
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Customer Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Customer Name</span>
+                                <span class="quotation-info-label">ชื่อลูกค้า</span>
                                 <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-label">เลขประจำตัวผู้เสียภาษี</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-label">อีเมล</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Email) ? "-" : Model.Customer!.Email)</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-label">ที่อยู่</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
                         </div>
                     </div>
@@ -262,18 +262,18 @@
 
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Salesperson Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลพนักงานขาย</div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Salesperson Name</span>
+                            <span class="quotation-info-label">ชื่อพนักงานขาย</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.SalespersonName) ? "-" : Model.Salesperson!.SalespersonName)</span>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.PhoneNumber) ? "-" : Model.Salesperson!.PhoneNumber)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-label">อีเมล</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Salesperson?.Email) ? "-" : Model.Salesperson!.Email)</span>
                             </div>
                         </div>
@@ -284,8 +284,8 @@
             <div class="form-section quotation-lines-section">
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                     <div>
-                        <div class="form-section-title mb-1">Quotation Lines</div>
-                        <div class="table-meta">@Model.QuotationDetails.Count line(s). Descriptions support multi-line quotation text.</div>
+                        <div class="form-section-title mb-1">รายการสินค้า/บริการ</div>
+                        <div class="table-meta">@Model.QuotationDetails.Count รายการ รองรับคำอธิบายหลายบรรทัด</div>
                     </div>
                 </div>
 
@@ -294,14 +294,14 @@
                         <thead>
                             <tr>
                                 <th style="width: 6%;">#</th>
-                                <th style="width: 24%;">Item</th>
-                                <th>Description</th>
-                                <th style="width: 10%;">Qty</th>
-                                <th style="width: 12%;">Unit Price</th>
-                                <th style="width: 14%;">Disc. Type</th>
-                                <th style="width: 12%;">Discount</th>
-                                <th style="width: 12%;">Net Price</th>
-                                <th style="width: 12%;">Line Total</th>
+                                <th style="width: 24%;">สินค้า</th>
+                                <th>รายละเอียด</th>
+                                <th style="width: 10%;">จำนวน</th>
+                                <th style="width: 12%;">ราคาต่อหน่วย</th>
+                                <th style="width: 14%;">ประเภทส่วนลด</th>
+                                <th style="width: 12%;">ส่วนลด</th>
+                                <th style="width: 12%;">ราคาสุทธิ</th>
+                                <th style="width: 12%;">รวมบรรทัด</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -329,15 +329,15 @@
                 <div class="quotation-summary-wrap">
                     <div class="quotation-summary-stack">
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Subtotal</span>
+                            <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
                             <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Discount</span>
+                            <span class="quotation-summary-name">ส่วนลด</span>
                             <span class="quotation-summary-amount">@appliedDiscount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Net After Discount</span>
+                            <span class="quotation-summary-name">ยอดสุทธิหลังหักส่วนลด</span>
                             <span class="quotation-summary-amount">@netAfterDiscount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
@@ -345,7 +345,7 @@
                             <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row total">
-                            <span class="quotation-summary-name">Total</span>
+                            <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                             <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
                         </div>
                     </div>
@@ -353,25 +353,25 @@
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Approved</span>
+                        <span class="document-history-label">อนุมัติโดย</span>
                         <span class="document-history-value">@(Model.ApprovedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Converted</span>
+                        <span class="document-history-label">สร้างใบแจ้งหนี้โดย</span>
                         <span class="document-history-value">@(Model.ConvertedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.ConvertedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>

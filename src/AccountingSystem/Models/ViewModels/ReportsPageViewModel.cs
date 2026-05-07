@@ -7,9 +7,11 @@ public class ReportsPageViewModel
     public DateTime DateFrom { get; set; }
     public DateTime DateTo { get; set; }
     public int? BranchId { get; set; }
+    public int? SalespersonId { get; set; }
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
     public IReadOnlyList<SelectListItem> BranchOptions { get; set; } = Array.Empty<SelectListItem>();
+    public IReadOnlyList<SelectListItem> SalespersonOptions { get; set; } = Array.Empty<SelectListItem>();
     public decimal SalesTotal { get; set; }
     public decimal PaymentsTotal { get; set; }
     public decimal SupplierPaymentsTotal { get; set; }

@@ -1,33 +1,32 @@
 @model BizCore.Models.Entities.Item
 
 @{
-    ViewData["Title"] = "Create Item";
+    ViewData["Title"] = "เพิ่มสินค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Create Item</h1>
-        <p class="page-subtitle">Add a product or service with clearer pricing and control sections.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">เพิ่มสินค้าและบริการ</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="itemForm" class="btn btn-primary px-4">Save Item</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        <button type="submit" form="itemForm" class="btn btn-primary px-4">บันทึก</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการ</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
         <div class="workflow-info workflow-info-info mb-3">
-            Set the item's <strong>Unit Price</strong> here. Quotations and invoices will use this value as the default selling price while the system stays in single-price mode.
+            กำหนด <strong>ราคาต่อหน่วย</strong> ของสินค้าได้ที่นี่ โดยระบบจะใช้เป็นราคาขายตั้งต้นในใบเสนอราคาและใบแจ้งหนี้เมื่อใช้งานในโหมดราคาเดียว
         </div>
         <form asp-action="Create" method="post" id="itemForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Use product-level fields like unit, stock, and unit price to prepare item records for sales testing. After saving, open <strong>Selling Prices</strong> if this item needs retail, wholesale, online, or other price levels.</span>
+                <span class="table-meta">หลังบันทึกแล้ว หากรายการนี้ต้องมีราคาขายหลายแบบ สามารถเข้าไปกำหนดต่อที่ <strong>ราคาขาย</strong></span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Item</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึก</button>
                 </div>
             </div>
         </form>

@@ -1,7 +1,8 @@
 @model BizCore.Models.Entities.PaymentHeader
 
 @{
-    ViewData["Title"] = "Payment Details";
+    ViewData["Title"] = "รายละเอียดการรับชำระ";
+    var isDraft = Model.Status == "Draft";
     var appliedAmount = Model.PaymentAllocations.Sum(x => x.AppliedAmount);
     var unappliedAmount = Math.Max(Model.Amount - appliedAmount, 0m);
     var hasAllocations = Model.PaymentAllocations.Any();
@@ -9,14 +10,14 @@
     var generateReceiptBlockedReason = canGenerateReceipt
         ? string.Empty
         : Model.Status != "Posted"
-            ? $"Generate Receipt is available only for Posted payments. Current status is {Model.Status}."
-            : "Generate Receipt is blocked because this payment already has a receipt.";
+            ? $"ออกใบเสร็จได้เฉพาะรายการรับชำระที่บันทึกแล้ว สถานะปัจจุบันคือ {Model.Status}"
+            : "ไม่สามารถออกใบเสร็จได้ เพราะรายการนี้มีใบเสร็จแล้ว";
     var canCancel = Model.Status == "Posted" && Model.ReceiptHeader?.Status != "Issued";
     var cancelBlockedReason = canCancel
         ? string.Empty
         : Model.Status != "Posted"
-            ? $"Cancel Payment is available only for Posted payments. Current status is {Model.Status}."
-            : "Cannot cancel payment because receipt already exists. Cancel receipt first.";
+            ? $"ยกเลิกรายการรับชำระได้เฉพาะรายการที่บันทึกแล้ว สถานะปัจจุบันคือ {Model.Status}"
+            : "ไม่สามารถยกเลิกรายการรับชำระได้ เพราะมีใบเสร็จแล้ว กรุณายกเลิกใบเสร็จก่อน";
 }
 
 @if (TempData["PaymentNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -26,14 +27,39 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">AR Module</div>
-        <h1 class="page-title">Payment Details</h1>
-        <p class="page-subtitle">Review posted payment information, optional invoice allocations, and the issued receipt.</p>
+        <div class="page-eyebrow">ลูกหนี้การค้า</div>
+        <h1 class="page-title">รายละเอียดการรับชำระ</h1>
+        <p class="page-subtitle">@(isDraft
+            ? "ตรวจสอบฉบับร่างการรับชำระก่อนบันทึกจริง โดยฉบับร่างยังไม่กระทบยอดใบแจ้งหนี้หรือใบวางบิล"
+            : "ตรวจสอบข้อมูลการรับชำระ การจัดสรรไปยังใบแจ้งหนี้ และใบเสร็จที่ออกแล้ว")</p>
     </div>
     <div class="page-actions">
+        @if (isDraft)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-outline-primary">แก้ไขฉบับร่าง</a>
+            <form asp-action="PostDraft" asp-route-id="@Model.PaymentId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-primary js-confirm-popover-toggle"
+                            data-confirm-target="postDraftPaymentDetailsConfirm_@Model.PaymentId"
+                            aria-expanded="false">
+                        บันทึกรับชำระ
+                    </button>
+                    <div class="confirm-popover" id="postDraftPaymentDetailsConfirm_@Model.PaymentId" hidden>
+                        <div class="confirm-popover-title">บันทึกรับชำระจากฉบับร่างนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่อยืนยันแล้ว ระบบจะตัดชำระใบแจ้งหนี้และอัปเดตยอดคงเหลือของเอกสารต้นทางทันที</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
         @if (Model.ReceiptHeader is not null)
         {
-            <a asp-controller="Receipts" asp-action="Details" asp-route-id="@Model.ReceiptHeader.ReceiptId" class="btn btn-primary">View Receipt</a>
+            <a asp-controller="Receipts" asp-action="Details" asp-route-id="@Model.ReceiptHeader.ReceiptId" class="btn btn-primary">ดูใบเสร็จ</a>
         }
         @if (canGenerateReceipt)
         {
@@ -44,22 +70,22 @@
                             class="btn btn-primary js-confirm-popover-toggle"
                             data-confirm-target="generateReceiptPaymentDetailsConfirm_@Model.PaymentId"
                             aria-expanded="false">
-                        Generate Receipt
+                        ออกใบเสร็จ
                     </button>
                     <div class="confirm-popover" id="generateReceiptPaymentDetailsConfirm_@Model.PaymentId" hidden>
-                        <div class="confirm-popover-title">Generate receipt for this payment?</div>
-                        <div class="confirm-popover-text">This will create one receipt linked to this posted payment.</div>
+                        <div class="confirm-popover-title">ออกใบเสร็จสำหรับรายการรับชำระนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะสร้างใบเสร็จ 1 ใบที่เชื่อมกับรายการรับชำระนี้</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
             </form>
         }
-        else
+        else if (!isDraft)
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@generateReceiptBlockedReason">Generate Receipt</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@generateReceiptBlockedReason">ออกใบเสร็จ</button>
         }
         @if (canCancel)
         {
@@ -70,30 +96,38 @@
                             class="btn btn-outline-danger js-confirm-popover-toggle"
                             data-confirm-target="cancelPaymentDetailsConfirm_@Model.PaymentId"
                             aria-expanded="false">
-                        Cancel Payment
+                        ยกเลิกรายการรับชำระ
                     </button>
                     <div class="confirm-popover" id="cancelPaymentDetailsConfirm_@Model.PaymentId" hidden>
-                        <div class="confirm-popover-title">Cancel this payment?</div>
-                        <div class="confirm-popover-text">This will cancel the payment and reverse any invoice allocations linked to it.</div>
+                        <div class="confirm-popover-title">ยกเลิกรายการรับชำระนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะยกเลิกรายการรับชำระ และย้อนการตัดชำระที่ผูกกับใบแจ้งหนี้ทั้งหมด</div>
+                        <div class="mt-2">
+                            <label for="cancelPaymentReason" class="form-label">เหตุผลการยกเลิก</label>
+                            <textarea id="cancelPaymentReason" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลการยกเลิก" required></textarea>
+                        </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
             </form>
         }
-        else
+        else if (!isDraft)
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Payment</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกรายการรับชำระ</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการรับชำระ</a>
     </div>
 </div>
 
-@if (!canGenerateReceipt || !canCancel)
+@if (isDraft || !canGenerateReceipt || !canCancel)
 {
     <div class="workflow-info mb-3">
+        @if (isDraft)
+        {
+            <div>ฉบับร่างจะยังไม่ตัดชำระใบแจ้งหนี้หรือใบวางบิลจนกว่าจะกดบันทึกรับชำระ</div>
+        }
         @if (!canGenerateReceipt)
         {
             <div>@generateReceiptBlockedReason</div>
@@ -109,26 +143,26 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Payment Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment No.</div>
+                        <div class="detail-label">เลขที่รับชำระ</div>
                         <div class="form-control readonly-detail">@Model.PaymentNo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment Date</div>
+                        <div class="detail-label">วันที่รับชำระ</div>
                         <div class="form-control readonly-detail">@Model.PaymentDate.ToString("dd MMM yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Reference No.</div>
+                        <div class="detail-label">เลขอ้างอิง</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Status</div>
+                        <div class="detail-label">สถานะ</div>
                         <div class="form-control readonly-detail">@Model.Status</div>
                     </div>
                     <div class="col-12">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                 </div>
@@ -137,29 +171,29 @@
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Customer Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Customer Code</span>
+                                <span class="quotation-info-label">รหัสลูกค้า</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.CustomerCode) ? "-" : Model.Customer!.CustomerCode)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Customer Name</span>
+                                <span class="quotation-info-label">ชื่อลูกค้า</span>
                                 <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-label">เลขประจำตัวผู้เสียภาษี</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-label">ที่อยู่</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
                         </div>
                     </div>
@@ -167,25 +201,25 @@
 
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Payment Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลการชำระเงิน</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Payment Method</span>
+                                <span class="quotation-info-label">วิธีชำระเงิน</span>
                                 <span class="quotation-info-value">@Model.PaymentMethod</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Receipt</span>
+                                <span class="quotation-info-label">ใบเสร็จ</span>
                                 <span class="quotation-info-value">@(Model.ReceiptHeader?.ReceiptNo ?? "-")</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Posted</span>
+                                <span class="quotation-info-label">บันทึกเมื่อ</span>
                                 <span class="quotation-info-value">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Allocations</span>
-                                <span class="quotation-info-value">@(hasAllocations ? $"{Model.PaymentAllocations.Count} invoice(s)" : "Unapplied payment")</span>
+                                <span class="quotation-info-label">การจัดสรร</span>
+                                <span class="quotation-info-value">@(hasAllocations ? $"{Model.PaymentAllocations.Count} ใบแจ้งหนี้" : "ยังไม่จัดสรรเข้ากับใบแจ้งหนี้")</span>
                             </div>
                         </div>
                     </div>
@@ -195,10 +229,10 @@
             <div class="form-section">
                 <div class="table-card-header px-0 pt-0">
                     <div>
-                        <h2 class="section-title">Invoice Allocation</h2>
-                        <p class="section-subtitle">Each allocation updates invoice paid amount, balance amount, and status. Payments can also remain unapplied.</p>
+                        <h2 class="section-title">การจัดสรรให้ใบแจ้งหนี้</h2>
+                        <p class="section-subtitle">ทุกการจัดสรรจะกระทบยอดชำระ ยอดคงเหลือ และสถานะของใบแจ้งหนี้ โดยสามารถบันทึกแบบยังไม่จัดสรรได้เช่นกัน</p>
                     </div>
-                    <div class="table-meta">@Model.PaymentAllocations.Count allocation(s)</div>
+                    <div class="table-meta">@Model.PaymentAllocations.Count รายการ</div>
                 </div>
                 @if (hasAllocations)
                 {
@@ -206,11 +240,11 @@
                         <table class="table entity-table align-middle">
                             <thead>
                                 <tr>
-                                    <th>Invoice No.</th>
-                                    <th>Invoice Date</th>
-                                    <th>Total</th>
-                                    <th>Updated Status</th>
-                                    <th class="text-end">Applied Amount</th>
+                                    <th>เลขที่ใบแจ้งหนี้</th>
+                                    <th>วันที่เอกสาร</th>
+                                    <th>ยอดรวม</th>
+                                    <th>สถานะหลังรับชำระ</th>
+                                    <th class="text-end">ยอดที่ตัดชำระ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -230,54 +264,54 @@
                 }
                 else
                 {
-                    <div class="workflow-info">This payment was posted without any invoice allocation. The full amount is currently unapplied.</div>
+                    <div class="workflow-info">รายการรับชำระนี้ถูกบันทึกโดยยังไม่จัดสรรเข้ากับใบแจ้งหนี้ ยอดทั้งหมดจึงยังเป็นยอดคงเหลือที่ไม่ถูกตัดชำระ</div>
                 }
             </div>
 
             <div class="quotation-summary-wrap">
                 <div class="quotation-summary-stack">
                     <div class="quotation-summary-row total">
-                        <span class="quotation-summary-name">Payment Amount</span>
+                        <span class="quotation-summary-name">จำนวนเงินรับชำระ</span>
                         <span class="quotation-summary-amount">@Model.Amount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">Applied</span>
+                        <span class="quotation-summary-name">ตัดชำระแล้ว</span>
                         <span class="quotation-summary-amount">@appliedAmount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">Unapplied</span>
+                        <span class="quotation-summary-name">ยังไม่ตัดชำระ</span>
                         <span class="quotation-summary-amount">@unappliedAmount.ToString("N2")</span>
                     </div>
                 </div>
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Posted</span>
+                        <span class="document-history-label">บันทึกโดย</span>
                         <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-label">ยกเลิกโดย</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     @if (Model.Status == "Cancelled")
                     {
                         <div class="document-history-reason">
-                            <span class="document-history-label">Cancel Reason</span>
+                            <span class="document-history-label">เหตุผลที่ยกเลิก</span>
                             <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
                         </div>
                     }

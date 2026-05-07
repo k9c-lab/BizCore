@@ -7,34 +7,60 @@ public class InvoiceHeader
     public int InvoiceId { get; set; }
 
     [Required]
-    [Display(Name = "Invoice No.")]
+    [Display(Name = "เลขที่ใบแจ้งหนี้")]
     [StringLength(30)]
     public string InvoiceNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Invoice Date")]
+    [Display(Name = "วันที่ใบแจ้งหนี้")]
     [DataType(DataType.Date)]
     public DateTime InvoiceDate { get; set; } = DateTime.Today;
 
     [Required]
-    [Display(Name = "Customer")]
+    [Display(Name = "ลูกค้า")]
     public int CustomerId { get; set; }
 
-    [Display(Name = "Salesperson")]
+    [Display(Name = "พนักงานขาย")]
     public int? SalespersonId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
-    [Display(Name = "Price Level")]
+    [Display(Name = "ระดับราคา")]
     public int? PriceLevelId { get; set; }
 
-    [Display(Name = "Quotation")]
+    [Display(Name = "ใบเสนอราคา")]
     public int? QuotationId { get; set; }
 
-    [Display(Name = "Reference No.")]
+    [Display(Name = "เลขที่อ้างอิง")]
     [StringLength(50)]
     public string? ReferenceNo { get; set; }
+
+    [Display(Name = "ชื่อ-สกุลคนไข้")]
+    [StringLength(200)]
+    public string? PatientFullName { get; set; }
+
+    [Display(Name = "อายุ (ปี)")]
+    [Range(0, 150)]
+    public int? PatientAge { get; set; }
+
+    [Display(Name = "เพศ")]
+    [StringLength(20)]
+    public string? PatientGender { get; set; }
+
+    [Display(Name = "HN")]
+    [StringLength(50)]
+    public string? PatientHn { get; set; }
+
+    [Display(Name = "สิทธิการรักษา")]
+    public int? TreatmentRightId { get; set; }
+
+    [Display(Name = "Ward")]
+    [StringLength(100)]
+    public string? PatientWard { get; set; }
+
+    [Display(Name = "แพทย์ส่ง")]
+    public int? ReferringDoctorId { get; set; }
 
     [StringLength(500)]
     public string? Remark { get; set; }
@@ -76,10 +102,13 @@ public class InvoiceHeader
     public Branch? Branch { get; set; }
     public PriceLevel? PriceLevel { get; set; }
     public QuotationHeader? Quotation { get; set; }
+    public TreatmentRight? TreatmentRight { get; set; }
+    public ReferringDoctor? ReferringDoctor { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? IssuedByUser { get; set; }
     public User? CancelledByUser { get; set; }
     public ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
     public ICollection<PaymentAllocation> PaymentAllocations { get; set; } = new List<PaymentAllocation>();
+    public ICollection<BillingNoteInvoice> BillingNoteInvoices { get; set; } = new List<BillingNoteInvoice>();
 }

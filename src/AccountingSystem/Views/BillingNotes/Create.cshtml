@@ -1,0 +1,678 @@
+@model BizCore.Models.ViewModels.BillingNoteCreateViewModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = Model.IsEditMode ? "แก้ไขใบวางบิล" : "สร้างใบวางบิล";
+    var formAction = Model.IsEditMode ? "Edit" : "Create";
+    var availableInvoicesJson = JsonSerializer.Serialize(
+        Model.AvailableInvoices.Select(x => new
+        {
+            invoiceId = x.InvoiceId,
+            treatmentRightName = x.TreatmentRightName,
+            balanceAmount = x.BalanceAmount,
+            totalAmount = x.TotalAmount,
+            vatAmount = x.VatAmount,
+            vatType = x.VatType,
+            itemLines = x.ItemLines.Select(y => new
+            {
+                itemCode = y.ItemCode,
+                itemName = y.ItemName,
+                qty = y.Qty,
+                lineTotal = y.LineTotal
+            })
+        }),
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">@(Model.IsEditMode ? "แก้ไขใบวางบิล" : "สร้างใบวางบิล")</h1>
+        <p class="page-subtitle">เลือกใบแจ้งหนี้ของลูกค้ารายเดียวกัน แล้วสรุปเป็นใบวางบิลได้ทั้งตามสิทธิการรักษาและตามรายการสินค้า</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="billingNoteForm" class="btn btn-outline-primary js-billing-submit" data-submit-action="SaveDraft" @(Model.AvailableInvoices.Any() ? null : "disabled")>บันทึกฉบับร่าง</button>
+        <div class="confirm-popover-shell d-inline-block">
+            <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="issueBillingTopConfirm" aria-expanded="false" @(Model.AvailableInvoices.Any() ? null : "disabled")>
+                ออกใบวางบิล
+            </button>
+            <div class="confirm-popover" id="issueBillingTopConfirm" hidden>
+                <div class="confirm-popover-title">ยืนยันออกใบวางบิลนี้หรือไม่?</div>
+                <div class="confirm-popover-text">หลังออกเอกสารแล้ว จะไม่สามารถแก้ไขได้เหมือนฉบับร่าง</div>
+                <div class="confirm-popover-actions">
+                    <button type="submit" form="billingNoteForm" class="btn btn-sm btn-primary js-billing-submit" data-submit-action="Issue">ยืนยัน</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
+                </div>
+            </div>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบวางบิล</a>
+    </div>
+</div>
+
+<form asp-action="@formAction" method="post" id="billingNoteForm">
+    <input asp-for="BillingNoteId" type="hidden" />
+    <input type="hidden" asp-for="Search" />
+    <input type="hidden" asp-for="DateFrom" />
+    <input type="hidden" asp-for="DateTo" />
+    <input type="hidden" asp-for="SubmitAction" id="billingNoteSubmitAction" />
+
+    <div asp-validation-summary="All" class="form-alert"></div>
+
+    <div class="card content-card mb-3">
+        <div class="card-body">
+            <div class="form-shell">
+                <div class="form-section quotation-header-section">
+                    <div class="form-section-title">ข้อมูลใบวางบิล</div>
+                    <div class="row g-2 quotation-header-grid">
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="BillingNoteNo" class="form-label"></label>
+                            <input asp-for="BillingNoteNo" class="form-control" readonly />
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="BillingNoteDate" class="form-label"></label>
+                            <input asp-for="BillingNoteDate" class="form-control" />
+                            <span asp-validation-for="BillingNoteDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="CustomerId" class="form-label"></label>
+                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions" class="form-select">
+                                <option value="">เลือกลูกค้า</option>
+                            </select>
+                            <span asp-validation-for="CustomerId" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="SummaryMode" class="form-label"></label>
+                            <select asp-for="SummaryMode" asp-items="Model.SummaryModeOptions" class="form-select" id="summaryModeSelect"></select>
+                            <span asp-validation-for="SummaryMode" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="BranchId" class="form-label"></label>
+                            @if (Model.CanAccessAllBranches)
+                            {
+                                <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
+                                    <option value="">ทุกสาขา</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <input asp-for="BranchId" type="hidden" />
+                                <div class="form-control readonly-detail">@Model.BranchName</div>
+                            }
+                            <span asp-validation-for="BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="DiscountAmount" class="form-label"></label>
+                            <input asp-for="DiscountAmount" class="form-control js-billing-discount" min="0" step="0.01" />
+                            <span asp-validation-for="DiscountAmount" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Remark" class="form-label"></label>
+                            <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Remark" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card content-card table-card h-100">
+                <div class="table-card-header">
+                    <div>
+                        <h2 class="section-title">ใบแจ้งหนี้ที่เลือกได้</h2>
+                    </div>
+                    <div class="table-meta">@Model.AvailableInvoices.Count รายการ</div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="list-filter-bar">
+                            <div class="list-filter-field grow">
+                                <label class="form-label" for="filterCustomerId">ลูกค้า</label>
+                                <select id="filterCustomerId" class="form-select" asp-items="Model.CustomerOptions">
+                                    <option value="">เลือกลูกค้า</option>
+                                </select>
+                            </div>
+                            <div class="list-filter-field grow">
+                                <label class="form-label" for="filterSearch">ค้นหาใบแจ้งหนี้</label>
+                                <input id="filterSearch" value="@Model.Search" class="form-control" placeholder="เลขที่ใบแจ้งหนี้ ชื่อคนไข้ หรือ HN" />
+                            </div>
+                            <div class="list-filter-field">
+                                <label class="form-label" for="filterDateFrom">จากวันที่</label>
+                                <input id="filterDateFrom" type="date" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
+                            </div>
+                            <div class="list-filter-field">
+                                <label class="form-label" for="filterDateTo">ถึงวันที่</label>
+                                <input id="filterDateTo" type="date" value="@Model.DateTo?.ToString("yyyy-MM-dd")" class="form-control" />
+                            </div>
+                            <div class="list-filter-actions">
+                                <a asp-action="@formAction" asp-route-id="@Model.BillingNoteId" class="btn btn-outline-secondary">ล้างค่า</a>
+                                <button type="button" class="btn btn-primary" id="loadBillingInvoicesButton">โหลดใบแจ้งหนี้</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!Model.CustomerId.HasValue)
+                    {
+                        <div class="table-empty">เลือกลูกค้าก่อนเพื่อโหลดใบแจ้งหนี้ที่ยังไม่ถูกใช้ในใบวางบิล</div>
+                    }
+                    else if (!Model.AvailableInvoices.Any())
+                    {
+                        <div class="table-empty">ไม่พบใบแจ้งหนี้ที่ยังมียอดค้างและยังไม่ถูกใช้ในใบวางบิล</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table entity-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">
+                                            <input type="checkbox" class="form-check-input" id="selectAllInvoices" />
+                                        </th>
+                                        <th>เลขที่ใบแจ้งหนี้</th>
+                                        <th>วันที่</th>
+                                        <th>คนไข้</th>
+                                        <th>HN</th>
+                                        <th>สิทธิการรักษา</th>
+                                        <th>ยอดค้าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @for (var i = 0; i < Model.AvailableInvoices.Count; i++)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox"
+                                                   name="SelectedInvoiceIds"
+                                                   value="@Model.AvailableInvoices[i].InvoiceId"
+                                                   checked="@Model.AvailableInvoices[i].Selected"
+                                                   class="form-check-input js-billing-invoice-check" />
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Invoices" asp-action="Details" asp-route-id="@Model.AvailableInvoices[i].InvoiceId" target="_blank" rel="noopener">
+                                                @Model.AvailableInvoices[i].InvoiceNo
+                                            </a>
+                                        </td>
+                                        <td>@Model.AvailableInvoices[i].InvoiceDate.ToString("dd/MM/yyyy")</td>
+                                        <td>@(string.IsNullOrWhiteSpace(Model.AvailableInvoices[i].PatientFullName) ? "-" : Model.AvailableInvoices[i].PatientFullName)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(Model.AvailableInvoices[i].PatientHn) ? "-" : Model.AvailableInvoices[i].PatientHn)</td>
+                                        <td>@Model.AvailableInvoices[i].TreatmentRightName</td>
+                                        <td>@Model.AvailableInvoices[i].BalanceAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card content-card h-100">
+                <div class="card-body">
+                    <div class="form-section-title mb-3">สรุปก่อนบันทึกใบวางบิล</div>
+                    <div class="quotation-summary-stack mb-4">
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">จำนวนใบแจ้งหนี้ที่เลือก</span>
+                            <span class="quotation-summary-amount" id="selectedInvoiceCount">@Model.SelectedInvoiceIds.Count</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ยอดรวมที่เลือก</span>
+                            <span class="quotation-summary-amount" id="selectedInvoiceAmount">@Model.SelectedTotalAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ยอดก่อน VAT</span>
+                            <span class="quotation-summary-amount" id="previewSubtotalAmount">@Model.PreviewSubtotalAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ส่วนลดทั้งใบ</span>
+                            <span class="quotation-summary-amount" id="previewDiscountAmount">@Model.DiscountAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">VAT</span>
+                            <span class="quotation-summary-amount" id="previewVatAmount">@Model.PreviewVatAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
+                            <span class="quotation-summary-amount" id="previewTotalAmount">@Model.PreviewTotalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title mb-2" id="summaryPreviewTitle">ตัวอย่างสรุป</div>
+                    <div id="billingSummaryPreview">
+                        @if (Model.SummaryPreview.Any())
+                        {
+                            @foreach (var line in Model.SummaryPreview)
+                            {
+                                var isItemMode = string.Equals(Model.SummaryMode, "Item", StringComparison.OrdinalIgnoreCase);
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">
+                                        @line.Label
+                                        @if (isItemMode)
+                                        {
+                                            <text> (@line.Quantity.ToString("N2") หน่วย)</text>
+                                        }
+                                        else
+                                        {
+                                            <text> (@line.InvoiceCount ใบ)</text>
+                                        }
+                                    </span>
+                                    <span class="quotation-summary-amount">@line.TotalAmount.ToString("N2")</span>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="table-empty" id="billingSummaryPreviewEmpty">เลือกใบแจ้งหนี้เพื่อดูตัวอย่างสรุป</div>
+                        }
+                    </div>
+
+                    <div class="form-actions mt-4">
+                        <span class="table-meta" id="billingSummaryModeHelp">ระบบจะสรุปรายการตามรูปแบบที่เลือก และคำนวณส่วนลดทั้งใบก่อน VAT</span>
+                        <div class="page-actions">
+                            <button type="submit" class="btn btn-outline-primary px-4 js-billing-submit" data-submit-action="SaveDraft" @(Model.AvailableInvoices.Any() ? null : "disabled")>บันทึกฉบับร่าง</button>
+                            <div class="confirm-popover-shell d-inline-block">
+                                <button type="button" class="btn btn-primary px-4 js-confirm-popover-toggle" data-confirm-target="issueBillingBottomConfirm" aria-expanded="false" @(Model.AvailableInvoices.Any() ? null : "disabled")>
+                                    ออกใบวางบิล
+                                </button>
+                                <div class="confirm-popover" id="issueBillingBottomConfirm" hidden>
+                                    <div class="confirm-popover-title">ยืนยันออกใบวางบิลนี้หรือไม่?</div>
+                                    <div class="confirm-popover-text">หลังออกเอกสารแล้ว จะไม่สามารถแก้ไขได้เหมือนฉบับร่าง</div>
+                                    <div class="confirm-popover-actions">
+                                        <button type="submit" class="btn btn-sm btn-primary js-billing-submit" data-submit-action="Issue">ยืนยัน</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const VAT_RATE = 0.07;
+            const summaryModeTreatmentRight = 'TreatmentRight';
+            const summaryModeItem = 'Item';
+            const invoiceLookup = new Map((@Html.Raw(availableInvoicesJson)).map(x => [String(x.invoiceId), x]));
+
+            const loadButton = document.getElementById('loadBillingInvoicesButton');
+            const headerCustomerId = document.getElementById('@Html.IdFor(x => x.CustomerId)');
+            const filterCustomerId = document.getElementById('filterCustomerId');
+            const filterSearch = document.getElementById('filterSearch');
+            const filterDateFrom = document.getElementById('filterDateFrom');
+            const filterDateTo = document.getElementById('filterDateTo');
+            const summaryModeSelect = document.getElementById('summaryModeSelect');
+            const selectAll = document.getElementById('selectAllInvoices');
+            const checkboxes = Array.from(document.querySelectorAll('.js-billing-invoice-check'));
+            const discountInput = document.querySelector('.js-billing-discount');
+            const countTarget = document.getElementById('selectedInvoiceCount');
+            const amountTarget = document.getElementById('selectedInvoiceAmount');
+            const subtotalTarget = document.getElementById('previewSubtotalAmount');
+            const discountTarget = document.getElementById('previewDiscountAmount');
+            const vatTarget = document.getElementById('previewVatAmount');
+            const totalTarget = document.getElementById('previewTotalAmount');
+            const previewTarget = document.getElementById('billingSummaryPreview');
+            const previewTitle = document.getElementById('summaryPreviewTitle');
+            const summaryHelp = document.getElementById('billingSummaryModeHelp');
+            const submitActionInput = document.getElementById('billingNoteSubmitAction');
+            const submitButtons = Array.from(document.querySelectorAll('.js-billing-submit'));
+            const validationSummary = document.querySelector('.validation-summary-errors, .validation-summary-valid, [asp-validation-summary="All"], .form-alert');
+
+            function setValidationSummary(message) {
+                if (!validationSummary) {
+                    return;
+                }
+
+                validationSummary.classList.remove('validation-summary-valid');
+                validationSummary.classList.add('validation-summary-errors');
+                validationSummary.innerHTML = `<ul><li>${message}</li></ul>`;
+            }
+
+            function clearValidationSummary() {
+                if (!validationSummary) {
+                    return;
+                }
+
+                validationSummary.classList.remove('validation-summary-errors');
+                validationSummary.classList.add('validation-summary-valid');
+                validationSummary.innerHTML = '';
+            }
+
+            function round2(value) {
+                return Math.round((value + Number.EPSILON) * 100) / 100;
+            }
+
+            function parseNumber(value) {
+                const parsed = Number(value || 0);
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+
+            function formatAmount(value) {
+                return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function formatQuantity(value) {
+                const rounded = round2(value);
+                const digits = Number.isInteger(rounded) ? 0 : 2;
+                return rounded.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: 2 });
+            }
+
+            function getCurrentSummaryMode() {
+                return summaryModeSelect?.value === summaryModeItem ? summaryModeItem : summaryModeTreatmentRight;
+            }
+
+            function buildLoadUrl() {
+                const url = new URL('@Url.Action(formAction, "BillingNotes", new { id = Model.BillingNoteId })', window.location.origin);
+
+                if (filterCustomerId?.value) {
+                    url.searchParams.set('customerId', filterCustomerId.value);
+                }
+
+                url.searchParams.set('summaryMode', getCurrentSummaryMode());
+
+                if (filterSearch?.value.trim()) {
+                    url.searchParams.set('search', filterSearch.value.trim());
+                }
+
+                if (filterDateFrom?.value) {
+                    url.searchParams.set('dateFrom', filterDateFrom.value);
+                }
+
+                if (filterDateTo?.value) {
+                    url.searchParams.set('dateTo', filterDateTo.value);
+                }
+
+                return url.toString();
+            }
+
+            function syncCustomerSelection(source, target) {
+                if (!source || !target) {
+                    return;
+                }
+
+                if (target.value !== source.value) {
+                    target.value = source.value;
+                }
+            }
+
+            function getSelectedInvoices() {
+                return checkboxes
+                    .filter(x => x.checked)
+                    .map(x => invoiceLookup.get(String(x.value)))
+                    .filter(Boolean);
+            }
+
+            function computeBillingAmounts(selectedInvoices) {
+                let subtotalAmount = 0;
+                let taxableSubtotalAmount = 0;
+
+                selectedInvoices.forEach(invoice => {
+                    const openAmount = parseNumber(invoice.balanceAmount);
+                    if (openAmount <= 0) {
+                        return;
+                    }
+
+                    if ((invoice.vatType || '').toUpperCase() !== 'VAT') {
+                        subtotalAmount += openAmount;
+                        return;
+                    }
+
+                    const invoiceTotal = parseNumber(invoice.totalAmount) > 0 ? parseNumber(invoice.totalAmount) : openAmount;
+                    const ratio = invoiceTotal > 0 ? openAmount / invoiceTotal : 0;
+                    const proratedVat = Math.min(round2(parseNumber(invoice.vatAmount) * ratio), openAmount);
+                    const preVatAmount = openAmount - proratedVat;
+
+                    subtotalAmount += preVatAmount;
+                    taxableSubtotalAmount += preVatAmount;
+                });
+
+                subtotalAmount = round2(subtotalAmount);
+                taxableSubtotalAmount = round2(taxableSubtotalAmount);
+
+                let discountAmount = parseNumber(discountInput?.value);
+                discountAmount = Math.max(0, Math.min(discountAmount, subtotalAmount));
+
+                const discountOnVatBase = subtotalAmount > 0 && taxableSubtotalAmount > 0
+                    ? Math.min(round2(discountAmount * taxableSubtotalAmount / subtotalAmount), taxableSubtotalAmount)
+                    : 0;
+
+                const vatAmount = round2(Math.max(taxableSubtotalAmount - discountOnVatBase, 0) * VAT_RATE);
+                const totalAmount = round2(subtotalAmount - discountAmount + vatAmount);
+
+                return {
+                    subtotalAmount,
+                    discountAmount,
+                    vatAmount,
+                    totalAmount
+                };
+            }
+
+            function buildItemDescription(itemLine) {
+                const itemCode = (itemLine.itemCode || '').trim();
+                const itemName = (itemLine.itemName || '').trim();
+
+                if (!itemCode && !itemName) {
+                    return 'ไม่ระบุสินค้า';
+                }
+
+                if (!itemCode) {
+                    return itemName;
+                }
+
+                if (!itemName) {
+                    return itemCode;
+                }
+
+                return `${itemCode} - ${itemName}`;
+            }
+
+            function computeOpenItemQuantity(invoice, itemLine) {
+                const qty = parseNumber(itemLine.qty);
+                const openAmount = parseNumber(invoice.balanceAmount);
+                const totalAmount = parseNumber(invoice.totalAmount);
+
+                if (qty <= 0 || openAmount <= 0) {
+                    return 0;
+                }
+
+                const ratio = totalAmount > 0 ? Math.min(Math.max(openAmount / totalAmount, 0), 1) : 1;
+                return round2(qty * ratio);
+            }
+
+            function computeOpenItemAmount(invoice, itemLine) {
+                const openAmount = parseNumber(invoice.balanceAmount);
+                const lineTotal = parseNumber(itemLine.lineTotal);
+                const subtotalAmount = (invoice.itemLines || []).reduce((sum, current) => sum + parseNumber(current.lineTotal), 0);
+
+                if (openAmount <= 0 || lineTotal <= 0 || subtotalAmount <= 0) {
+                    return 0;
+                }
+
+                return round2(openAmount * (lineTotal / subtotalAmount));
+            }
+
+            function buildSummaryGroups(selectedInvoices, summaryMode) {
+                const groups = new Map();
+
+                if (summaryMode === summaryModeItem) {
+                    selectedInvoices.forEach(invoice => {
+                        (invoice.itemLines || []).forEach(itemLine => {
+                            const label = buildItemDescription(itemLine);
+                            const quantity = computeOpenItemQuantity(invoice, itemLine);
+                            const totalAmount = computeOpenItemAmount(invoice, itemLine);
+                            const existing = groups.get(label) || { quantity: 0, totalAmount: 0, invoiceIds: new Set() };
+
+                            existing.quantity += quantity;
+                            existing.totalAmount += totalAmount;
+                            existing.invoiceIds.add(invoice.invoiceId);
+                            groups.set(label, existing);
+                        });
+                    });
+
+                    return Array.from(groups.entries())
+                        .map(([label, data]) => ({
+                            label,
+                            quantity: round2(data.quantity),
+                            invoiceCount: data.invoiceIds.size,
+                            totalAmount: round2(data.totalAmount)
+                        }))
+                        .filter(x => x.quantity > 0 || x.totalAmount > 0)
+                        .sort((a, b) => a.label.localeCompare(b.label));
+                }
+
+                selectedInvoices.forEach(invoice => {
+                    const label = invoice.treatmentRightName || 'ไม่ระบุสิทธิการรักษา';
+                    const existing = groups.get(label) || { quantity: 0, totalAmount: 0, invoiceCount: 0 };
+
+                    existing.quantity += 1;
+                    existing.invoiceCount += 1;
+                    existing.totalAmount += parseNumber(invoice.balanceAmount);
+                    groups.set(label, existing);
+                });
+
+                return Array.from(groups.entries())
+                    .map(([label, data]) => ({
+                        label,
+                        quantity: data.quantity,
+                        invoiceCount: data.invoiceCount,
+                        totalAmount: round2(data.totalAmount)
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            }
+
+            function renderSummary() {
+                const summaryMode = getCurrentSummaryMode();
+                const selectedInvoices = getSelectedInvoices();
+                const selectedAmount = selectedInvoices.reduce((sum, invoice) => sum + parseNumber(invoice.balanceAmount), 0);
+                const billingAmounts = computeBillingAmounts(selectedInvoices);
+                const groups = buildSummaryGroups(selectedInvoices, summaryMode);
+
+                if (countTarget) {
+                    countTarget.textContent = String(selectedInvoices.length);
+                }
+
+                if (amountTarget) {
+                    amountTarget.textContent = formatAmount(selectedAmount);
+                }
+
+                if (subtotalTarget) {
+                    subtotalTarget.textContent = formatAmount(billingAmounts.subtotalAmount);
+                }
+
+                if (discountTarget) {
+                    discountTarget.textContent = formatAmount(billingAmounts.discountAmount);
+                }
+
+                if (vatTarget) {
+                    vatTarget.textContent = formatAmount(billingAmounts.vatAmount);
+                }
+
+                if (totalTarget) {
+                    totalTarget.textContent = formatAmount(billingAmounts.totalAmount);
+                }
+
+                if (previewTitle) {
+                    previewTitle.textContent = summaryMode === summaryModeItem
+                        ? 'ตัวอย่างสรุปตามรายการสินค้า'
+                        : 'ตัวอย่างสรุปตามสิทธิการรักษา';
+                }
+
+                if (summaryHelp) {
+                    summaryHelp.textContent = summaryMode === summaryModeItem
+                        ? 'ระบบจะสรุปรายการตามสินค้า โดยจำนวนคำนวณตามสัดส่วนยอดค้างของแต่ละใบแจ้งหนี้'
+                        : 'ระบบจะสรุปรายการเป็น 1 สิทธิการรักษาต่อ 1 บรรทัด และคำนวณส่วนลดทั้งใบก่อน VAT';
+                }
+
+                if (!previewTarget) {
+                    return;
+                }
+
+                if (groups.length === 0) {
+                    previewTarget.innerHTML = '<div class="table-empty">เลือกใบแจ้งหนี้เพื่อดูตัวอย่างสรุป</div>';
+                    return;
+                }
+
+                previewTarget.innerHTML = groups
+                    .map(group => {
+                        const metaText = summaryMode === summaryModeItem
+                            ? `${formatQuantity(group.quantity)} หน่วย`
+                            : `${group.invoiceCount} ใบ`;
+
+                        return `
+                            <div class="quotation-summary-row">
+                                <span class="quotation-summary-name">${group.label} (${metaText})</span>
+                                <span class="quotation-summary-amount">${formatAmount(group.totalAmount)}</span>
+                            </div>`;
+                    })
+                    .join('');
+            }
+
+            if (loadButton) {
+                loadButton.addEventListener('click', () => {
+                    if (!filterCustomerId?.value) {
+                        setValidationSummary('กรุณาเลือกลูกค้าก่อนโหลดใบแจ้งหนี้');
+                        filterCustomerId?.focus();
+                        return;
+                    }
+
+                    clearValidationSummary();
+                    window.location.href = buildLoadUrl();
+                });
+            }
+
+            if (headerCustomerId && filterCustomerId) {
+                headerCustomerId.addEventListener('change', () => {
+                    syncCustomerSelection(headerCustomerId, filterCustomerId);
+                    clearValidationSummary();
+                });
+
+                filterCustomerId.addEventListener('change', () => {
+                    syncCustomerSelection(filterCustomerId, headerCustomerId);
+                    clearValidationSummary();
+                });
+
+                syncCustomerSelection(headerCustomerId, filterCustomerId);
+            }
+
+            if (summaryModeSelect) {
+                summaryModeSelect.addEventListener('change', renderSummary);
+            }
+
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = selectAll.checked;
+                    });
+                    renderSummary();
+                });
+            }
+
+            if (discountInput) {
+                discountInput.addEventListener('input', renderSummary);
+                discountInput.addEventListener('change', renderSummary);
+            }
+
+            submitButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    if (submitActionInput) {
+                        submitActionInput.value = button.dataset.submitAction || 'Issue';
+                    }
+                });
+            });
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', renderSummary);
+            });
+
+            renderSummary();
+        })();
+    </script>
+}

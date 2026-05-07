@@ -7,30 +7,34 @@ public class ReceiptHeader
     public int ReceiptId { get; set; }
 
     [Required]
-    [Display(Name = "Receipt No.")]
+    [Display(Name = "เลขที่ใบเสร็จรับเงิน")]
     [StringLength(30)]
     public string ReceiptNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Receipt Date")]
+    [Display(Name = "วันที่ใบเสร็จรับเงิน")]
     [DataType(DataType.Date)]
     public DateTime ReceiptDate { get; set; } = DateTime.Today;
 
     [Required]
-    [Display(Name = "Customer")]
+    [Display(Name = "ลูกค้า")]
     public int CustomerId { get; set; }
 
     [Required]
     public int PaymentId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
-    [Display(Name = "Total Received Amount")]
+    [Display(Name = "ยอดรับรวม")]
     public decimal TotalReceivedAmount { get; set; }
 
     [StringLength(500)]
     public string? Remark { get; set; }
+
+    [Display(Name = "รายการพิมพ์บนใบเสร็จ")]
+    [StringLength(1000)]
+    public string? PrintItemDescription { get; set; }
 
     [Required]
     [StringLength(20)]
@@ -55,4 +59,5 @@ public class ReceiptHeader
     public User? IssuedByUser { get; set; }
     public User? CancelledByUser { get; set; }
     public PaymentHeader? PaymentHeader { get; set; }
+    public ICollection<ReceiptPrintLine> PrintLines { get; set; } = new List<ReceiptPrintLine>();
 }

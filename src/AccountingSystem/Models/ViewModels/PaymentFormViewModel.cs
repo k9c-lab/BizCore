@@ -8,34 +8,43 @@ public class PaymentFormViewModel
     public int? PaymentId { get; set; }
 
     [Required]
-    [Display(Name = "Payment No.")]
+    [Display(Name = "เลขที่รับชำระ")]
     [StringLength(30)]
     public string PaymentNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Payment Date")]
+    [Display(Name = "วันที่รับชำระ")]
     [DataType(DataType.Date)]
     public DateTime PaymentDate { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Please select a customer.")]
-    [Display(Name = "Customer")]
+    [Required(ErrorMessage = "กรุณาเลือกลูกค้า")]
+    [Display(Name = "ลูกค้า")]
     public int? CustomerId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "ใบวางบิล")]
+    public int? BillingNoteId { get; set; }
+
+    public string BillingNoteNo { get; set; } = string.Empty;
+    public decimal BillingNoteTotalAmount { get; set; }
+    public decimal BillingNotePaidAmount { get; set; }
+    public decimal BillingNoteBalanceAmount { get; set; }
+    public bool LockCustomerSelection { get; set; }
+
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Payment Method")]
+    [Display(Name = "วิธีการชำระเงิน")]
     [StringLength(20)]
     public string PaymentMethod { get; set; } = "Transfer";
 
-    [Display(Name = "Reference No.")]
+    [Display(Name = "เลขที่อ้างอิง")]
     [StringLength(100)]
     public string? ReferenceNo { get; set; }
 
-    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Amount must be greater than zero.")]
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "จำนวนเงินต้องมากกว่า 0")]
     public decimal Amount { get; set; }
 
     [StringLength(500)]

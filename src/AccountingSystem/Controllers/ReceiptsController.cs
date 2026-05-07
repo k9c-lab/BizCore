@@ -89,6 +89,7 @@ public class ReceiptsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Branch)
+            .Include(x => x.PrintLines)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -114,6 +115,7 @@ public class ReceiptsController : CrudControllerBase
             .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Branch)
+            .Include(x => x.PrintLines)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -136,6 +138,82 @@ public class ReceiptsController : CrudControllerBase
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdatePrintLines(int id, string[]? descriptions, decimal?[]? amounts)
+    {
+        var receipt = await _context.ReceiptHeaders
+            .Include(x => x.PrintLines)
+            .FirstOrDefaultAsync(x => x.ReceiptId == id);
+
+        if (receipt is null || !CanAccessBranch(receipt.BranchId))
+        {
+            return NotFound();
+        }
+
+        if (receipt.Status == "Cancelled")
+        {
+            TempData["ReceiptNotice"] = "Cancelled receipts cannot be updated.";
+            return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+        }
+
+        var lines = new List<ReceiptPrintLine>();
+        var descriptionValues = descriptions ?? Array.Empty<string>();
+        var amountValues = amounts ?? Array.Empty<decimal?>();
+        var maxLength = Math.Max(descriptionValues.Length, amountValues.Length);
+
+        for (var index = 0; index < maxLength; index++)
+        {
+            var description = index < descriptionValues.Length ? descriptionValues[index]?.Trim() : null;
+            var amount = index < amountValues.Length ? amountValues[index] : null;
+            var hasDescription = !string.IsNullOrWhiteSpace(description);
+            var hasAmount = amount.HasValue;
+
+            if (!hasDescription && !hasAmount)
+            {
+                continue;
+            }
+
+            if (!hasDescription || !hasAmount)
+            {
+                TempData["ReceiptNotice"] = "Each receipt print row must have both description and amount.";
+                return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+            }
+
+            lines.Add(new ReceiptPrintLine
+            {
+                ReceiptId = receipt.ReceiptId,
+                LineNumber = lines.Count + 1,
+                Description = description!,
+                Amount = decimal.Round(amount!.Value, 2, MidpointRounding.AwayFromZero)
+            });
+        }
+
+        if (lines.Any())
+        {
+            var total = lines.Sum(x => x.Amount);
+            if (total != decimal.Round(receipt.TotalReceivedAmount, 2, MidpointRounding.AwayFromZero))
+            {
+                TempData["ReceiptNotice"] = $"Receipt print lines must total {receipt.TotalReceivedAmount:N2}.";
+                return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+            }
+        }
+
+        _context.ReceiptPrintLines.RemoveRange(receipt.PrintLines);
+        receipt.PrintItemDescription = null;
+        foreach (var line in lines)
+        {
+            receipt.PrintLines.Add(line);
+        }
+        receipt.UpdatedDate = DateTime.UtcNow;
+        receipt.UpdatedByUserId = CurrentUserId();
+
+        await _context.SaveChangesAsync();
+
+        TempData["ReceiptNotice"] = "Receipt print lines were updated.";
+        return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? cancelReason)
     {
         var receipt = await _context.ReceiptHeaders.FirstOrDefaultAsync(x => x.ReceiptId == id);
@@ -151,6 +229,12 @@ public class ReceiptsController : CrudControllerBase
             return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
         }
 
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            TempData["ReceiptNotice"] = "กรุณาระบุเหตุผลในการยกเลิกใบเสร็จรับเงิน";
+            return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+        }
+
         var now = DateTime.UtcNow;
         var userId = CurrentUserId();
         receipt.Status = "Cancelled";
@@ -158,7 +242,7 @@ public class ReceiptsController : CrudControllerBase
         receipt.UpdatedByUserId = userId;
         receipt.CancelledByUserId = userId;
         receipt.CancelledDate = now;
-        receipt.CancelReason = string.IsNullOrWhiteSpace(cancelReason) ? null : cancelReason.Trim();
+        receipt.CancelReason = cancelReason.Trim();
         await _context.SaveChangesAsync();
 
         TempData["ReceiptNotice"] = "Receipt was cancelled. Payment and invoice balances were not changed.";

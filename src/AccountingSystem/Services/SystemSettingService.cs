@@ -78,4 +78,48 @@ public class SystemSettingService : ISystemSettingService
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<bool> GetEnablePatientInfoAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var value = await _context.SystemSettings
+                .AsNoTracking()
+                .Where(x => x.SettingKey == SettingKeys.SalesEnablePatientInfo)
+                .Select(x => x.SettingValue)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return value is null || !bool.TryParse(value, out var enabled)
+                ? true
+                : enabled;
+        }
+        catch (Exception ex) when (ex is DbUpdateException || ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException)
+        {
+            return true;
+        }
+    }
+
+    public async Task SetEnablePatientInfoAsync(bool enabled, int? updatedByUserId, CancellationToken cancellationToken = default)
+    {
+        await _context.Database.ExecuteSqlRawAsync(EnsureSystemSettingsSql, cancellationToken);
+
+        var setting = await _context.SystemSettings
+            .FirstOrDefaultAsync(x => x.SettingKey == SettingKeys.SalesEnablePatientInfo, cancellationToken);
+
+        if (setting is null)
+        {
+            setting = new SystemSetting
+            {
+                SettingKey = SettingKeys.SalesEnablePatientInfo,
+                Description = "Controls whether invoice screens and prints show patient information fields."
+            };
+            _context.SystemSettings.Add(setting);
+        }
+
+        setting.SettingValue = enabled.ToString().ToLowerInvariant();
+        setting.UpdatedByUserId = updatedByUserId;
+        setting.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

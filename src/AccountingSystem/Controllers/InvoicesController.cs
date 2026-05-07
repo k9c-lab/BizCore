@@ -36,6 +36,8 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Salesperson)
             .Include(x => x.Branch)
             .Include(x => x.Quotation)
+            .Include(x => x.BillingNoteInvoices)
+                .ThenInclude(x => x.BillingNoteHeader)
             .Include(x => x.PaymentAllocations)
             .AsQueryable();
 
@@ -51,6 +53,8 @@ public class InvoicesController : CrudControllerBase
             query = query.Where(x =>
                 x.InvoiceNo.Contains(keyword) ||
                 (x.ReferenceNo != null && x.ReferenceNo.Contains(keyword)) ||
+                (x.PatientFullName != null && x.PatientFullName.Contains(keyword)) ||
+                (x.PatientHn != null && x.PatientHn.Contains(keyword)) ||
                 (x.Customer != null && (
                     x.Customer.CustomerCode.Contains(keyword) ||
                     x.Customer.CustomerName.Contains(keyword) ||
@@ -177,7 +181,7 @@ public class InvoicesController : CrudControllerBase
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, InvoiceFormViewModel model)
+    public async Task<IActionResult> Edit(int id, InvoiceFormViewModel model, string? submitAction)
     {
         if (id != model.InvoiceId)
         {
@@ -207,7 +211,9 @@ public class InvoicesController : CrudControllerBase
         model.BranchId = invoice.BranchId;
         ModelState.Remove(nameof(InvoiceFormViewModel.InvoiceNo));
 
-        if (!await ValidateAndComputeAsync(model, requireSerials: false, requireAvailableStock: false))
+        var issueInvoice = string.Equals(submitAction, "Issue", StringComparison.OrdinalIgnoreCase);
+
+        if (!await ValidateAndComputeAsync(model, requireSerials: issueInvoice, requireAvailableStock: issueInvoice))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -220,6 +226,13 @@ public class InvoicesController : CrudControllerBase
         invoice.PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null;
         invoice.QuotationId = model.QuotationId;
         invoice.ReferenceNo = model.ReferenceNo?.Trim();
+        invoice.PatientFullName = model.PatientFullName?.Trim();
+        invoice.PatientAge = model.PatientAge;
+        invoice.PatientGender = model.PatientGender?.Trim();
+        invoice.PatientHn = model.PatientHn?.Trim();
+        invoice.TreatmentRightId = model.TreatmentRightId;
+        invoice.PatientWard = model.PatientWard?.Trim();
+        invoice.ReferringDoctorId = model.ReferringDoctorId;
         invoice.Remark = model.Remark?.Trim();
         invoice.Subtotal = model.Subtotal;
         invoice.DiscountAmount = model.DiscountMode == "Header" ? model.HeaderDiscountAmount : model.DiscountAmount;
@@ -236,16 +249,107 @@ public class InvoicesController : CrudControllerBase
         invoice.ReferenceLineTotalAmount = (invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m) + (invoice.ReferenceLineVatAmount ?? 0m);
         invoice.PaidAmount = 0m;
         invoice.BalanceAmount = model.BalanceAmount;
-        invoice.Status = "Draft";
+        invoice.Status = issueInvoice ? "Issued" : "Draft";
         invoice.UpdatedDate = DateTime.UtcNow;
         invoice.UpdatedByUserId = CurrentUserId();
+        invoice.IssuedByUserId = issueInvoice ? CurrentUserId() : null;
+        invoice.IssuedDate = issueInvoice ? DateTime.UtcNow : null;
 
         _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
         invoice.InvoiceDetails = model.Details.Select(MapDetailEntity).ToList();
 
-        if (!await TrySaveAsync("Invoice number or selected serial is already in use."))
+        if (!issueInvoice)
         {
+            if (!await TrySaveAsync("Invoice number or selected serial is already in use."))
+            {
+                await PopulateLookupsAsync(model);
+                return View(model);
+            }
+
+            return RedirectToAction(nameof(Details), new { id = invoice.InvoiceId });
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var itemIds = model.Details.Select(x => x.ItemId!.Value).Distinct().ToList();
+            var serialIds = model.Details.SelectMany(x => x.SelectedSerialIds).Distinct().ToList();
+
+            var itemMap = await _context.Items
+                .Where(x => itemIds.Contains(x.ItemId))
+                .ToDictionaryAsync(x => x.ItemId);
+
+            var serialMap = serialIds.Count == 0
+                ? new Dictionary<int, SerialNumber>()
+                : await _context.SerialNumbers
+                    .Where(x => serialIds.Contains(x.SerialId))
+                    .ToDictionaryAsync(x => x.SerialId);
+
+            await _context.SaveChangesAsync();
+
+            foreach (var detail in invoice.InvoiceDetails)
+            {
+                var item = itemMap[detail.ItemId];
+                var isProduct = string.Equals(item.ItemType, "Product", StringComparison.OrdinalIgnoreCase);
+                if (isProduct && item.TrackStock)
+                {
+                    var branchStock = await GetBranchStockAsync(invoice.BranchId, detail.ItemId);
+                    if (branchStock < detail.Qty)
+                    {
+                        throw new InvalidOperationException($"สต็อกของสินค้า {item.ItemCode} ไม่เพียงพอ");
+                    }
+
+                    await AdjustStockBalanceAsync(invoice.BranchId, detail.ItemId, -detail.Qty);
+                    _context.StockMovements.Add(new StockMovement
+                    {
+                        MovementDate = invoice.InvoiceDate,
+                        MovementType = "InvoiceIssue",
+                        ReferenceType = "Invoice",
+                        ReferenceId = invoice.InvoiceId,
+                        ItemId = detail.ItemId,
+                        FromBranchId = invoice.BranchId,
+                        Qty = -detail.Qty,
+                        Remark = invoice.InvoiceNo,
+                        CreatedByUserId = CurrentUserId(),
+                        CreatedDate = DateTime.UtcNow
+                    });
+                }
+
+                foreach (var invoiceSerial in detail.InvoiceSerials)
+                {
+                    var serial = serialMap[invoiceSerial.SerialId];
+                    if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Serial {serial.SerialNo} ไม่พร้อมใช้งานแล้ว");
+                    }
+
+                    serial.Status = "Sold";
+                    serial.CurrentCustomerId = invoice.CustomerId;
+                    serial.InvoiceId = invoice.InvoiceId;
+                    serial.CustomerWarrantyStartDate = detail.CustomerWarrantyStartDate?.Date;
+                    serial.CustomerWarrantyEndDate = detail.CustomerWarrantyEndDate?.Date;
+                }
+            }
+
+            invoice.BalanceAmount = invoice.TotalAmount - invoice.PaidAmount;
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            TempData["InvoiceNotice"] = "ออกใบแจ้งหนี้เรียบร้อยแล้ว";
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
             await PopulateLookupsAsync(model);
+            ModelState.AddModelError(string.Empty, "เลขที่ใบแจ้งหนี้หรือ Serial ที่เลือกถูกใช้งานไปแล้ว");
+            return View(model);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await transaction.RollbackAsync();
+            await PopulateLookupsAsync(model);
+            ModelState.AddModelError(string.Empty, ex.Message);
             return View(model);
         }
 
@@ -299,6 +403,13 @@ public class InvoicesController : CrudControllerBase
                 PriceLevelId = model.ShowPriceLevelSelector ? model.PriceLevelId : null,
                 QuotationId = model.QuotationId,
                 ReferenceNo = model.ReferenceNo?.Trim(),
+                PatientFullName = model.PatientFullName?.Trim(),
+                PatientAge = model.PatientAge,
+                PatientGender = model.PatientGender?.Trim(),
+                PatientHn = model.PatientHn?.Trim(),
+                TreatmentRightId = model.TreatmentRightId,
+                PatientWard = model.PatientWard?.Trim(),
+                ReferringDoctorId = model.ReferringDoctorId,
                 Remark = model.Remark?.Trim(),
                 Subtotal = model.Subtotal,
                 DiscountAmount = model.DiscountMode == "Header" ? model.HeaderDiscountAmount : model.DiscountAmount,
@@ -409,6 +520,8 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Salesperson)
             .Include(x => x.Branch)
             .Include(x => x.Quotation)
+            .Include(x => x.TreatmentRight)
+            .Include(x => x.ReferringDoctor)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -422,7 +535,13 @@ public class InvoicesController : CrudControllerBase
                     .ThenInclude(x => x.SerialNumber)
             .FirstOrDefaultAsync(x => x.InvoiceId == id.Value);
 
-        return invoice is null || !CanAccessBranch(invoice.BranchId) ? NotFound() : View(invoice);
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
+        {
+            return NotFound();
+        }
+
+        ViewData["EnablePatientInfo"] = await _systemSettingService.GetEnablePatientInfoAsync();
+        return View(invoice);
     }
 
     [HttpPost]
@@ -452,7 +571,7 @@ public class InvoicesController : CrudControllerBase
         var model = MapInvoiceToForm(invoice);
         if (!await ValidateAndComputeAsync(model, requireSerials: true, requireAvailableStock: true))
         {
-            TempData["InvoiceNotice"] = "Cannot issue invoice. Serial-controlled items must have selected serial count equal to quantity.";
+            TempData["InvoiceNotice"] = BuildIssueValidationNotice();
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -572,6 +691,12 @@ public class InvoicesController : CrudControllerBase
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            TempData["InvoiceNotice"] = "กรุณาระบุเหตุผลในการยกเลิกใบแจ้งหนี้";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -626,7 +751,7 @@ public class InvoicesController : CrudControllerBase
             invoice.UpdatedByUserId = CurrentUserId();
             invoice.CancelledByUserId = CurrentUserId();
             invoice.CancelledDate = DateTime.UtcNow;
-            invoice.CancelReason = string.IsNullOrWhiteSpace(cancelReason) ? null : cancelReason.Trim();
+            invoice.CancelReason = cancelReason.Trim();
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             TempData["InvoiceNotice"] = "Invoice cancelled successfully.";
@@ -653,6 +778,8 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Salesperson)
             .Include(x => x.Branch)
             .Include(x => x.Quotation)
+            .Include(x => x.TreatmentRight)
+            .Include(x => x.ReferringDoctor)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
@@ -666,6 +793,7 @@ public class InvoicesController : CrudControllerBase
         }
 
         PopulatePrintCompanyViewData(_companyProfile);
+        ViewData["EnablePatientInfo"] = await _systemSettingService.GetEnablePatientInfoAsync();
         return View(invoice);
     }
 
@@ -727,8 +855,10 @@ public class InvoicesController : CrudControllerBase
     private async Task PopulateLookupsAsync(InvoiceFormViewModel model)
     {
         var pricingMode = await _systemSettingService.GetPricingModeAsync();
+        var enablePatientInfo = await _systemSettingService.GetEnablePatientInfoAsync();
         model.PricingMode = pricingMode;
         model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
+        model.ShowPatientInfo = enablePatientInfo;
         if (!model.ShowPriceLevelSelector || model.QuotationId.HasValue)
         {
             model.PriceLevelId = model.QuotationId.HasValue ? model.PriceLevelId : null;
@@ -813,6 +943,38 @@ public class InvoicesController : CrudControllerBase
             {
                 Value = x.SalespersonId.ToString(),
                 Text = $"{x.SalespersonCode} - {x.SalespersonName}"
+            })
+            .ToListAsync();
+
+        model.PatientGenderOptions = new[]
+        {
+            new SelectListItem("ไม่ระบุ", string.Empty, string.IsNullOrWhiteSpace(model.PatientGender)),
+            new SelectListItem("ชาย", "ชาย", model.PatientGender == "ชาย"),
+            new SelectListItem("หญิง", "หญิง", model.PatientGender == "หญิง"),
+            new SelectListItem("อื่นๆ", "อื่นๆ", model.PatientGender == "อื่นๆ")
+        };
+
+        model.TreatmentRightOptions = await _context.TreatmentRights
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.TreatmentRightId == model.TreatmentRightId)
+            .OrderBy(x => x.TreatmentRightCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.TreatmentRightId.ToString(),
+                Text = $"{x.TreatmentRightCode} - {x.TreatmentRightName}",
+                Selected = model.TreatmentRightId.HasValue && x.TreatmentRightId == model.TreatmentRightId.Value
+            })
+            .ToListAsync();
+
+        model.ReferringDoctorOptions = await _context.ReferringDoctors
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.ReferringDoctorId == model.ReferringDoctorId)
+            .OrderBy(x => x.DoctorCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.ReferringDoctorId.ToString(),
+                Text = $"{x.DoctorCode} - {x.DoctorName}",
+                Selected = model.ReferringDoctorId.HasValue && x.ReferringDoctorId == model.ReferringDoctorId.Value
             })
             .ToListAsync();
 
@@ -1016,6 +1178,13 @@ public class InvoicesController : CrudControllerBase
             BranchName = invoice.Branch?.BranchName ?? string.Empty,
             QuotationNo = invoice.Quotation?.QuotationNumber,
             ReferenceNo = invoice.ReferenceNo,
+            PatientFullName = invoice.PatientFullName,
+            PatientAge = invoice.PatientAge,
+            PatientGender = invoice.PatientGender,
+            PatientHn = invoice.PatientHn,
+            TreatmentRightId = invoice.TreatmentRightId,
+            PatientWard = invoice.PatientWard,
+            ReferringDoctorId = invoice.ReferringDoctorId,
             VatType = invoice.VatType,
             DiscountMode = invoice.QuotationId.HasValue ? "Line" : (useHeaderDiscount ? "Header" : "Line"),
             HeaderDiscountAmount = invoice.QuotationId.HasValue ? 0m : (useHeaderDiscount ? referenceDiscountTotal : 0m),
@@ -1196,7 +1365,7 @@ public class InvoicesController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one invoice line.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มรายการใบแจ้งหนี้อย่างน้อย 1 รายการ");
         }
 
         if (!ModelState.IsValid)
@@ -1261,7 +1430,27 @@ public class InvoicesController : CrudControllerBase
             var salespersonExists = await _context.Salespersons.AnyAsync(x => x.SalespersonId == model.SalespersonId.Value);
             if (!salespersonExists)
             {
-                ModelState.AddModelError(nameof(model.SalespersonId), "Selected salesperson was not found.");
+                ModelState.AddModelError(nameof(model.SalespersonId), "ไม่พบพนักงานขายที่เลือก");
+            }
+        }
+
+        if (model.TreatmentRightId.HasValue)
+        {
+            var treatmentRightExists = await _context.TreatmentRights
+                .AnyAsync(x => x.TreatmentRightId == model.TreatmentRightId.Value && x.IsActive);
+            if (!treatmentRightExists)
+            {
+                ModelState.AddModelError(nameof(model.TreatmentRightId), "ไม่พบสิทธิการรักษาที่เลือก");
+            }
+        }
+
+        if (model.ReferringDoctorId.HasValue)
+        {
+            var referringDoctorExists = await _context.ReferringDoctors
+                .AnyAsync(x => x.ReferringDoctorId == model.ReferringDoctorId.Value && x.IsActive);
+            if (!referringDoctorExists)
+            {
+                ModelState.AddModelError(nameof(model.ReferringDoctorId), "ไม่พบแพทย์ส่งที่เลือก");
             }
         }
 
@@ -1271,18 +1460,18 @@ public class InvoicesController : CrudControllerBase
                 .AnyAsync(x => x.PriceLevelId == model.PriceLevelId.Value && x.IsActive);
             if (!priceLevelExists)
             {
-                ModelState.AddModelError(nameof(model.PriceLevelId), "Selected price level was not found.");
+                ModelState.AddModelError(nameof(model.PriceLevelId), "ไม่พบระดับราคาที่เลือก");
             }
         }
 
         if (model.VatType is not ("VAT" or "NoVAT"))
         {
-            ModelState.AddModelError(nameof(model.VatType), "VAT type must be VAT or NoVAT.");
+            ModelState.AddModelError(nameof(model.VatType), "ประเภทราคาภาษีต้องเป็น VAT หรือ NoVAT เท่านั้น");
         }
 
         if (model.DiscountMode is not ("Line" or "Header"))
         {
-            ModelState.AddModelError(nameof(model.DiscountMode), "Discount mode must be Line or Header.");
+            ModelState.AddModelError(nameof(model.DiscountMode), "รูปแบบส่วนลดต้องเป็น Line หรือ Header เท่านั้น");
         }
 
         if (model.QuotationId.HasValue)
@@ -1337,17 +1526,17 @@ public class InvoicesController : CrudControllerBase
 
             if (detail.QuotedQty <= 0)
             {
-                ModelState.AddModelError($"Details[{i}].QuotedQty", "Quoted quantity must be greater than zero.");
+                ModelState.AddModelError($"Details[{i}].QuotedQty", "จำนวนตามใบเสนอราคาต้องมากกว่า 0");
             }
 
             if (detail.Qty <= 0)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Quantity must be greater than zero.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนที่ออกบิลต้องมากกว่า 0");
             }
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out var item))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกสินค้าให้ถูกต้อง");
                 continue;
             }
 
@@ -1370,7 +1559,7 @@ public class InvoicesController : CrudControllerBase
 
             if (requireAvailableStock && detail.TrackStock && detail.CurrentStock < detail.Qty)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Quantity cannot exceed current stock.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนที่ออกบิลต้องไม่เกินสต็อกคงเหลือ");
             }
 
             var gross = detail.Qty * detail.UnitPrice;
@@ -1381,7 +1570,7 @@ public class InvoicesController : CrudControllerBase
 
             if (detail.DiscountAmount > gross)
             {
-                ModelState.AddModelError($"Details[{i}].DiscountAmount", "Discount cannot exceed the line amount.");
+                ModelState.AddModelError($"Details[{i}].DiscountAmount", "ส่วนลดต้องไม่มากกว่ายอดรวมของบรรทัด");
                 continue;
             }
 
@@ -1389,62 +1578,62 @@ public class InvoicesController : CrudControllerBase
             {
                 if (detail.Qty != Math.Truncate(detail.Qty))
                 {
-                    ModelState.AddModelError($"Details[{i}].Qty", "Serial-controlled items must use whole-number quantity.");
+                    ModelState.AddModelError($"Details[{i}].Qty", "สินค้าที่ควบคุม Serial ต้องใช้จำนวนเต็มเท่านั้น");
                 }
 
                 if (detail.QuotedQty != Math.Truncate(detail.QuotedQty))
                 {
-                    ModelState.AddModelError($"Details[{i}].QuotedQty", "Quoted quantity must use whole numbers for serial-controlled items.");
+                    ModelState.AddModelError($"Details[{i}].QuotedQty", "จำนวนตามใบเสนอราคาของสินค้าที่ควบคุม Serial ต้องเป็นจำนวนเต็มเท่านั้น");
                 }
 
                 if (detail.SelectedSerialIds.Count > (int)detail.Qty)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial count cannot exceed quantity.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "จำนวน Serial ที่เลือกต้องไม่มากกว่าจำนวนที่ออกบิล");
                 }
 
                 if (requireSerials && detail.SelectedSerialIds.Count == 0)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Please select serial numbers for serial-controlled items.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "กรุณาเลือก Serial Number สำหรับสินค้าที่ควบคุม Serial");
                 }
 
                 if (requireSerials && detail.SelectedSerialIds.Count != (int)detail.Qty)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial count must exactly match quantity.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "จำนวน Serial ที่เลือกต้องเท่ากับจำนวนที่ออกบิลพอดี");
                 }
 
                 if (detail.CustomerWarrantyStartDate.HasValue &&
                     detail.CustomerWarrantyEndDate.HasValue &&
                     detail.CustomerWarrantyEndDate.Value.Date < detail.CustomerWarrantyStartDate.Value.Date)
                 {
-                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyEndDate", "Customer warranty end date must be on or after the start date.");
+                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyEndDate", "วันสิ้นสุดประกันของลูกค้าต้องไม่น้อยกว่าวันเริ่มต้น");
                 }
 
                 foreach (var serialId in detail.SelectedSerialIds)
                 {
                     if (duplicateSerialIds.Contains(serialId))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "The same serial cannot be selected more than once.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "ไม่สามารถเลือก Serial เดิมซ้ำได้");
                     }
 
                     if (!serialMap.TryGetValue(serialId, out var serial))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "One or more selected serials were not found.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "ไม่พบ Serial ที่เลือกอย่างน้อย 1 รายการ");
                         continue;
                     }
 
                     if (serial.ItemId != item.ItemId)
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial does not belong to the chosen item.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Serial ที่เลือกไม่ตรงกับสินค้าที่เลือก");
                     }
 
                     if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Only InStock serials can be invoiced.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "สามารถออกบิลได้เฉพาะ Serial ที่สถานะเป็น InStock เท่านั้น");
                     }
 
                     if (model.BranchId.HasValue && serial.BranchId != model.BranchId.Value)
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial does not belong to the invoice branch.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Serial ที่เลือกไม่ได้อยู่ในสาขาของใบแจ้งหนี้");
                     }
                 }
             }
@@ -1547,6 +1736,23 @@ public class InvoicesController : CrudControllerBase
     private static decimal CalculateReferenceLineDiscount(IEnumerable<InvoiceLineEditorViewModel> details)
     {
         return details.Sum(x => x.DiscountAmount);
+    }
+
+    private string BuildIssueValidationNotice()
+    {
+        var errors = ModelState.Values
+            .SelectMany(x => x.Errors)
+            .Select(x => x.ErrorMessage?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (errors.Count == 0)
+        {
+            return "Cannot issue invoice. Please review the invoice data and try again.";
+        }
+
+        return $"Cannot issue invoice. {string.Join(" ", errors)}";
     }
 
     private static void EnsureAtLeastOneLine(InvoiceFormViewModel model)

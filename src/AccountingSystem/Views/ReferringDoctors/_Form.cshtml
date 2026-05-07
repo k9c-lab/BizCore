@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.ReferringDoctor
+@{
+    var codeReadOnly = (bool?)ViewData["CodeReadOnly"] == true;
+}
+
+<div asp-validation-summary="All" class="form-alert"></div>
+
+<div class="form-shell">
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">ข้อมูลแพทย์ส่ง</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="DoctorCode" class="form-label"></label>
+                <input asp-for="DoctorCode" class="form-control" readonly="@codeReadOnly" />
+                @if (codeReadOnly)
+                {
+                    <div class="form-text">ระบบสร้างรหัสให้อัตโนมัติในรูปแบบ DOC-0001</div>
+                }
+                <span asp-validation-for="DoctorCode" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6 col-md-6">
+                <label asp-for="DoctorName" class="form-label"></label>
+                <input asp-for="DoctorName" class="form-control" />
+                <span asp-validation-for="DoctorName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">สถานะ</label>
+                <label class="quotation-inline-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <span>ใช้งานอยู่</span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>

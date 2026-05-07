@@ -1,18 +1,17 @@
-@model BizCore.Models.Entities.Customer
+﻿@model BizCore.Models.Entities.Customer
 
 @{
-    ViewData["Title"] = "Create Customer";
+    ViewData["Title"] = "เพิ่มลูกค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Create Customer</h1>
-        <p class="page-subtitle">Add a customer record with clearer form sections and validation feedback.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">เพิ่มลูกค้า</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="customerForm" class="btn btn-primary px-4">Save Customer</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        <button type="submit" form="customerForm" class="btn btn-primary px-4">บันทึกลูกค้า</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการ</a>
     </div>
 </div>
 
@@ -21,10 +20,10 @@
         <form asp-action="Create" method="post" id="customerForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Fields with validation feedback need correction before save.</span>
+                <span class="table-meta">หากมีข้อความ validation กรุณาแก้ไขข้อมูลก่อนบันทึก</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Customer</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกลูกค้า</button>
                 </div>
             </div>
         </form>
@@ -34,3 +33,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

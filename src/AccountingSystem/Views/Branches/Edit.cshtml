@@ -1,18 +1,17 @@
-@model BizCore.Models.Entities.Branch
+﻿@model BizCore.Models.Entities.Branch
 
 @{
-    ViewData["Title"] = "Edit Branch";
+    ViewData["Title"] = "แก้ไขสาขา";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Master Data</div>
-        <h1 class="page-title">Edit Branch</h1>
-        <p class="page-subtitle">Update branch contact information and active status.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">แก้ไขสาขา</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="branchForm" class="btn btn-primary px-4">Save Changes</button>
-        <a asp-action="Details" asp-route-id="@Model.BranchId" class="btn btn-outline-secondary">Back</a>
+        <button type="submit" form="branchForm" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
+        <a asp-action="Details" asp-route-id="@Model.BranchId" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -21,10 +20,10 @@
         <form asp-action="Edit" method="post" id="branchForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Inactive branches remain visible for history but should not be used for new transactions later.</span>
+                <span class="table-meta">สาขาที่ปิดใช้งานแล้วยังแสดงในประวัติได้ แต่ไม่ควรใช้กับรายการใหม่</span>
                 <div class="page-actions">
-                    <a asp-action="Details" asp-route-id="@Model.BranchId" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@Model.BranchId" class="btn btn-outline-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
                 </div>
             </div>
         </form>
@@ -34,3 +33,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

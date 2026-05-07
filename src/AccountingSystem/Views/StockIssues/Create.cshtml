@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.StockIssueFormViewModel
+﻿@model BizCore.Models.ViewModels.StockIssueFormViewModel
 
 @{
     ViewData["Title"] = Model.StockIssueId.HasValue ? "Edit Stock Issue" : "New Stock Issue";
@@ -12,8 +12,7 @@
     <div>
         <div class="page-eyebrow">Inventory Module</div>
         <h1 class="page-title">@ViewData["Title"]</h1>
-        <p class="page-subtitle">Deduct branch stock for internal use or non-sales inventory adjustments.</p>
-    </div>
+        </div>
     <div class="page-actions">
         @if (Model.StockIssueId.HasValue)
         {
@@ -321,3 +320,4 @@
         loadStockForAllRows();
     </script>
 }
+

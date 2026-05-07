@@ -1,19 +1,27 @@
 @model BizCore.Models.Entities.ReceiptHeader
 
 @{
-    ViewData["Title"] = "Receipt Details";
+    ViewData["Title"] = "รายละเอียดใบเสร็จรับเงิน";
     var allocations = Model.PaymentHeader?.PaymentAllocations
         .OrderBy(x => x.InvoiceHeader!.InvoiceDate)
         .ThenBy(x => x.InvoiceHeader!.InvoiceNo)
         .ToList() ?? new List<BizCore.Models.Entities.PaymentAllocation>();
     var appliedAmount = allocations.Sum(x => x.AppliedAmount);
     var invoiceTotal = allocations.Sum(x => x.InvoiceHeader?.TotalAmount ?? 0m);
+    var invoiceVatTotal = allocations.Sum(x => x.InvoiceHeader?.VatAmount ?? 0m);
+    var invoiceSubtotal = invoiceTotal - invoiceVatTotal;
     var remainingBalance = allocations.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
     var hasAllocations = allocations.Any();
+    var printLines = Model.PrintLines.OrderBy(x => x.LineNumber).ToList();
+    var receiptPrintLineRowCount = Math.Max(printLines.Count, 1);
     var canCancel = Model.Status == "Issued";
+    var canEditPrintLines = Model.Status != "Cancelled";
+    var summarySubtotal = hasAllocations ? invoiceSubtotal : Model.TotalReceivedAmount;
+    var summaryVat = hasAllocations ? invoiceVatTotal : 0m;
+    var summaryTotal = hasAllocations ? invoiceTotal : Model.TotalReceivedAmount;
     var cancelBlockedReason = canCancel
         ? string.Empty
-        : $"Cancel Receipt is available only for Issued receipts. Current status is {Model.Status}.";
+        : $"ยกเลิกใบเสร็จได้เฉพาะเอกสารที่ออกแล้วเท่านั้น สถานะปัจจุบันคือ {Model.Status}";
 }
 
 @if (TempData["ReceiptNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -23,16 +31,16 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">AR Module</div>
-        <h1 class="page-title">Receipt Details</h1>
-        <p class="page-subtitle">Review the issued receipt and any related posted payment allocations.</p>
+        <div class="page-eyebrow">ลูกหนี้การค้า</div>
+        <h1 class="page-title">รายละเอียดใบเสร็จรับเงิน</h1>
+        <p class="page-subtitle">ตรวจสอบข้อมูลใบเสร็จ รายการรับชำระ และรายการที่จะพิมพ์บนใบเสร็จ</p>
     </div>
     <div class="page-actions">
         @if (Model.PaymentHeader is not null)
         {
-            <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">View Payment</a>
+            <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">ดูรายการรับชำระ</a>
         }
-        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId })', '_blank', 'noopener');">Print</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId })', '_blank', 'noopener');">พิมพ์</button>
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline confirm-popover-form">
@@ -42,14 +50,18 @@
                             class="btn btn-outline-danger js-confirm-popover-toggle"
                             data-confirm-target="cancelReceiptDetailsConfirm_@Model.ReceiptId"
                             aria-expanded="false">
-                        Cancel Receipt
+                        ยกเลิกใบเสร็จ
                     </button>
                     <div class="confirm-popover" id="cancelReceiptDetailsConfirm_@Model.ReceiptId" hidden>
-                        <div class="confirm-popover-title">Cancel this receipt?</div>
-                        <div class="confirm-popover-text">Payment and invoice balances will not change when this receipt is cancelled.</div>
+                        <div class="confirm-popover-title">ยืนยันยกเลิกใบเสร็จนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">การยกเลิกใบเสร็จจะไม่เปลี่ยนยอดรับชำระและยอดคงเหลือของเอกสารอ้างอิง</div>
+                        <div class="mt-2">
+                            <label for="cancelReceiptReason" class="form-label">เหตุผลการยกเลิก</label>
+                            <textarea id="cancelReceiptReason" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลการยกเลิก" required></textarea>
+                        </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -57,9 +69,9 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Receipt</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกใบเสร็จ</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบเสร็จรับเงิน</a>
     </div>
 </div>
 
@@ -72,57 +84,125 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Receipt Header</div>
+                <div class="form-section-title">ข้อมูลใบเสร็จรับเงิน</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Receipt No.</div>
+                        <div class="detail-label">เลขที่ใบเสร็จ</div>
                         <div class="form-control readonly-detail">@Model.ReceiptNo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Receipt Date</div>
+                        <div class="detail-label">วันที่ใบเสร็จ</div>
                         <div class="form-control readonly-detail">@Model.ReceiptDate.ToString("dd MMM yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment No.</div>
+                        <div class="detail-label">เลขที่รับชำระ</div>
                         <div class="form-control readonly-detail">@(Model.PaymentHeader?.PaymentNo ?? "-")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Status</div>
+                        <div class="detail-label">สถานะ</div>
                         <div class="form-control readonly-detail">@Model.Status</div>
                     </div>
                     <div class="col-12">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                 </div>
             </div>
 
+            <div class="form-section">
+                <div class="table-card-header px-0 pt-0">
+                    <div>
+                        <h2 class="section-title">รายการพิมพ์บนใบเสร็จ</h2>
+                        <p class="section-subtitle">กรอกรายการและจำนวนเงินสำหรับพิมพ์บนใบเสร็จ โดยยอดรวมทุกรายการต้องเท่ากับยอดรับชำระ</p>
+                    </div>
+                </div>
+                <form asp-action="UpdatePrintLines" asp-route-id="@Model.ReceiptId" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <div class="text-muted">ยอดรับชำระของใบเสร็จนี้: @Model.TotalReceivedAmount.ToString("N2")</div>
+                        @if (canEditPrintLines)
+                        {
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary" id="addReceiptPrintLineButton">เพิ่มแถว</button>
+                                <button type="button" class="btn btn-outline-secondary" id="removeReceiptPrintLineButton">ลบแถว</button>
+                            </div>
+                        }
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table entity-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:72px;">ลำดับ</th>
+                                    <th>รายการ</th>
+                                    <th class="text-end" style="width:220px;">จำนวนเงิน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiptPrintLinesBody">
+                            @for (var index = 0; index < receiptPrintLineRowCount; index++)
+                            {
+                                var line = index < printLines.Count ? printLines[index] : null;
+                                <tr>
+                                    <td class="receipt-print-line-no">@(index + 1)</td>
+                                    <td>
+                                        <textarea name="descriptions"
+                                                  class="form-control"
+                                                  rows="2"
+                                                  maxlength="500"
+                                                  disabled="@(!canEditPrintLines)">@line?.Description</textarea>
+                                    </td>
+                                    <td>
+                                        <input type="number"
+                                               name="amounts"
+                                               value="@(line?.Amount.ToString("0.00"))"
+                                               class="form-control text-end"
+                                               min="0"
+                                               step="0.01"
+                                               disabled="@(!canEditPrintLines)" />
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        @if (canEditPrintLines)
+                        {
+                            <button type="submit" class="btn btn-primary">บันทึกรายการพิมพ์</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-secondary" disabled>บันทึกรายการพิมพ์</button>
+                        }
+                    </div>
+                </form>
+            </div>
+
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Customer Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Customer Code</span>
+                                <span class="quotation-info-label">รหัสลูกค้า</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.CustomerCode) ? "-" : Model.Customer!.CustomerCode)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Customer Name</span>
-                                <span class="quotation-info-value">@Model.Customer?.CustomerName</span>
+                                <span class="quotation-info-label">ชื่อลูกค้า</span>
+                                <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.CustomerName) ? "-" : Model.Customer!.CustomerName)</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-label">เลขประจำตัวผู้เสียภาษี</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.PhoneNumber) ? "-" : Model.Customer!.PhoneNumber)</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-label">ที่อยู่</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</span>
                         </div>
                     </div>
@@ -130,26 +210,30 @@
 
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Receipt / Payment Reference</div>
+                        <div class="quotation-info-card-title">ข้อมูลอ้างอิงการรับชำระ</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Payment Method</span>
+                                <span class="quotation-info-label">วิธีชำระเงิน</span>
                                 <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentMethod ?? "-")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Payment Reference</span>
+                                <span class="quotation-info-label">เลขอ้างอิง</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PaymentHeader?.ReferenceNo) ? "-" : Model.PaymentHeader!.ReferenceNo)</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Payment Date</span>
+                                <span class="quotation-info-label">วันที่รับชำระ</span>
                                 <span class="quotation-info-value">@(Model.PaymentHeader?.PaymentDate.ToString("dd MMM yyyy") ?? "-")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Allocations</span>
-                                <span class="quotation-info-value">@(hasAllocations ? $"{allocations.Count} invoice(s)" : "No linked invoices")</span>
+                                <span class="quotation-info-label">สาขา</span>
+                                <span class="quotation-info-value">@(Model.Branch?.BranchName ?? "-")</span>
                             </div>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">การจัดสรร</span>
+                            <span class="quotation-info-value">@(hasAllocations ? $"{allocations.Count} ใบแจ้งหนี้" : "ไม่มีใบแจ้งหนี้ที่ผูกไว้")</span>
                         </div>
                     </div>
                 </div>
@@ -158,10 +242,10 @@
             <div class="form-section">
                 <div class="table-card-header px-0 pt-0">
                     <div>
-                        <h2 class="section-title">Receipt Items</h2>
-                        <p class="section-subtitle">Full item details from the referenced invoice(s), with payment summary below.</p>
+                        <h2 class="section-title">เอกสารอ้างอิง</h2>
+                        <p class="section-subtitle">แสดงรายละเอียดจากใบแจ้งหนี้ที่ถูกจัดสรรกับรายการรับชำระนี้</p>
                     </div>
-                    <div class="table-meta">@allocations.Count invoice(s)</div>
+                    <div class="table-meta">@allocations.Count ใบแจ้งหนี้</div>
                 </div>
                 @if (hasAllocations)
                 {
@@ -169,10 +253,11 @@
                         <table class="table entity-table align-middle">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
-                                    <th class="text-end">Qty</th>
-                                    <th class="text-end">Unit Price</th>
-                                    <th class="text-end">Amount</th>
+                                    <th>ใบแจ้งหนี้</th>
+                                    <th>ลูกค้า</th>
+                                    <th class="text-end">ยอดรวม</th>
+                                    <th class="text-end">ชำระแล้ว</th>
+                                    <th class="text-end">คงเหลือ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -183,29 +268,16 @@
                                 {
                                     continue;
                                 }
-
                                 <tr>
-                                    <td colspan="4">
-                                        <span class="code-chip">@invoice.InvoiceNo</span>
-                                        <span class="text-muted ms-2">@invoice.InvoiceDate.ToString("dd MMM yyyy")</span>
+                                    <td>
+                                        <a asp-controller="Invoices" asp-action="Details" asp-route-id="@invoice.InvoiceId">@invoice.InvoiceNo</a>
+                                        <div class="table-meta">@invoice.InvoiceDate.ToString("dd MMM yyyy")</div>
                                     </td>
+                                    <td>@(invoice.Customer?.CustomerName ?? Model.Customer?.CustomerName ?? "-")</td>
+                                    <td class="text-end">@invoice.TotalAmount.ToString("N2")</td>
+                                    <td class="text-end">@invoice.PaidAmount.ToString("N2")</td>
+                                    <td class="text-end">@invoice.BalanceAmount.ToString("N2")</td>
                                 </tr>
-                                foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="fw-semibold">@line.Item?.ItemName</div>
-                                            <div class="text-muted small">@line.Item?.ItemCode</div>
-                                            @if (!string.IsNullOrWhiteSpace(line.Remark))
-                                            {
-                                                <div class="text-muted small">@line.Remark</div>
-                                            }
-                                        </td>
-                                        <td class="text-end">@line.Qty.ToString("N2")</td>
-                                        <td class="text-end">@line.UnitPrice.ToString("N2")</td>
-                                        <td class="text-end">@line.LineTotal.ToString("N2")</td>
-                                    </tr>
-                                }
                             }
                             </tbody>
                         </table>
@@ -213,7 +285,7 @@
                 }
                 else
                 {
-                    <div class="workflow-info">This receipt was issued from a standalone payment with no invoice allocations.</div>
+                    <div class="workflow-info">ใบเสร็จนี้ออกจากรายการรับชำระที่ยังไม่ได้จัดสรรให้ใบแจ้งหนี้</div>
                 }
             </div>
 
@@ -221,15 +293,15 @@
                 <div class="quotation-party-column">
                     <div class="quotation-summary-stack">
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Invoice Total</span>
+                            <span class="quotation-summary-name">ยอดรวมใบแจ้งหนี้</span>
                             <span class="quotation-summary-amount">@invoiceTotal.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Paid To Date</span>
+                            <span class="quotation-summary-name">ชำระแล้วสะสม</span>
                             <span class="quotation-summary-amount">@((invoiceTotal - remainingBalance).ToString("N2"))</span>
                         </div>
                         <div class="quotation-summary-row total">
-                            <span class="quotation-summary-name">Remaining Balance</span>
+                            <span class="quotation-summary-name">ยอดคงเหลือ</span>
                             <span class="quotation-summary-amount">@remainingBalance.ToString("N2")</span>
                         </div>
                     </div>
@@ -238,24 +310,16 @@
                     <div class="quotation-summary-wrap">
                         <div class="quotation-summary-stack">
                             <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">Payment Method</span>
-                                <span class="quotation-summary-amount">@(Model.PaymentHeader?.PaymentMethod ?? "-")</span>
+                                <span class="quotation-summary-name">ยอดก่อน VAT</span>
+                                <span class="quotation-summary-amount">@summarySubtotal.ToString("N2")</span>
                             </div>
                             <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">Payment Reference</span>
-                                <span class="quotation-summary-amount">@(string.IsNullOrWhiteSpace(Model.PaymentHeader?.ReferenceNo) ? "-" : Model.PaymentHeader!.ReferenceNo)</span>
-                            </div>
-                            <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">Receipt Date</span>
-                                <span class="quotation-summary-amount">@Model.ReceiptDate.ToString("dd MMM yyyy")</span>
+                                <span class="quotation-summary-name">VAT</span>
+                                <span class="quotation-summary-amount">@summaryVat.ToString("N2")</span>
                             </div>
                             <div class="quotation-summary-row total">
-                                <span class="quotation-summary-name">This Receipt Paid</span>
-                                <span class="quotation-summary-amount">@(hasAllocations ? appliedAmount.ToString("N2") : Model.TotalReceivedAmount.ToString("N2"))</span>
-                            </div>
-                            <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">Receipt Amount</span>
-                                <span class="quotation-summary-amount">@Model.TotalReceivedAmount.ToString("N2")</span>
+                                <span class="quotation-summary-name">ยอดรวม</span>
+                                <span class="quotation-summary-amount">@summaryTotal.ToString("N2")</span>
                             </div>
                         </div>
                     </div>
@@ -263,32 +327,32 @@
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Issued</span>
+                        <span class="document-history-label">ออกเอกสารโดย</span>
                         <span class="document-history-value">@(Model.IssuedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.IssuedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-label">ยกเลิกโดย</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     @if (Model.Status == "Cancelled")
                     {
                         <div class="document-history-reason">
-                            <span class="document-history-label">Cancel Reason</span>
+                            <span class="document-history-label">เหตุผลที่ยกเลิก</span>
                             <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
                         </div>
                     }
@@ -297,3 +361,47 @@
         </div>
     </div>
 </div>
+
+@if (canEditPrintLines)
+{
+    <script>
+        (() => {
+            const tbody = document.getElementById("receiptPrintLinesBody");
+            const addButton = document.getElementById("addReceiptPrintLineButton");
+            const removeButton = document.getElementById("removeReceiptPrintLineButton");
+
+            if (!tbody || !addButton || !removeButton) {
+                return;
+            }
+
+            const renderRowNumbers = () => {
+                tbody.querySelectorAll(".receipt-print-line-no").forEach((cell, index) => {
+                    cell.textContent = String(index + 1);
+                });
+            };
+
+            const createRow = () => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="receipt-print-line-no"></td>
+                    <td><textarea name="descriptions" class="form-control" rows="2" maxlength="500"></textarea></td>
+                    <td><input type="number" name="amounts" class="form-control text-end" min="0" step="0.01" /></td>
+                `;
+                tbody.appendChild(row);
+                renderRowNumbers();
+            };
+
+            addButton.addEventListener("click", createRow);
+            removeButton.addEventListener("click", () => {
+                if (tbody.rows.length <= 1) {
+                    return;
+                }
+
+                tbody.removeChild(tbody.lastElementChild);
+                renderRowNumbers();
+            });
+
+            renderRowNumbers();
+        })();
+    </script>
+}

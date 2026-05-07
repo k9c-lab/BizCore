@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockTransferHeader>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockTransferHeader>
 
 @{
     ViewData["Title"] = "Stock Transfers";
@@ -12,8 +12,7 @@
     <div>
         <div class="page-eyebrow">Inventory Module</div>
         <h1 class="page-title">Stock Transfers</h1>
-        <p class="page-subtitle">Move stock and serial numbers between branches with branch balance tracking.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary px-4">New Transfer</a>
     </div>
@@ -28,8 +27,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Transfer Register</h2>
-            <p class="section-subtitle">Track branch-to-branch inventory movement.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount records</div>
     </div>
     <div class="card-body">
@@ -136,3 +134,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

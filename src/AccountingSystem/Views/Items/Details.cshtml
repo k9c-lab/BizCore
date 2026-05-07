@@ -1,23 +1,23 @@
 @model BizCore.Models.Entities.Item
 
 @{
-    ViewData["Title"] = "Item Details";
+    ViewData["Title"] = "รายละเอียดสินค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Master Data</div>
-        <h1 class="page-title">Item Details</h1>
-        <p class="page-subtitle">Review pricing, item type, and inventory control settings.</p>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">รายละเอียดสินค้าและบริการ</h1>
+        <p class="page-subtitle">ตรวจสอบข้อมูลสินค้า ราคา และการตั้งค่าสต็อก/Serial</p>
     </div>
     <div class="page-actions">
         @if (Model.TrackStock)
         {
-            <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@Model.ItemId" class="btn btn-outline-primary">View Ledger</a>
+            <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@Model.ItemId" class="btn btn-outline-primary">ดูสมุดสต็อก</a>
         }
-        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Selling Prices</a>
-        <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">Edit Item</a>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">ราคาขาย</a>
+        <a asp-action="Edit" asp-route-id="@Model.ItemId" class="btn btn-primary">แก้ไข</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -25,62 +25,62 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Item Profile</div>
+                <div class="form-section-title">ข้อมูลสินค้า</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Item Code</div>
+                        <div class="detail-label">รหัสสินค้า</div>
                         <div class="form-control readonly-detail">@Model.ItemCode</div>
                     </div>
                     <div class="col-lg-5 col-md-6">
-                        <div class="detail-label">Item Name</div>
+                        <div class="detail-label">ชื่อสินค้า</div>
                         <div class="form-control readonly-detail">@Model.ItemName</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                        <div class="detail-label">สถานะ</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "ใช้งาน" : "ปิดใช้งาน")</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Item Type</div>
-                        <div class="form-control readonly-detail">@Model.ItemType</div>
+                        <div class="detail-label">ประเภท</div>
+                        <div class="form-control readonly-detail">@(Model.ItemType == "Product" ? "สินค้า" : Model.ItemType == "Service" ? "บริการ" : Model.ItemType == "Spare Part" ? "อะไหล่" : Model.ItemType)</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="detail-label">Part Number</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PartNumber) ? "-" : Model.PartNumber)</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Unit</div>
+                        <div class="detail-label">หน่วย</div>
                         <div class="form-control readonly-detail">@Model.Unit</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Unit Price</div>
+                        <div class="detail-label">ราคาต่อหน่วย</div>
                         <div class="form-control readonly-detail">@Model.UnitPrice.ToString("N2")</div>
                     </div>
                 </div>
             </div>
 
             <div class="form-section">
-                <div class="form-section-title">Multi-Price Setup Path</div>
+                <div class="form-section-title">แนวทางการตั้งราคาหลายระดับ</div>
                 <div class="workflow-info workflow-info-info mb-0">
-                    Base selling price is still managed with <strong>Unit Price</strong>. If this customer uses multiple selling prices, open <a asp-action="Pricing" asp-route-id="@Model.ItemId">Selling Prices</a> to assign prices by level after configuring <a asp-controller="PriceLevels" asp-action="Index">Price Levels</a>.
+                    ราคาพื้นฐานยังคงอ้างอิงจาก <strong>ราคาต่อหน่วย</strong> หากลูกค้ารายนี้ใช้งานหลายระดับราคา สามารถเข้าไปกำหนดต่อที่ <a asp-action="Pricing" asp-route-id="@Model.ItemId">ราคาขาย</a> หลังตั้งค่า <a asp-controller="PriceLevels" asp-action="Index">ระดับราคา</a>
                 </div>
             </div>
 
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Inventory Controls</div>
+                        <div class="quotation-info-card-title">การควบคุมสต็อก</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Track Stock</span>
-                                <span class="quotation-info-value">@(Model.TrackStock ? "Yes" : "No")</span>
+                                <span class="quotation-info-label">ตัดสต็อก</span>
+                                <span class="quotation-info-value">@(Model.TrackStock ? "ใช่" : "ไม่ใช่")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Serial Controlled</span>
-                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "Yes" : "No")</span>
+                                <span class="quotation-info-label">ควบคุม Serial</span>
+                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "ใช่" : "ไม่ใช่")</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Current Stock</span>
+                            <span class="quotation-info-label">สต็อกปัจจุบัน</span>
                             <span class="quotation-info-value">@Model.CurrentStock.ToString("N2")</span>
                         </div>
                     </div>
@@ -88,15 +88,15 @@
 
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Document Usage</div>
+                        <div class="quotation-info-card-title">การใช้งานในเอกสาร</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Sales / Purchasing</span>
-                                <span class="quotation-info-value">@(Model.IsActive ? "Selectable in documents" : "Hidden from normal selection")</span>
+                                <span class="quotation-info-label">งานขาย / จัดซื้อ</span>
+                                <span class="quotation-info-value">@(Model.IsActive ? "พร้อมใช้งานในเอกสาร" : "ซ่อนจากการเลือกใช้งานตามปกติ")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Serial Requirement</span>
-                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "Serial number required when receiving/issuing" : "No serial entry required")</span>
+                                <span class="quotation-info-label">ข้อกำหนด Serial</span>
+                                <span class="quotation-info-value">@(Model.IsSerialControlled ? "ต้องระบุ Serial ตอนรับ/จ่ายสินค้า" : "ไม่บังคับระบุ Serial")</span>
                             </div>
                         </div>
                     </div>

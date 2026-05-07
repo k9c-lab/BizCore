@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.StockAuditPageViewModel
+﻿@model BizCore.Models.ViewModels.StockAuditPageViewModel
 
 @{
     ViewData["Title"] = "Stock Audit";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Inventory Audit</div>
         <h1 class="page-title">Stock Audit</h1>
-        <p class="page-subtitle">Read-only reconciliation for StockBalances, serial stock, and stock ledger net quantity in @Model.BranchName.</p>
-    </div>
+        </div>
 </div>
 
 <div class="quote-summary-grid mb-3">
@@ -31,8 +30,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Reconciliation Results</h2>
-            <p class="section-subtitle">This page does not change stock. Use it to find rows that need investigation.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
     </div>
     <div class="card-body">
@@ -126,3 +124,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

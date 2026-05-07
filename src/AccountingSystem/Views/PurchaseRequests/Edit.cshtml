@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
+﻿@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
 
 @{
     ViewData["Title"] = "Edit Purchase Request";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Edit Purchase Request</h1>
-        <p class="page-subtitle">Update draft request details before submitting to central purchasing.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Details" asp-route-id="@Model.PurchaseRequestId" class="btn btn-outline-secondary">Back</a>
     </div>
@@ -34,3 +33,4 @@
     <partial name="_ValidationScriptsPartial" />
     <partial name="_FormScripts" />
 }
+

@@ -9,56 +9,83 @@ public class InvoiceFormViewModel
     public int? QuotationId { get; set; }
 
     [Required]
-    [Display(Name = "Invoice No.")]
+    [Display(Name = "เลขที่ใบแจ้งหนี้")]
     [StringLength(30)]
     public string InvoiceNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Invoice Date")]
+    [Display(Name = "วันที่ใบแจ้งหนี้")]
     [DataType(DataType.Date)]
     public DateTime InvoiceDate { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Please select a customer.")]
-    [Display(Name = "Customer")]
+    [Required(ErrorMessage = "กรุณาเลือกลูกค้า")]
+    [Display(Name = "ลูกค้า")]
     public int? CustomerId { get; set; }
 
-    [Display(Name = "Salesperson")]
+    [Display(Name = "พนักงานขาย")]
     public int? SalespersonId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
-    [Display(Name = "Price Level")]
+    [Display(Name = "ระดับราคา")]
     public int? PriceLevelId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
     public string PricingMode { get; set; } = string.Empty;
     public bool ShowPriceLevelSelector { get; set; }
+    public bool ShowPatientInfo { get; set; } = true;
 
-    [Display(Name = "Quotation No. (Optional)")]
+    [Display(Name = "เลขที่ใบเสนอราคา (ถ้ามี)")]
     public string? QuotationNo { get; set; }
 
-    [Display(Name = "Reference No.")]
+    [Display(Name = "เลขที่อ้างอิง")]
     [StringLength(50)]
     public string? ReferenceNo { get; set; }
 
-    [Required]
-    [Display(Name = "VAT Type")]
-    [StringLength(10)]
-    public string VatType { get; set; } = "NoVAT";
+    [Display(Name = "ชื่อ-สกุลคนไข้")]
+    [StringLength(200)]
+    public string? PatientFullName { get; set; }
+
+    [Display(Name = "อายุ (ปี)")]
+    [Range(0, 150, ErrorMessage = "อายุต้องอยู่ระหว่าง 0 ถึง 150 ปี")]
+    public int? PatientAge { get; set; }
+
+    [Display(Name = "เพศ")]
+    [StringLength(20)]
+    public string? PatientGender { get; set; }
+
+    [Display(Name = "HN")]
+    [StringLength(50)]
+    public string? PatientHn { get; set; }
+
+    [Display(Name = "สิทธิการรักษา")]
+    public int? TreatmentRightId { get; set; }
+
+    [Display(Name = "Ward")]
+    [StringLength(100)]
+    public string? PatientWard { get; set; }
+
+    [Display(Name = "แพทย์ส่ง")]
+    public int? ReferringDoctorId { get; set; }
 
     [Required]
-    [Display(Name = "Discount Mode")]
+    [Display(Name = "ประเภทภาษี")]
+    [StringLength(10)]
+    public string VatType { get; set; } = "VAT";
+
+    [Required]
+    [Display(Name = "รูปแบบส่วนลด")]
     [StringLength(10)]
     public string DiscountMode { get; set; } = "Line";
 
     [Range(typeof(decimal), "0", "9999999999999999.99")]
-    [Display(Name = "Header Discount")]
+    [Display(Name = "ส่วนลดท้ายเอกสาร")]
     public decimal HeaderDiscountAmount { get; set; }
 
-    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Amount due must be greater than zero.")]
-    [Display(Name = "Amount Due This Invoice")]
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "ยอดเรียกเก็บต้องมากกว่า 0")]
+    [Display(Name = "ยอดเรียกเก็บใบนี้")]
     public decimal? AmountDueThisInvoice { get; set; }
 
     [StringLength(500)]
@@ -83,6 +110,9 @@ public class InvoiceFormViewModel
     public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> PriceLevelOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> QuotationOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> PatientGenderOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> TreatmentRightOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> ReferringDoctorOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<InvoiceItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<InvoiceItemLookupViewModel>();

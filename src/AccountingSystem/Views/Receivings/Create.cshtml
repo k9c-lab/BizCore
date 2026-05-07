@@ -1,4 +1,4 @@
-@inject IUserPermissionService PermissionService
+﻿@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.ReceivingFormViewModel
 
 @{
@@ -24,8 +24,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">@pageTitle</h1>
-        <p class="page-subtitle">Save a draft while receiving details are incomplete, then post when stock and serial records are ready to update.</p>
-    </div>
+        </div>
     <div class="page-actions">
         @if (isEdit)
         {
@@ -614,3 +613,4 @@
         })();
     </script>
 }
+

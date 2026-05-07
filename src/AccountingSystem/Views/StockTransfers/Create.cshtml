@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.StockTransferFormViewModel
+﻿@model BizCore.Models.ViewModels.StockTransferFormViewModel
 
 @{
     ViewData["Title"] = Model.StockTransferId.HasValue ? "Edit Stock Transfer" : "New Stock Transfer";
@@ -12,8 +12,7 @@
     <div>
         <div class="page-eyebrow">Inventory Module</div>
         <h1 class="page-title">@ViewData["Title"]</h1>
-        <p class="page-subtitle">Prepare a branch-to-branch stock movement and post when quantities are ready.</p>
-    </div>
+        </div>
     <div class="page-actions">
         @if (Model.StockTransferId.HasValue)
         {
@@ -330,3 +329,4 @@
         loadStockForAllRows();
     </script>
 }
+

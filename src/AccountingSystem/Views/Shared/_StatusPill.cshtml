@@ -3,6 +3,29 @@
 @{
     var status = string.IsNullOrWhiteSpace(Model) ? "-" : Model.Trim();
     var normalized = status.Replace(" ", string.Empty, StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
+    var displayStatus = normalized switch
+    {
+        "draft" => "ฉบับร่าง",
+        "unpaid" => "ยังไม่ชำระ",
+        "submitted" => "ส่งอนุมัติแล้ว",
+        "approved" => "อนุมัติแล้ว",
+        "issued" => "ออกเอกสารแล้ว",
+        "posted" => "บันทึกแล้ว",
+        "paid" => "ชำระแล้ว",
+        "fullyinvoiced" => "ออกใบแจ้งหนี้ครบแล้ว",
+        "notinvoiced" => "ยังไม่ออกใบแจ้งหนี้",
+        "converted" => "แปลงเอกสารแล้ว",
+        "convertedtopo" => "แปลงเป็นใบสั่งซื้อแล้ว",
+        "partiallypaid" => "ชำระบางส่วน",
+        "partiallyinvoiced" => "ออกใบแจ้งหนี้บางส่วน",
+        "partiallyreceived" => "รับบางส่วน",
+        "fullyreceived" => "รับครบแล้ว",
+        "completed" => "เสร็จสมบูรณ์",
+        "rejected" => "ไม่อนุมัติ",
+        "cancelled" => "ยกเลิกแล้ว",
+        "inactive" => "ปิดใช้งาน",
+        _ => status
+    };
     var toneClass = normalized switch
     {
         "draft" => "status-pill-draft",
@@ -28,4 +51,4 @@
     };
 }
 
-<span class="status-pill @toneClass">@status</span>
+<span class="status-pill @toneClass">@displayStatus</span>

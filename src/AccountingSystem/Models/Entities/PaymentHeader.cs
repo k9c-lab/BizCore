@@ -20,6 +20,9 @@ public class PaymentHeader
     [Display(Name = "Customer")]
     public int CustomerId { get; set; }
 
+    [Display(Name = "Billing Note")]
+    public int? BillingNoteId { get; set; }
+
     [Display(Name = "Branch")]
     public int? BranchId { get; set; }
 
@@ -55,6 +58,7 @@ public class PaymentHeader
     public string? CancelReason { get; set; }
 
     public Customer? Customer { get; set; }
+    public BillingNoteHeader? BillingNoteHeader { get; set; }
     public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }

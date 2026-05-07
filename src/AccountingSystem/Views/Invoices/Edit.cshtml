@@ -1,17 +1,18 @@
 @model BizCore.Models.ViewModels.InvoiceFormViewModel
 
 @{
-    ViewData["Title"] = "Edit Invoice";
+    ViewData["Title"] = "แก้ไขใบแจ้งหนี้";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Edit Invoice</h1>
-        <p class="page-subtitle">Only draft invoices can be edited. Issued and cancelled invoices remain read-only.</p>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">แก้ไขใบแจ้งหนี้</h1>
     </div>
     <div class="page-actions">
-        <a asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary">View Invoice</a>
+        <button type="submit" form="invoiceForm" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+        <button type="submit" form="invoiceForm" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกใบแจ้งหนี้</button>
+        <a asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary">กลับไปรายละเอียดใบแจ้งหนี้</a>
     </div>
 </div>
 
@@ -22,13 +23,33 @@
 
 <div class="card content-card">
     <div class="card-body">
+        @if (Model.ShowPriceLevelSelector && !Model.QuotationId.HasValue)
+        {
+            <div class="pricing-path-card mb-3">
+                <div class="pricing-path-title">แหล่งที่มาของราคาในใบแจ้งหนี้</div>
+                <div class="pricing-path-text">
+                    <span>โหมดปัจจุบัน: <strong>หลายระดับราคา</strong> เลือกระดับราคาบนหัวเอกสาร แล้วระบบจะเติมราคาสินค้าให้อัตโนมัติตามระดับราคานั้น โดยถ้าไม่พบราคาจะใช้ราคาพื้นฐานของสินค้าแทน</span>
+                </div>
+            </div>
+        }
+        else if (Model.QuotationId.HasValue)
+        {
+            <div class="pricing-path-card mb-3">
+                <div class="pricing-path-title">แหล่งที่มาของราคาในใบแจ้งหนี้</div>
+                <div class="pricing-path-text">
+                    <span>โหมดปัจจุบัน: <strong>อ้างอิงใบเสนอราคา</strong> ราคาในใบแจ้งหนี้จะอ้างอิงจากใบเสนอราคาที่อนุมัติแล้ว</span>
+                </div>
+            </div>
+        }
+
         <form asp-action="Edit" asp-route-id="@Model.InvoiceId" method="post" id="invoiceForm">
             <partial name="_Form" model="Model" />
+
             <div class="form-actions mt-3">
-                <span class="table-meta">Saving keeps this invoice as Draft. Use Issue after serials and warranty are complete.</span>
+                <span class="table-meta">บันทึกฉบับร่างยังสามารถกลับมาแก้ไขได้ และสามารถออกใบแจ้งหนี้จากหน้านี้ได้ทันทีเมื่อข้อมูลครบถ้วน</span>
                 <div class="page-actions">
-                    <a asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                    <button type="submit" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+                    <button type="submit" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกใบแจ้งหนี้</button>
                 </div>
             </div>
         </form>

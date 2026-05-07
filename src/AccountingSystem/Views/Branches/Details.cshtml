@@ -1,18 +1,18 @@
 @model BizCore.Models.Entities.Branch
 
 @{
-    ViewData["Title"] = "Branch Details";
+    ViewData["Title"] = "รายละเอียดสาขา";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Master Data</div>
-        <h1 class="page-title">Branch Details</h1>
-        <p class="page-subtitle">Review branch profile before branch-based stock is enabled.</p>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">รายละเอียดสาขา</h1>
+        <p class="page-subtitle">ตรวจสอบข้อมูลสาขาก่อนใช้งานในเอกสารและสต็อกตามสาขา</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Edit" asp-route-id="@Model.BranchId" class="btn btn-primary">Edit Branch</a>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Edit" asp-route-id="@Model.BranchId" class="btn btn-primary">แก้ไขสาขา</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -20,41 +20,41 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Branch Information</div>
+                <div class="form-section-title">ข้อมูลสาขา</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Branch Code</div>
+                        <div class="detail-label">รหัสสาขา</div>
                         <div class="form-control readonly-detail">@Model.BranchCode</div>
                     </div>
                     <div class="col-lg-5 col-md-6">
-                        <div class="detail-label">Branch Name</div>
+                        <div class="detail-label">ชื่อสาขา</div>
                         <div class="form-control readonly-detail">@Model.BranchName</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                        <div class="detail-label">สถานะ</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "ใช้งาน" : "ไม่ใช้งาน")</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Created</div>
+                        <div class="detail-label">วันที่สร้าง</div>
                         <div class="form-control readonly-detail">@Model.CreatedDate.ToString("dd MMM yyyy")</div>
                     </div>
                 </div>
             </div>
 
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Contact Information</div>
+                <div class="quotation-info-card-title">ข้อมูลติดต่อ</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</span>
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-label">ที่อยู่</span>
                     <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</span>
                 </div>
             </div>

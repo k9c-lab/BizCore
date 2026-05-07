@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Announcement>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Announcement>
 
 @{
     ViewData["Title"] = "Announcements";
@@ -16,8 +16,7 @@
     <div>
         <div class="page-eyebrow">Overview Module</div>
         <h1 class="page-title">Announcements</h1>
-        <p class="page-subtitle">Manage welcome-page announcements for users across the system.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary">Create Announcement</a>
     </div>
@@ -52,8 +51,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Announcement Register</h2>
-            <p class="section-subtitle">Announcements available for welcome-page publishing.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount row(s)</div>
     </div>
     <div class="card-body">
@@ -118,3 +116,4 @@
 </div>
 
 <partial name="_Pager" model="Model.Pagination" />
+

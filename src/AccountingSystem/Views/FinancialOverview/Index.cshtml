@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.FinancialOverviewViewModel
+﻿@model BizCore.Models.ViewModels.FinancialOverviewViewModel
 
 @{
     ViewData["Title"] = "Financial Overview";
@@ -10,8 +10,7 @@
     <div>
         <div class="page-eyebrow">Financial Summary</div>
         <h1 class="page-title">Financial Overview</h1>
-        <p class="page-subtitle">Cash collection and supplier payment snapshot for @Model.BranchName.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary">Open Reports</a>
     </div>
@@ -77,8 +76,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Receivables Mix</h2>
-                        <p class="section-subtitle">Collected vs outstanding customer receivables.</p>
-                    </div>
+                        </div>
                 </div>
                 <div class="financial-donut-shell">
                     <div class="financial-donut" style="--pct:@arPercent; --fill:#2563eb; --rest:#dbeafe;">
@@ -109,8 +107,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Payables Mix</h2>
-                        <p class="section-subtitle">Paid vs outstanding supplier payables.</p>
-                    </div>
+                        </div>
                 </div>
                 <div class="financial-donut-shell">
                     <div class="financial-donut" style="--pct:@apPercent; --fill:#16a34a; --rest:#dcfce7;">
@@ -141,8 +138,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Outstanding Receivables</h2>
-            <p class="section-subtitle">Customer invoices that still have balance to collect.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.ReceivableRows.Count row(s)</div>
     </div>
     <div class="card-body">
@@ -187,8 +183,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Outstanding Payables</h2>
-            <p class="section-subtitle">Supplier purchase orders that still have balance to pay.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.PayableRows.Count row(s)</div>
     </div>
     <div class="card-body">
@@ -235,8 +230,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Receivables by Customer</h2>
-                    <p class="section-subtitle">Which customers still owe the most.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.ReceivableCustomerRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -277,8 +271,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Payables by Supplier</h2>
-                    <p class="section-subtitle">Which suppliers still have open balance.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.PayableSupplierRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -395,3 +388,4 @@
         }
     }
 </style>
+

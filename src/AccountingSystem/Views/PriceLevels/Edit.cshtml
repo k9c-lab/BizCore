@@ -1,4 +1,4 @@
-@model BizCore.Models.Entities.PriceLevel
+﻿@model BizCore.Models.Entities.PriceLevel
 
 @{
     ViewData["Title"] = "Edit Price Level";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Sales Setup</div>
         <h1 class="page-title">Edit Price Level</h1>
-        <p class="page-subtitle">Refine price level naming and ordering without changing existing document prices.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <button type="submit" form="priceLevelForm" class="btn btn-primary px-4">Save Changes</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
@@ -32,3 +31,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

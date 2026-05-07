@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.ReportsPageViewModel
+﻿@model BizCore.Models.ViewModels.ReportsPageViewModel
 
 @{
     ViewData["Title"] = "Reports";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Management Reports</div>
         <h1 class="page-title">Reports</h1>
-        <p class="page-subtitle">Sales, stock, movement, and claim summaries for @Model.BranchName.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Dashboard</a>
     </div>
@@ -33,6 +32,10 @@
                     <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
                 </div>
             }
+            <div class="list-filter-field">
+                <label class="form-label" for="salespersonId">Sale</label>
+                <select id="salespersonId" name="salespersonId" asp-items="Model.SalespersonOptions" class="form-select"></select>
+            </div>
             <div class="list-filter-actions">
                 <a asp-action="Index" class="btn btn-outline-secondary">This Month</a>
                 <button type="submit" class="btn btn-primary">Run</button>
@@ -74,8 +77,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Outstanding Receivables</h2>
-                    <p class="section-subtitle">Invoices that still have customer balance to collect.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.ReceivableRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -122,8 +124,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Receivables by Customer</h2>
-                    <p class="section-subtitle">Which customers still owe the most.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.ReceivableCustomerRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -167,8 +168,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Outstanding Payables</h2>
-                    <p class="section-subtitle">Purchase orders that still have supplier balance to pay.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.PayableRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -215,8 +215,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Payables by Supplier</h2>
-                    <p class="section-subtitle">Which suppliers still have open balance.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.PayableSupplierRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -261,8 +260,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Sales Chart</h2>
-                        <p class="section-subtitle">Sales amount from the displayed daily rows.</p>
-                    </div>
+                        </div>
                 </div>
                 @{
                     var chartRows = Model.SalesRows.OrderBy(x => x.Date).TakeLast(10).ToList();
@@ -290,8 +288,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Movement Mix</h2>
-                        <p class="section-subtitle">Quantity by stock movement type.</p>
-                    </div>
+                        </div>
                 </div>
                 @{
                     var maxMovement = Model.MovementRows.Any() ? Model.MovementRows.Max(x => x.Quantity) : 0m;
@@ -320,8 +317,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Sales Report</h2>
-            <p class="section-subtitle">Daily invoice totals by branch.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.SalesRows.Count row(s)</div>
     </div>
     <div class="card-body">
@@ -437,8 +433,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Stock Balance</h2>
-                    <p class="section-subtitle">Top stock-on-hand items.</p>
-                </div>
+                    </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -478,8 +473,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Stock Movement</h2>
-                    <p class="section-subtitle">Movement counts and quantities.</p>
-                </div>
+                    </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -516,8 +510,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Claim Report</h2>
-            <p class="section-subtitle">Customer and supplier claim counts by status.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.ClaimRows.Count row(s)</div>
     </div>
     <div class="card-body">
@@ -548,3 +541,4 @@
         </div>
     </div>
 </div>
+

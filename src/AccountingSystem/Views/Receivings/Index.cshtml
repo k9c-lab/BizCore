@@ -1,4 +1,4 @@
-@inject IUserPermissionService PermissionService
+﻿@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.ReceivingHeader>
 
 @{
@@ -15,8 +15,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Receivings</h1>
-        <p class="page-subtitle">Post incoming goods against purchase orders and update stock plus serials.</p>
-    </div>
+        </div>
 </div>
 
 <div class="workflow-info mb-3">
@@ -32,8 +31,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Receiving Register</h2>
-            <p class="section-subtitle">Draft and posted receiving documents. Only posted documents update stock and serial records.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount records</div>
     </div>
     <div class="card-body">
@@ -162,3 +160,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

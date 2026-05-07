@@ -1,0 +1,30 @@
+@model BizCore.Models.Entities.ReferringDoctor
+
+@{
+    ViewData["Title"] = "ลบแพทย์ส่ง";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">ลบแพทย์ส่ง</h1>
+        <p class="page-subtitle">ยืนยันก่อนลบรายการนี้ออกจาก master data</p>
+    </div>
+</div>
+
+<div class="card content-card danger-card">
+    <div class="card-body">
+        <div class="danger-banner">
+            รายการ <strong>@Model.DoctorName</strong> จะถูกลบออกจาก master data
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">รหัส</span><p class="detail-value">@Model.DoctorCode</p></div>
+            <div class="detail-item"><span class="detail-label">สถานะ</span><p class="detail-value">@(Model.IsActive ? "ใช้งานอยู่" : "ไม่ใช้งาน")</p></div>
+        </div>
+        <form asp-action="Delete" method="post" class="form-actions mt-4">
+            <input type="hidden" asp-for="ReferringDoctorId" />
+            <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+            <button type="submit" class="btn btn-danger px-4">ลบรายการ</button>
+        </form>
+    </div>
+</div>

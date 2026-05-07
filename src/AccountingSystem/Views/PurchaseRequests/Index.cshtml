@@ -1,4 +1,4 @@
-@inject IUserPermissionService PermissionService
+﻿@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseRequestHeader>
 
 @{
@@ -18,8 +18,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Purchase Requests</h1>
-        <p class="page-subtitle">Branch item requests before central admin creates supplier purchase orders.</p>
-    </div>
+        </div>
     <div class="page-actions">
         @if (canCreatePOPermission)
         {
@@ -42,8 +41,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">PR Register</h2>
-            <p class="section-subtitle">Track branch requests, approval, and PO conversion.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount records</div>
     </div>
     <div class="card-body">
@@ -245,3 +243,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

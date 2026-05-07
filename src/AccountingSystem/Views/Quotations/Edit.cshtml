@@ -1,18 +1,17 @@
 @model BizCore.Models.ViewModels.QuotationFormViewModel
 
 @{
-    ViewData["Title"] = "Edit Quotation";
+    ViewData["Title"] = "แก้ไขใบเสนอราคา";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Edit Quotation</h1>
-        <p class="page-subtitle">Update draft quotation details before approval or conversion to invoice.</p>
-    </div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">แก้ไขใบเสนอราคา</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="quotationForm" class="btn btn-primary px-4">Save Draft</button>
-        <a asp-action="Details" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary">View Quotation</a>
+        <button type="submit" form="quotationForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
+        <a asp-action="Details" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary">ดูใบเสนอราคา</a>
     </div>
 </div>
 
@@ -22,10 +21,10 @@
             <input type="hidden" asp-for="QuotationHeaderId" />
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Only draft quotations can be edited. Saving still does not affect stock or serial assignment.</span>
+                <span class="table-meta">แก้ไขได้เฉพาะใบเสนอราคาฉบับร่าง และการบันทึกยังไม่กระทบสต็อกหรือการเลือก Serial</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
                 </div>
             </div>
         </form>
@@ -77,7 +76,7 @@
                                    id="Details_${index}__ItemSearch"
                                    class="form-control js-item-search"
                                    autocomplete="off"
-                                   placeholder="Search by item code, name, or part number" />
+                                   placeholder="ค้นหาจากรหัส ชื่อ หรือ Part Number" />
                             <div id="quotationItemResults_${index}" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                         </div>
                         <div class="table-meta js-stock-hint"></div>
@@ -93,8 +92,8 @@
                     </td>
                     <td>
                         <select name="Details[${index}].DiscountType" class="form-select js-line-discount-type">
-                            <option value="Amount" selected>Amount</option>
-                            <option value="Percent">Percent</option>
+                            <option value="Amount" selected>จำนวนเงิน</option>
+                            <option value="Percent">เปอร์เซ็นต์</option>
                         </select>
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].DiscountType" data-valmsg-replace="true"></span>
                     </td>
@@ -120,7 +119,7 @@
                 detailRow.className = "quotation-line-row quotation-line-row-detail";
                 detailRow.innerHTML = `
                     <td colspan="9">
-                        <label class="form-label">Description</label>
+                        <label class="form-label">รายละเอียด</label>
                         <textarea name="Details[${index}].Description" id="Details_${index}__Description" class="form-control js-line-description" rows="3"></textarea>
                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Description" data-valmsg-replace="true"></span>
                     </td>`;
@@ -177,11 +176,11 @@
                 }
 
                 if (!hasSelectedBranch()) {
-                    return "Select branch to view stock.";
+                    return "เลือกสาขาเพื่อดูสต็อก";
                 }
 
                 const stock = Number(item.CurrentStock || 0);
-                return `Branch stock: ${stock.toFixed(2)}`;
+                return `สต็อกในสาขา: ${stock.toFixed(2)}`;
             };
 
             const refreshBranchStock = async () => {
@@ -222,7 +221,7 @@
                     .slice(0, keyword ? 12 : 20);
 
                 if (matches.length === 0) {
-                    customerResults.innerHTML = `<div class="search-dropdown-empty">No matching customers found.</div>`;
+                    customerResults.innerHTML = `<div class="search-dropdown-empty">ไม่พบลูกค้าที่ตรงกับคำค้น</div>`;
                     customerResults.style.display = "";
                     return;
                 }
@@ -276,7 +275,7 @@
                     .slice(0, keyword ? 12 : 20);
 
                 if (matches.length === 0) {
-                    results.innerHTML = `<div class="search-dropdown-empty">No matching items found.</div>`;
+                    results.innerHTML = `<div class="search-dropdown-empty">ไม่พบสินค้าที่ตรงกับคำค้น</div>`;
                     results.style.display = "";
                     return;
                 }
@@ -332,19 +331,19 @@
                     if (isLineMode) {
                         headerDiscountInput.value = "0";
                         headerDiscountPercentInput.value = "0";
-                        headerDiscountHelp.textContent = "Disabled in line discount mode.";
-                        headerDiscountPercentHelp.textContent = "Disabled in line discount mode.";
-                        discountModeText.textContent = "Line discount mode: use discount per quotation line. Header discount is disabled.";
+                        headerDiscountHelp.textContent = "ปิดใช้งานเมื่อเลือกส่วนลดรายบรรทัด";
+                        headerDiscountPercentHelp.textContent = "ปิดใช้งานเมื่อเลือกส่วนลดรายบรรทัด";
+                        discountModeText.textContent = "โหมดส่วนลดรายบรรทัด: กำหนดส่วนลดในแต่ละรายการ และปิดส่วนลดท้ายเอกสาร";
                     } else {
                         if (headerDiscountTypeInput.value === "Percent") {
-                            headerDiscountHelp.textContent = "Calculated automatically from header discount percent.";
-                            headerDiscountPercentHelp.textContent = "Applied to subtotal before VAT.";
+                            headerDiscountHelp.textContent = "ระบบจะคำนวณจากเปอร์เซ็นต์ส่วนลดท้ายเอกสารให้อัตโนมัติ";
+                            headerDiscountPercentHelp.textContent = "คำนวณจากยอดก่อน VAT";
                         } else {
-                            headerDiscountHelp.textContent = "Used only in header discount mode.";
-                            headerDiscountPercentHelp.textContent = "Disabled when header discount type is Amount.";
+                            headerDiscountHelp.textContent = "ใช้ได้เฉพาะเมื่อเลือกส่วนลดท้ายเอกสาร";
+                            headerDiscountPercentHelp.textContent = "ปิดใช้งานเมื่อประเภทส่วนลดเป็นจำนวนเงิน";
                             headerDiscountPercentInput.value = "0";
                         }
-                        discountModeText.textContent = "Header discount mode: line discounts are disabled and the whole quotation discount is applied before VAT.";
+                        discountModeText.textContent = "โหมดส่วนลดท้ายเอกสาร: ปิดส่วนลดรายบรรทัด และคำนวณส่วนลดรวมก่อน VAT";
                     }
 
                     lineBody.querySelectorAll(".quotation-line-row-main").forEach(row => {

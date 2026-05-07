@@ -1,0 +1,86 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.ReferringDoctor>
+
+@{
+    ViewData["Title"] = "แพทย์ส่ง";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">แพทย์ส่ง</h1>
+        <p class="page-subtitle">จัดการรายการแพทย์ส่งที่ใช้เลือกในใบแจ้งหนี้</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">เพิ่มแพทย์ส่ง</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">รายการแพทย์ส่ง</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="รหัสหรือชื่อแพทย์ส่ง" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">สถานะ</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="Active" selected="@(status == "Active")">ใช้งานอยู่</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">ไม่ใช้งาน</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th>ชื่อแพทย์ส่ง</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@item.DoctorCode</span></td>
+                            <td class="fw-semibold">@item.DoctorName</td>
+                            <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "ใช้งานอยู่" : "ไม่ใช้งาน")</span></td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@item.ReferringDoctorId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                                    <a asp-action="Edit" asp-route-id="@item.ReferringDoctorId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
+                                    <a asp-action="Delete" asp-route-id="@item.ReferringDoctorId" class="btn btn-sm btn-outline-danger">ลบ</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="table-empty">ยังไม่มีรายการแพทย์ส่ง</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

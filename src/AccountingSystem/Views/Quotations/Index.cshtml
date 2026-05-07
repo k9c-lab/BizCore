@@ -1,7 +1,7 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.QuotationHeader>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.QuotationHeader>
 
 @{
-    ViewData["Title"] = "Quotations";
+    ViewData["Title"] = "ใบเสนอราคา";
     var paymentStatusMap = ViewData["PaymentStatusMap"] as IReadOnlyDictionary<int, BizCore.Models.ViewModels.QuotationPaymentStatusViewModel>
         ?? new Dictionary<int, BizCore.Models.ViewModels.QuotationPaymentStatusViewModel>();
     var search = ViewData["Search"] as string;
@@ -12,65 +12,63 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Quotations</h1>
-        <p class="page-subtitle">Create and manage quotations before invoice, with VAT calculation and conversion to draft invoice.</p>
-    </div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">ใบเสนอราคา</h1>
+        </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Quotation</a>
+        <a asp-action="Create" class="btn btn-primary px-4">สร้างใบเสนอราคา</a>
     </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Quotation Register</h2>
-            <p class="section-subtitle">Approved quotations can be used to prefill invoices, and the same quotation can be reused when needed.</p>
-        </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+            <h2 class="section-title">รายการใบเสนอราคา</h2>
+            </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Quotation no., reference, customer, or salesperson" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่เอกสาร, เลขอ้างอิง, ลูกค้า หรือพนักงานขาย" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
-                    <option value="Approved" selected="@(status == "Approved")">Approved</option>
-                    <option value="Converted" selected="@(status == "Converted")">Converted</option>
-                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Draft" selected="@(status == "Draft")">ฉบับร่าง</option>
+                    <option value="Approved" selected="@(status == "Approved")">อนุมัติแล้ว</option>
+                    <option value="Converted" selected="@(status == "Converted")">แปลงแล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิกแล้ว</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Quotation No.</th>
-                        <th>Reference No.</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Salesperson</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Invoice Coverage</th>
-                        <th class="text-end">Actions</th>
+                        <th>เลขที่ใบเสนอราคา</th>
+                        <th>เลขอ้างอิง</th>
+                        <th>วันที่</th>
+                        <th>ลูกค้า</th>
+                        <th>พนักงานขาย</th>
+                        <th>ยอดรวม</th>
+                        <th>สถานะ</th>
+                        <th>สถานะการออกบิล</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,7 +83,7 @@
                                 QuotationHeaderId = quotation.QuotationHeaderId,
                                 QuotationTotalAmount = quotation.TotalAmount,
                                 RemainingAmount = quotation.TotalAmount,
-                                Status = "Not Invoiced"
+                                Status = "NotInvoiced"
                             };
                         <tr>
                             <td><span class="code-chip">@quotation.QuotationNumber</span></td>
@@ -97,15 +95,15 @@
                             <td>@await Html.PartialAsync("_StatusPill", quotation.Status)</td>
                             <td>
                                 <div>@await Html.PartialAsync("_StatusPill", paymentStatus.Status)</div>
-                                <div class="table-meta">Invoiced @paymentStatus.InvoicedAmount.ToString("N2") / @quotation.TotalAmount.ToString("N2")</div>
+                                <div class="table-meta">ออกบิลแล้ว @paymentStatus.InvoicedAmount.ToString("N2") / @quotation.TotalAmount.ToString("N2")</div>
                             </td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = quotation.QuotationHeaderId })', '_blank', 'noopener');">Print</button>
+                                    <a asp-action="Details" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = quotation.QuotationHeaderId })', '_blank', 'noopener');">พิมพ์</button>
                                     @if (quotation.Status == "Draft")
                                     {
-                                        <a asp-action="Edit" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <a asp-action="Edit" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
                                         <form asp-action="Approve" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
                                             @Html.AntiForgeryToken()
                                             <div class="confirm-popover-shell">
@@ -113,14 +111,14 @@
                                                         class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
                                                         data-confirm-target="approveQuotationConfirm_@quotation.QuotationHeaderId"
                                                         aria-expanded="false">
-                                                    Approve
+                                                    อนุมัติ
                                                 </button>
                                                 <div class="confirm-popover" id="approveQuotationConfirm_@quotation.QuotationHeaderId" hidden>
-                                                    <div class="confirm-popover-title">Approve this quotation?</div>
-                                                    <div class="confirm-popover-text">This will approve the quotation and allow it to be converted into an invoice.</div>
+                                                    <div class="confirm-popover-title">อนุมัติใบเสนอราคานี้หรือไม่?</div>
+                                                    <div class="confirm-popover-text">เมื่ออนุมัติแล้ว จะสามารถนำใบเสนอราคานี้ไปสร้างใบแจ้งหนี้ได้</div>
                                                     <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -135,14 +133,14 @@
                                                         class="btn btn-sm btn-primary js-confirm-popover-toggle"
                                                         data-confirm-target="convertQuotationConfirm_@quotation.QuotationHeaderId"
                                                         aria-expanded="false">
-                                                    Convert
+                                                    สร้างใบแจ้งหนี้
                                                 </button>
                                                 <div class="confirm-popover" id="convertQuotationConfirm_@quotation.QuotationHeaderId" hidden>
-                                                    <div class="confirm-popover-title">Convert this quotation?</div>
-                                                    <div class="confirm-popover-text">This will open the quotation into a draft invoice flow for further review before issuing.</div>
+                                                    <div class="confirm-popover-title">สร้างใบแจ้งหนี้จากใบเสนอราคานี้หรือไม่?</div>
+                                                    <div class="confirm-popover-text">ระบบจะเปิดเอกสารใบแจ้งหนี้ฉบับร่างเพื่อให้ตรวจสอบก่อนออกเอกสาร</div>
                                                     <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -156,7 +154,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="9" class="table-empty">No quotations yet. Create the first quotation to start the sales module.</td>
+                        <td colspan="9" class="table-empty">ยังไม่มีใบเสนอราคา เริ่มสร้างเอกสารแรกเพื่อใช้งานส่วนงานขายได้เลย</td>
                     </tr>
                 }
                 </tbody>
@@ -165,3 +163,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

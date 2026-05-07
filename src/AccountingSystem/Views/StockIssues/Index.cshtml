@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockIssueHeader>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockIssueHeader>
 
 @{
     ViewData["Title"] = "Stock Issues";
@@ -13,8 +13,7 @@
     <div>
         <div class="page-eyebrow">Inventory Module</div>
         <h1 class="page-title">Stock Issues</h1>
-        <p class="page-subtitle">Issue stock from a branch for internal use, damage, demo, adjustment, or other reasons.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary px-4">New Issue</a>
     </div>
@@ -29,8 +28,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Issue Register</h2>
-            <p class="section-subtitle">Track non-sales stock deductions by branch.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount records</div>
     </div>
     <div class="card-body">
@@ -148,3 +146,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

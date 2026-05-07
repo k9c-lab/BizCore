@@ -16,6 +16,8 @@
     var invoiceVatTotal = allocationList.Sum(x => x.InvoiceHeader?.VatAmount ?? 0m);
     var invoiceSubtotal = invoiceTotal - invoiceVatTotal;
     var remainingBalance = allocationList.Sum(x => x.InvoiceHeader?.BalanceAmount ?? 0m);
+    var printLines = Model.PrintLines.OrderBy(x => x.LineNumber).ToList();
+    var hasPrintLines = printLines.Any();
     var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalReceivedAmount);
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
     var printCopies = new[]
@@ -349,7 +351,41 @@
                 </div>
             </section>
 
-            @if (hasAllocations)
+            @if (hasPrintLines)
+            {
+                <section class="print-section">
+                    <table class="line-table">
+                        <thead>
+                            <tr>
+                                <th class="col-no"><span class="bi-label-th">ลำดับ</span><span class="bi-label-en">No.</span></th>
+                                <th class="col-description"><span class="bi-label-th">รายการ</span><span class="bi-label-en">Description</span></th>
+                                <th class="col-amount"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @for (var index = 0; index < printLines.Count; index++)
+                        {
+                            var line = printLines[index];
+                            <tr>
+                                <td class="col-no">@(index + 1)</td>
+                                <td class="col-description">@line.Description</td>
+                                <td class="col-amount">@line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+
+                    <div class="summary-wrap">
+                        <div class="amount-text">@totalAmountText</div>
+                        <table class="summary-table">
+                            <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@(hasAllocations ? invoiceSubtotal.ToString("N2") : Model.TotalReceivedAmount.ToString("N2"))</td></tr>
+                            <tr><td class="summary-label">VAT</td><td>@(hasAllocations ? invoiceVatTotal.ToString("N2") : 0m.ToString("N2"))</td></tr>
+                            <tr class="summary-total"><td>ยอดรวม / Total</td><td>@(hasAllocations ? invoiceTotal.ToString("N2") : Model.TotalReceivedAmount.ToString("N2"))</td></tr>
+                        </table>
+                    </div>
+                </section>
+            }
+            else if (hasAllocations)
             {
                 <section class="print-section">
                     <table class="line-table">
@@ -427,9 +463,9 @@
                     <div class="summary-wrap">
                         <div class="amount-text">@totalAmountText</div>
                         <table class="summary-table">
-                            <tr><td class="summary-label">ยอดรับชำระ / Payment Amount</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
-                            <tr><td class="summary-label">จัดสรรให้ใบแจ้งหนี้ / Applied Amount</td><td>@appliedAmount.ToString("N2")</td></tr>
-                            <tr class="summary-total"><td>เงินรับลอย / Unapplied Amount</td><td>@Math.Max(Model.TotalReceivedAmount - appliedAmount, 0m).ToString("N2")</td></tr>
+                            <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
+                            <tr><td class="summary-label">VAT</td><td>@((0m).ToString("N2"))</td></tr>
+                            <tr class="summary-total"><td>ยอดรวม / Total</td><td>@Model.TotalReceivedAmount.ToString("N2")</td></tr>
                         </table>
                     </div>
                 </section>

@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.DashboardViewModel
+﻿@model BizCore.Models.ViewModels.DashboardViewModel
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Executive Overview</div>
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Operational snapshot for @Model.BranchName on @Model.Today.ToString("dd MMM yyyy").</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-controller="Reports" asp-action="Index" class="btn btn-primary">Open Reports</a>
         <a asp-controller="StockAudit" asp-action="Index" class="btn btn-outline-secondary">Stock Audit</a>
@@ -69,8 +68,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Sales Trend</h2>
-                        <p class="section-subtitle">Last 7 days invoice amount.</p>
-                    </div>
+                        </div>
                 </div>
                 @{
                     var maxSales = Model.SalesTrend.Any() ? Model.SalesTrend.Max(x => x.Value) : 0m;
@@ -97,8 +95,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Open Claim Mix</h2>
-                        <p class="section-subtitle">Customer vs supplier claim workload.</p>
-                    </div>
+                        </div>
                 </div>
                 @{
                     var claimTotal = Model.ClaimMix.Sum(x => x.Value);
@@ -129,8 +126,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Needs Attention</h2>
-                    <p class="section-subtitle">Low stock and workflow queues for today.</p>
-                </div>
+                    </div>
             </div>
             <div class="card-body">
                 <div class="quotation-info-grid mb-3">
@@ -185,8 +181,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Recent Activity</h2>
-                    <p class="section-subtitle">Latest invoices and payments.</p>
-                </div>
+                    </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -301,3 +296,4 @@
         background: #16a34a;
     }
 </style>
+

@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SupplierPaymentHeader>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SupplierPaymentHeader>
 
 @{
     ViewData["Title"] = "Supplier Payments";
@@ -17,8 +17,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Supplier Payments</h1>
-        <p class="page-subtitle">Track supplier payment postings against approved purchase orders.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary">Record Payment</a>
     </div>
@@ -59,8 +58,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Payment Register</h2>
-            <p class="section-subtitle">Posted and cancelled supplier payment history.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount row(s)</div>
     </div>
     <div class="card-body">
@@ -117,3 +115,4 @@
 </div>
 
 <partial name="_Pager" model="Model.Pagination" />
+

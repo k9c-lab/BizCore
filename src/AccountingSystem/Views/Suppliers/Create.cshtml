@@ -1,18 +1,17 @@
-@model BizCore.Models.Entities.Supplier
+﻿@model BizCore.Models.Entities.Supplier
 
 @{
-    ViewData["Title"] = "Create Supplier";
+    ViewData["Title"] = "เพิ่มผู้ขาย";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Create Supplier</h1>
-        <p class="page-subtitle">Create supplier master data with cleaner grouping for operations and finance.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">เพิ่มผู้ขาย</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="supplierForm" class="btn btn-primary px-4">Save Supplier</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        <button type="submit" form="supplierForm" class="btn btn-primary px-4">บันทึกผู้ขาย</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการ</a>
     </div>
 </div>
 
@@ -21,10 +20,10 @@
         <form asp-action="Create" method="post" id="supplierForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Use supplier contact details that stay readable in future purchasing screens.</span>
+                <span class="table-meta">กรอกข้อมูลติดต่อที่ต้องการใช้ต่อในเอกสารจัดซื้อให้ครบถ้วน</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Supplier</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกผู้ขาย</button>
                 </div>
             </div>
         </form>
@@ -34,3 +33,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

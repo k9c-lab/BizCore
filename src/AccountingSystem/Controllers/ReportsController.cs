@@ -17,7 +17,7 @@ public class ReportsController : CrudControllerBase
         _context = context;
     }
 
-    public async Task<IActionResult> Index(DateTime? dateFrom, DateTime? dateTo, int? branchId)
+    public async Task<IActionResult> Index(DateTime? dateFrom, DateTime? dateTo, int? branchId, int? salespersonId)
     {
         if (!CurrentUserHasPermission("Reports.View"))
         {
@@ -64,6 +64,11 @@ public class ReportsController : CrudControllerBase
             movementQuery = movementQuery.Where(x => x.FromBranchId == effectiveBranchId.Value || x.ToBranchId == effectiveBranchId.Value);
             customerClaimQuery = customerClaimQuery.Where(x => x.BranchId == effectiveBranchId.Value);
             supplierClaimQuery = supplierClaimQuery.Where(x => x.BranchId == effectiveBranchId.Value);
+        }
+
+        if (salespersonId.HasValue)
+        {
+            invoiceQuery = invoiceQuery.Where(x => x.SalespersonId == salespersonId.Value);
         }
 
         var salesTotal = await invoiceQuery.SumAsync(x => (decimal?)x.TotalAmount) ?? 0m;
@@ -239,9 +244,11 @@ public class ReportsController : CrudControllerBase
             DateFrom = from,
             DateTo = to,
             BranchId = effectiveBranchId,
+            SalespersonId = salespersonId,
             BranchName = branchName,
             CanAccessAllBranches = canAccessAllBranches,
             BranchOptions = await BuildBranchOptionsAsync(effectiveBranchId, canAccessAllBranches),
+            SalespersonOptions = await BuildSalespersonOptionsAsync(salespersonId),
             SalesTotal = salesTotal,
             PaymentsTotal = collectedAr,
             SupplierPaymentsTotal = paidAp,
@@ -305,6 +312,28 @@ public class ReportsController : CrudControllerBase
                 Value = x.BranchId.ToString(),
                 Text = x.BranchCode + " - " + x.BranchName,
                 Selected = selectedBranchId.HasValue && x.BranchId == selectedBranchId.Value
+            })
+            .ToListAsync());
+
+        return options;
+    }
+
+    private async Task<IReadOnlyList<SelectListItem>> BuildSalespersonOptionsAsync(int? selectedSalespersonId)
+    {
+        var options = new List<SelectListItem>
+        {
+            new() { Value = string.Empty, Text = "พนักงานทุกคน", Selected = !selectedSalespersonId.HasValue }
+        };
+
+        options.AddRange(await _context.Salespersons
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.SalespersonCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.SalespersonId.ToString(),
+                Text = x.SalespersonCode + " - " + x.SalespersonName,
+                Selected = selectedSalespersonId.HasValue && x.SalespersonId == selectedSalespersonId.Value
             })
             .ToListAsync());
 

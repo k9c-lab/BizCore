@@ -1,7 +1,7 @@
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.ReceiptHeader>
 
 @{
-    ViewData["Title"] = "Receipts";
+    ViewData["Title"] = "ใบเสร็จรับเงิน";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -10,57 +10,55 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">AR Module</div>
-        <h1 class="page-title">Receipts</h1>
-        <p class="page-subtitle">Issued receipts created automatically from posted customer payments.</p>
-    </div>
+        <div class="page-eyebrow">ลูกหนี้การค้า</div>
+        <h1 class="page-title">ใบเสร็จรับเงิน</h1>
+        </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Receipt Register</h2>
-            <p class="section-subtitle">Receipts are read-only after issue in this phase.</p>
-        </div>
-        <div class="table-meta">@Model.TotalCount record(s)</div>
+            <h2 class="section-title">รายการใบเสร็จรับเงิน</h2>
+            </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Receipt no., payment no., reference, or customer" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ใบเสร็จ, เลขที่รับชำระ, เลขอ้างอิง หรือลูกค้า" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Issued" selected="@(status == "Issued")">Issued</option>
-                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Issued" selected="@(status == "Issued")">ออกเอกสารแล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิกแล้ว</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Receipt No.</th>
-                        <th>Receipt Date</th>
-                        <th>Customer</th>
-                        <th>Total Received</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th>เลขที่ใบเสร็จ</th>
+                        <th>วันที่ใบเสร็จ</th>
+                        <th>ลูกค้า</th>
+                        <th>ยอดรับชำระ</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,7 +66,6 @@
                 {
                     @foreach (var receipt in Model)
                     {
-                        var canCancel = receipt.Status == "Issued";
                         <tr>
                             <td><span class="code-chip">@receipt.ReceiptNo</span></td>
                             <td>@receipt.ReceiptDate.ToString("dd MMM yyyy")</td>
@@ -77,30 +74,7 @@
                             <td><span class="status-pill active">@receipt.Status</span></td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = receipt.ReceiptId })', '_blank', 'noopener');">Print</button>
-                                    @if (canCancel)
-                                    {
-                                        <form asp-action="Cancel" asp-route-id="@receipt.ReceiptId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
-                                                        data-confirm-target="cancelReceiptConfirm_@receipt.ReceiptId"
-                                                        aria-expanded="false">
-                                                    Cancel
-                                                </button>
-                                                <div class="confirm-popover" id="cancelReceiptConfirm_@receipt.ReceiptId" hidden>
-                                                    <div class="confirm-popover-title">Cancel this receipt?</div>
-                                                    <div class="confirm-popover-text">Payment and invoice balances will not change when this receipt is cancelled.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
+                                    <a asp-action="Details" asp-route-id="@receipt.ReceiptId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
                                 </div>
                             </td>
                         </tr>
@@ -108,7 +82,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="6" class="table-empty">No receipts yet. Posting a payment will create the first receipt automatically.</td></tr>
+                    <tr><td colspan="6" class="table-empty">ยังไม่มีใบเสร็จรับเงิน เมื่อบันทึกรายการรับชำระแล้ว ระบบจะสร้างใบเสร็จใบแรกให้อัตโนมัติ</td></tr>
                 }
                 </tbody>
             </table>

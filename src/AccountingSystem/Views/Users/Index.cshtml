@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.User>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.User>
 
 @{
     ViewData["Title"] = "Users";
@@ -16,8 +16,7 @@
     <div>
         <div class="page-eyebrow">Administration</div>
         <h1 class="page-title">User Management</h1>
-        <p class="page-subtitle">Manage login accounts, roles, and access status.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary">New User</a>
         <a asp-controller="RolePermissions" asp-action="Index" class="btn btn-outline-secondary">Role Permissions</a>
@@ -34,8 +33,7 @@
         <div class="table-card-header px-0 pt-0">
             <div>
                 <h2 class="section-title">Users</h2>
-                <p class="section-subtitle">Inactive users cannot sign in.</p>
-            </div>
+                </div>
             <div class="table-meta">@Model.TotalCount account(s)</div>
         </div>
 
@@ -122,3 +120,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

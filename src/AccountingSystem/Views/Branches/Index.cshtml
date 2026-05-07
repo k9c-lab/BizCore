@@ -1,59 +1,57 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Branch>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Branch>
 
 @{
-    ViewData["Title"] = "Branches";
+    ViewData["Title"] = "สาขา";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Master Data</div>
-        <h1 class="page-title">Branches</h1>
-        <p class="page-subtitle">Manage branch locations used for user scope and future branch stock.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">สาขา</h1>
+        </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Branch</a>
+        <a asp-action="Create" class="btn btn-primary px-4">เพิ่มสาขา</a>
     </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Branch Register</h2>
-            <p class="section-subtitle">Branch is the first stock location layer. Warehouse is intentionally deferred.</p>
-        </div>
-        <div class="table-meta">@Model.TotalCount record(s)</div>
+            <h2 class="section-title">รายการสาขา</h2>
+            </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Code, name, phone, or email" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="รหัส, ชื่อ, โทรศัพท์ หรืออีเมล" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Active" selected="@(status == "Active")">Active</option>
-                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Active" selected="@(status == "Active")">ใช้งาน</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">ไม่ใช้งาน</option>
                 </select>
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Code</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>รหัส</th>
+                        <th>ชื่อสาขา</th>
+                        <th>โทรศัพท์</th>
+                        <th>อีเมล</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,11 +64,11 @@
                             <td class="fw-semibold">@branch.BranchName</td>
                             <td>@(string.IsNullOrWhiteSpace(branch.PhoneNumber) ? "-" : branch.PhoneNumber)</td>
                             <td>@(string.IsNullOrWhiteSpace(branch.Email) ? "-" : branch.Email)</td>
-                            <td><span class="status-pill @(branch.IsActive ? "active" : "inactive")">@(branch.IsActive ? "Active" : "Inactive")</span></td>
+                            <td><span class="status-pill @(branch.IsActive ? "active" : "inactive")">@(branch.IsActive ? "ใช้งาน" : "ไม่ใช้งาน")</span></td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-secondary">Details</a>
-                                    <a asp-action="Edit" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="Details" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                                    <a asp-action="Edit" asp-route-id="@branch.BranchId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
                                 </div>
                             </td>
                         </tr>
@@ -79,7 +77,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="6" class="table-empty">No branches yet. Add a branch before branch-based stock is enabled.</td>
+                        <td colspan="6" class="table-empty">ยังไม่มีข้อมูลสาขา เริ่มเพิ่มสาขาก่อนเปิดใช้งานสต็อกตามสาขา</td>
                     </tr>
                 }
                 </tbody>
@@ -88,3 +86,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

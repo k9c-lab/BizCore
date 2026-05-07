@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
+﻿@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
 
 @{
     ViewData["Title"] = "Record Supplier Payment";
@@ -9,8 +9,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Record Supplier Payment</h1>
-        <p class="page-subtitle">Post a lightweight supplier payment against one approved purchase order.</p>
-    </div>
+        </div>
     <div class="page-actions">
         @if (hasPurchaseOrderContext)
         {
@@ -47,3 +46,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

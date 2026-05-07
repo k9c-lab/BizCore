@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.WelcomeViewModel
+﻿@model BizCore.Models.ViewModels.WelcomeViewModel
 
 @{
     ViewData["Title"] = "Welcome";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Welcome</div>
         <h1 class="page-title">Ready to work in BizCore</h1>
-        <p class="page-subtitle">Start from the overview that fits your role, then move into the day-to-day workflow from the sidebar.</p>
-    </div>
+        </div>
 </div>
 
 <div class="card content-card mb-3">
@@ -17,14 +16,7 @@
         <div class="welcome-hero">
             <div>
                 <h2 class="section-title mb-2">Hello, @Model.DisplayName</h2>
-                <p class="section-subtitle mb-0">
-                    Role: <strong>@Model.RoleName</strong>
-                    @if (!string.IsNullOrWhiteSpace(Model.BranchName))
-                    {
-                        <span class="welcome-branch">| Branch: <strong>@Model.BranchName</strong></span>
-                    }
-                </p>
-            </div>
+                </div>
             <div class="welcome-badge">Overview Hub</div>
         </div>
     </div>
@@ -37,7 +29,6 @@
             <div class="card-body">
                 <div class="welcome-card-icon finance">THB</div>
                 <h2 class="section-title">Financial Overview</h2>
-                <p class="section-subtitle">See revenue, collections, supplier payments, and outstanding balances in one place.</p>
                 <div class="page-actions">
                     <a asp-controller="FinancialOverview" asp-action="Index" class="btn btn-primary">Open Financial Overview</a>
                 </div>
@@ -51,7 +42,6 @@
             <div class="card-body">
                 <div class="welcome-card-icon inventory">INV</div>
                 <h2 class="section-title">Inventory Overview</h2>
-                <p class="section-subtitle">Check stock on hand, low-stock items, movement summary, and branch-level inventory visibility.</p>
                 <div class="page-actions">
                     <a asp-controller="InventoryOverview" asp-action="Index" class="btn btn-primary">Open Inventory Overview</a>
                 </div>
@@ -65,7 +55,6 @@
             <div class="card-body">
                 <div class="welcome-card-icon dashboard">DB</div>
                 <h2 class="section-title">Dashboard</h2>
-                <p class="section-subtitle">Open the operational dashboard for daily activity, stock attention items, and quick branch-level signals.</p>
                 <div class="page-actions">
                     <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Open Dashboard</a>
                 </div>
@@ -81,8 +70,7 @@
             <div class="table-card-header px-0 pt-0">
                 <div>
                     <h2 class="section-title">Announcements</h2>
-                    <p class="section-subtitle">Current notices published for users on the welcome page.</p>
-                </div>
+                    </div>
                 @if (Model.CanUseAnnouncements)
                 {
                     <div class="page-actions">
@@ -119,8 +107,7 @@ else if (Model.CanUseAnnouncements)
             <div class="table-card-header px-0 pt-0">
                 <div>
                     <h2 class="section-title">Announcements</h2>
-                    <p class="section-subtitle">There are no active announcements yet.</p>
-                </div>
+                    </div>
                 <div class="page-actions">
                     <a asp-controller="Announcements" asp-action="Index" class="btn btn-outline-secondary">Manage Announcements</a>
                 </div>
@@ -128,3 +115,4 @@ else if (Model.CanUseAnnouncements)
         </div>
     </div>
 }
+

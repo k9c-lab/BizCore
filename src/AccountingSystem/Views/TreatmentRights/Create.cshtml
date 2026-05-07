@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.TreatmentRight
+
+@{
+    ViewData["Title"] = "เพิ่มสิทธิการรักษา";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">เพิ่มสิทธิการรักษา</h1>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="treatmentRightForm" class="btn btn-primary px-4">บันทึก</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปที่รายการ</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" id="treatmentRightForm">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">ใช้สำหรับเลือกสิทธิการรักษาในใบแจ้งหนี้ของผู้ป่วย</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึก</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

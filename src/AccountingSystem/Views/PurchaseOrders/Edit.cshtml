@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
+﻿@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
 
 @{
     ViewData["Title"] = "Edit Purchase Order";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Purchasing Module</div>
         <h1 class="page-title">Edit Purchase Order</h1>
-        <p class="page-subtitle">Adjust PO header and lines before receiving is posted.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">View PO</a>
     </div>
@@ -35,3 +34,4 @@
     <partial name="_ValidationScriptsPartial" />
     <partial name="_FormScripts" />
 }
+

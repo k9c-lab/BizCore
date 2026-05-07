@@ -16,9 +16,10 @@
     var canUseSales = CanUseMenu("Sales.Menu");
     var canUseQuotations = CanUseMenu("Sales.Quotations.Menu");
     var canUseInvoices = CanUseMenu("Sales.Invoices.Menu");
+    var canUseBillingNotes = CanUseMenu("Sales.BillingNotes.Menu");
     var canUsePayments = CanUseMenu("Sales.Payments.Menu");
     var canUseReceipts = CanUseMenu("Sales.Receipts.Menu");
-    var showSalesSection = canUseSales || canUseQuotations || canUseInvoices || canUsePayments || canUseReceipts;
+    var showSalesSection = canUseSales || canUseQuotations || canUseInvoices || canUseBillingNotes || canUsePayments || canUseReceipts;
 
     var canUsePurchasing = CanUseMenu("Purchasing.Menu");
     var canUsePurchaseRequests = CanUseMenu("Purchasing.PR.Menu");
@@ -46,18 +47,20 @@
     var canUseCustomers = CanUseMenu("MasterData.Customers.Menu");
     var canUseSuppliers = CanUseMenu("MasterData.Suppliers.Menu");
     var canUseSalespersons = CanUseMenu("MasterData.Salespersons.Menu");
+    var canUseTreatmentRights = CanUseMenu("MasterData.TreatmentRights.Menu");
+    var canUseReferringDoctors = CanUseMenu("MasterData.ReferringDoctors.Menu");
     var canUseItems = CanUseMenu("MasterData.Items.Menu");
     var canUseUsers = CanUseMenu("MasterData.Users.Menu");
     var canUseRolePermissions = CanUseMenu("MasterData.RolePermissions.Menu");
     var canUsePriceLevels = User.IsInRole("Admin");
     var canUseSettings = User.IsInRole("Admin");
-    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
+    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
         : User.FindFirst("BranchName")?.Value;
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -71,56 +74,60 @@
         <aside class="app-sidebar">
             <div class="sidebar-brand">
                 <a class="sidebar-brand-link" asp-controller="Welcome" asp-action="Index">BizCore</a>
-                <div class="sidebar-caption">Core Operations</div>
+                <div class="sidebar-caption">ระบบงานหลัก</div>
             </div>
 
             <nav class="sidebar-nav">
                 @if (showOverviewSection)
                 {
                     <div class="sidebar-section@(ActiveSection("Home", "Reports", "FinancialOverview", "InventoryOverview", "Announcements"))">
-                        <div class="sidebar-section-title">Overview</div>
+                        <div class="sidebar-section-title">ภาพรวม</div>
                         @if (canUseDashboard)
                         {
-                            <a class="sidebar-link@(ActiveLink("Home"))" asp-controller="Home" asp-action="Index" aria-current="@AriaCurrent("Home")">Dashboard</a>
+                            <a class="sidebar-link@(ActiveLink("Home"))" asp-controller="Home" asp-action="Index" aria-current="@AriaCurrent("Home")">แดชบอร์ด</a>
                         }
                         @if (canUseFinancialOverview)
                         {
-                            <a class="sidebar-link@(ActiveLink("FinancialOverview"))" asp-controller="FinancialOverview" asp-action="Index" aria-current="@AriaCurrent("FinancialOverview")">Financial Overview</a>
+                            <a class="sidebar-link@(ActiveLink("FinancialOverview"))" asp-controller="FinancialOverview" asp-action="Index" aria-current="@AriaCurrent("FinancialOverview")">ภาพรวมการเงิน</a>
                         }
                         @if (canUseInventoryOverview)
                         {
-                            <a class="sidebar-link@(ActiveLink("InventoryOverview"))" asp-controller="InventoryOverview" asp-action="Index" aria-current="@AriaCurrent("InventoryOverview")">Inventory Overview</a>
+                            <a class="sidebar-link@(ActiveLink("InventoryOverview"))" asp-controller="InventoryOverview" asp-action="Index" aria-current="@AriaCurrent("InventoryOverview")">ภาพรวมคลังสินค้า</a>
                         }
                         @if (canUseAnnouncements)
                         {
-                            <a class="sidebar-link@(ActiveLink("Announcements"))" asp-controller="Announcements" asp-action="Index" aria-current="@AriaCurrent("Announcements")">Announcements</a>
+                            <a class="sidebar-link@(ActiveLink("Announcements"))" asp-controller="Announcements" asp-action="Index" aria-current="@AriaCurrent("Announcements")">ประกาศ</a>
                         }
                         @if (canUseReports)
                         {
-                            <a class="sidebar-link@(ActiveLink("Reports"))" asp-controller="Reports" asp-action="Index" aria-current="@AriaCurrent("Reports")">Reports</a>
+                            <a class="sidebar-link@(ActiveLink("Reports"))" asp-controller="Reports" asp-action="Index" aria-current="@AriaCurrent("Reports")">รายงาน</a>
                         }
                     </div>
                 }
 
                 @if (showSalesSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "Payments", "Receipts"))">
-                        <div class="sidebar-section-title">Sales</div>
+                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "BillingNotes", "Payments", "Receipts"))">
+                        <div class="sidebar-section-title">งานขาย</div>
                         @if (canUseQuotations)
                         {
-                            <a class="sidebar-link@(ActiveLink("Quotations"))" asp-controller="Quotations" asp-action="Index" aria-current="@AriaCurrent("Quotations")">Quotations</a>
+                            <a class="sidebar-link@(ActiveLink("Quotations"))" asp-controller="Quotations" asp-action="Index" aria-current="@AriaCurrent("Quotations")">ใบเสนอราคา</a>
                         }
                         @if (canUseInvoices)
                         {
-                            <a class="sidebar-link@(ActiveLink("Invoices"))" asp-controller="Invoices" asp-action="Index" aria-current="@AriaCurrent("Invoices")">Invoices</a>
+                            <a class="sidebar-link@(ActiveLink("Invoices"))" asp-controller="Invoices" asp-action="Index" aria-current="@AriaCurrent("Invoices")">ใบแจ้งหนี้</a>
+                        }
+                        @if (canUseBillingNotes)
+                        {
+                            <a class="sidebar-link@(ActiveLink("BillingNotes"))" asp-controller="BillingNotes" asp-action="Index" aria-current="@AriaCurrent("BillingNotes")">ใบวางบิล</a>
                         }
                         @if (canUsePayments)
                         {
-                            <a class="sidebar-link@(ActiveLink("Payments"))" asp-controller="Payments" asp-action="Index" aria-current="@AriaCurrent("Payments")">Payments</a>
+                            <a class="sidebar-link@(ActiveLink("Payments"))" asp-controller="Payments" asp-action="Index" aria-current="@AriaCurrent("Payments")">รับชำระเงิน</a>
                         }
                         @if (canUseReceipts)
                         {
-                            <a class="sidebar-link@(ActiveLink("Receipts"))" asp-controller="Receipts" asp-action="Index" aria-current="@AriaCurrent("Receipts")">Receipts</a>
+                            <a class="sidebar-link@(ActiveLink("Receipts"))" asp-controller="Receipts" asp-action="Index" aria-current="@AriaCurrent("Receipts")">ใบเสร็จรับเงิน</a>
                         }
                     </div>
                 }
@@ -128,22 +135,22 @@
                 @if (showPurchasingSection)
                 {
                     <div class="sidebar-section@(ActiveSection("PurchaseRequests", "PurchaseOrders", "Receivings", "SupplierPayments"))">
-                        <div class="sidebar-section-title">Purchasing</div>
+                        <div class="sidebar-section-title">งานจัดซื้อ</div>
                         @if (canUsePurchaseRequests)
                         {
-                            <a class="sidebar-link@(ActiveLink("PurchaseRequests"))" asp-controller="PurchaseRequests" asp-action="Index" aria-current="@AriaCurrent("PurchaseRequests")">Purchase Requests</a>
+                            <a class="sidebar-link@(ActiveLink("PurchaseRequests"))" asp-controller="PurchaseRequests" asp-action="Index" aria-current="@AriaCurrent("PurchaseRequests")">ใบขอซื้อ</a>
                         }
                         @if (canUsePurchaseOrders)
                         {
-                            <a class="sidebar-link@(ActiveLink("PurchaseOrders"))" asp-controller="PurchaseOrders" asp-action="Index" aria-current="@AriaCurrent("PurchaseOrders")">Purchase Orders</a>
+                            <a class="sidebar-link@(ActiveLink("PurchaseOrders"))" asp-controller="PurchaseOrders" asp-action="Index" aria-current="@AriaCurrent("PurchaseOrders")">ใบสั่งซื้อ</a>
                         }
                         @if (canViewReceiving)
                         {
-                            <a class="sidebar-link@(ActiveLink("Receivings"))" asp-controller="Receivings" asp-action="Index" aria-current="@AriaCurrent("Receivings")">Receivings</a>
+                            <a class="sidebar-link@(ActiveLink("Receivings"))" asp-controller="Receivings" asp-action="Index" aria-current="@AriaCurrent("Receivings")">รับสินค้า</a>
                         }
                         @if (canUseSupplierPayments)
                         {
-                            <a class="sidebar-link@(ActiveLink("SupplierPayments"))" asp-controller="SupplierPayments" asp-action="Index" aria-current="@AriaCurrent("SupplierPayments")">Supplier Payments</a>
+                            <a class="sidebar-link@(ActiveLink("SupplierPayments"))" asp-controller="SupplierPayments" asp-action="Index" aria-current="@AriaCurrent("SupplierPayments")">ชำระเงินผู้ขาย</a>
                         }
                     </div>
                 }
@@ -151,30 +158,30 @@
                 @if (showInventorySection)
                 {
                     <div class="sidebar-section@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues"))">
-                        <div class="sidebar-section-title">Inventory</div>
+                        <div class="sidebar-section-title">คลังสินค้า</div>
                         @if (canUseStockInquiry)
                         {
-                            <a class="sidebar-link@(ActiveLink("StockInquiry"))" asp-controller="StockInquiry" asp-action="Index" aria-current="@AriaCurrent("StockInquiry")">Stock Inquiry</a>
+                            <a class="sidebar-link@(ActiveLink("StockInquiry"))" asp-controller="StockInquiry" asp-action="Index" aria-current="@AriaCurrent("StockInquiry")">สอบถามสต็อก</a>
                         }
                         @if (canUseSerialInquiry)
                         {
-                            <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index" aria-current="@AriaCurrent("SerialInquiry")">Serial Inquiry</a>
+                            <a class="sidebar-link@(ActiveLink("SerialInquiry"))" asp-controller="SerialInquiry" asp-action="Index" aria-current="@AriaCurrent("SerialInquiry")">สอบถาม Serial</a>
                         }
                         @if (canUseStockLedger)
                         {
-                            <a class="sidebar-link@(ActiveLink("StockLedger"))" asp-controller="StockLedger" asp-action="Index" aria-current="@AriaCurrent("StockLedger")">Stock Ledger</a>
+                            <a class="sidebar-link@(ActiveLink("StockLedger"))" asp-controller="StockLedger" asp-action="Index" aria-current="@AriaCurrent("StockLedger")">สมุดสต็อก</a>
                         }
                         @if (canUseStockAudit)
                         {
-                            <a class="sidebar-link@(ActiveLink("StockAudit"))" asp-controller="StockAudit" asp-action="Index" aria-current="@AriaCurrent("StockAudit")">Stock Audit</a>
+                            <a class="sidebar-link@(ActiveLink("StockAudit"))" asp-controller="StockAudit" asp-action="Index" aria-current="@AriaCurrent("StockAudit")">ตรวจนับสต็อก</a>
                         }
                         @if (canUseStockTransfers)
                         {
-                            <a class="sidebar-link@(ActiveLink("StockTransfers"))" asp-controller="StockTransfers" asp-action="Index" aria-current="@AriaCurrent("StockTransfers")">Stock Transfers</a>
+                            <a class="sidebar-link@(ActiveLink("StockTransfers"))" asp-controller="StockTransfers" asp-action="Index" aria-current="@AriaCurrent("StockTransfers")">โอนย้ายสต็อก</a>
                         }
                         @if (canUseStockIssues)
                         {
-                            <a class="sidebar-link@(ActiveLink("StockIssues"))" asp-controller="StockIssues" asp-action="Index" aria-current="@AriaCurrent("StockIssues")">Stock Issues</a>
+                            <a class="sidebar-link@(ActiveLink("StockIssues"))" asp-controller="StockIssues" asp-action="Index" aria-current="@AriaCurrent("StockIssues")">เบิกสต็อก</a>
                         }
                     </div>
                 }
@@ -182,57 +189,65 @@
                 @if (showWarrantySection)
                 {
                     <div class="sidebar-section@(ActiveSection("SupplierClaims", "CustomerClaims"))">
-                        <div class="sidebar-section-title">Warranty</div>
+                        <div class="sidebar-section-title">งานเคลม</div>
                         @if (canUseCustomerClaims)
                         {
-                            <a class="sidebar-link@(ActiveLink("CustomerClaims"))" asp-controller="CustomerClaims" asp-action="Index" aria-current="@AriaCurrent("CustomerClaims")">Customer Claims</a>
+                            <a class="sidebar-link@(ActiveLink("CustomerClaims"))" asp-controller="CustomerClaims" asp-action="Index" aria-current="@AriaCurrent("CustomerClaims")">เคลมลูกค้า</a>
                         }
                         @if (canUseSupplierClaims)
                         {
-                            <a class="sidebar-link@(ActiveLink("SupplierClaims"))" asp-controller="SupplierClaims" asp-action="Index" aria-current="@AriaCurrent("SupplierClaims")">Supplier Claims</a>
+                            <a class="sidebar-link@(ActiveLink("SupplierClaims"))" asp-controller="SupplierClaims" asp-action="Index" aria-current="@AriaCurrent("SupplierClaims")">เคลมผู้ขาย</a>
                         }
                     </div>
                 }
 
                 @if (showMasterDataSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
-                        <div class="sidebar-section-title">Master Data</div>
+                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
+                        <div class="sidebar-section-title">ข้อมูลหลัก</div>
                         @if (canUseBranches)
                         {
-                            <a class="sidebar-link@(ActiveLink("Branches"))" asp-controller="Branches" asp-action="Index" aria-current="@AriaCurrent("Branches")">Branches</a>
+                            <a class="sidebar-link@(ActiveLink("Branches"))" asp-controller="Branches" asp-action="Index" aria-current="@AriaCurrent("Branches")">สาขา</a>
                         }
                         @if (canUseCustomers)
                         {
-                            <a class="sidebar-link@(ActiveLink("Customers"))" asp-controller="Customers" asp-action="Index" aria-current="@AriaCurrent("Customers")">Customers</a>
+                            <a class="sidebar-link@(ActiveLink("Customers"))" asp-controller="Customers" asp-action="Index" aria-current="@AriaCurrent("Customers")">ลูกค้า</a>
                         }
                         @if (canUseSuppliers)
                         {
-                            <a class="sidebar-link@(ActiveLink("Suppliers"))" asp-controller="Suppliers" asp-action="Index" aria-current="@AriaCurrent("Suppliers")">Suppliers</a>
+                            <a class="sidebar-link@(ActiveLink("Suppliers"))" asp-controller="Suppliers" asp-action="Index" aria-current="@AriaCurrent("Suppliers")">ผู้ขาย</a>
                         }
                         @if (canUseSalespersons)
                         {
-                            <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index" aria-current="@AriaCurrent("Salespersons")">Salespersons</a>
+                            <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index" aria-current="@AriaCurrent("Salespersons")">พนักงานขาย</a>
+                        }
+                        @if (canUseTreatmentRights)
+                        {
+                            <a class="sidebar-link@(ActiveLink("TreatmentRights"))" asp-controller="TreatmentRights" asp-action="Index" aria-current="@AriaCurrent("TreatmentRights")">สิทธิการรักษา</a>
+                        }
+                        @if (canUseReferringDoctors)
+                        {
+                            <a class="sidebar-link@(ActiveLink("ReferringDoctors"))" asp-controller="ReferringDoctors" asp-action="Index" aria-current="@AriaCurrent("ReferringDoctors")">แพทย์ส่ง</a>
                         }
                         @if (canUseItems)
                         {
-                            <a class="sidebar-link@(ActiveLink("Items"))" asp-controller="Items" asp-action="Index" aria-current="@AriaCurrent("Items")">Items</a>
+                            <a class="sidebar-link@(ActiveLink("Items"))" asp-controller="Items" asp-action="Index" aria-current="@AriaCurrent("Items")">สินค้าและบริการ</a>
                         }
                         @if (canUseUsers)
                         {
-                            <a class="sidebar-link@(ActiveLink("Users"))" asp-controller="Users" asp-action="Index" aria-current="@AriaCurrent("Users")">Users</a>
+                            <a class="sidebar-link@(ActiveLink("Users"))" asp-controller="Users" asp-action="Index" aria-current="@AriaCurrent("Users")">ผู้ใช้งาน</a>
                         }
                         @if (canUseRolePermissions)
                         {
-                            <a class="sidebar-link@(ActiveLink("RolePermissions"))" asp-controller="RolePermissions" asp-action="Index" aria-current="@AriaCurrent("RolePermissions")">Role Permissions</a>
+                            <a class="sidebar-link@(ActiveLink("RolePermissions"))" asp-controller="RolePermissions" asp-action="Index" aria-current="@AriaCurrent("RolePermissions")">สิทธิ์ตามบทบาท</a>
                         }
                         @if (canUsePriceLevels)
                         {
-                            <a class="sidebar-link@(ActiveLink("PriceLevels"))" asp-controller="PriceLevels" asp-action="Index" aria-current="@AriaCurrent("PriceLevels")">Price Levels</a>
+                            <a class="sidebar-link@(ActiveLink("PriceLevels"))" asp-controller="PriceLevels" asp-action="Index" aria-current="@AriaCurrent("PriceLevels")">ระดับราคา</a>
                         }
                         @if (canUseSettings)
                         {
-                            <a class="sidebar-link@(ActiveLink("Settings"))" asp-controller="Settings" asp-action="Index" aria-current="@AriaCurrent("Settings")">Settings</a>
+                            <a class="sidebar-link@(ActiveLink("Settings"))" asp-controller="Settings" asp-action="Index" aria-current="@AriaCurrent("Settings")">ตั้งค่า</a>
                         }
                     </div>
                 }
@@ -251,12 +266,12 @@
                     </div>
                     <form asp-controller="Account" asp-action="Logout" method="post">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="sidebar-logout">Sign Out</button>
+                        <button type="submit" class="sidebar-logout">ออกจากระบบ</button>
                     </form>
                 }
                 else
                 {
-                    <span>Accounting operations workspace</span>
+                    <span>พื้นที่ทำงานระบบบัญชี</span>
                 }
             </div>
         </aside>

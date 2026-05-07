@@ -4,6 +4,35 @@
     var referenceNetAmount = Model.ReferenceSubtotal - Model.ReferenceDiscountAmount;
 }
 
+@if (!hasQuotationReference)
+{
+    <style>
+        .invoice-entry-grid > .invoice-entry-field:nth-child(2),
+        #invoiceLinesTable thead th:nth-child(3),
+        #invoiceLinesTable tbody tr.invoice-line-main td:nth-child(3) {
+            display: none;
+        }
+
+        @if (!Model.ShowPriceLevelSelector)
+        {
+            <text>
+        .quotation-header-section > .workflow-info {
+            display: none;
+        }
+            </text>
+        }
+    </style>
+}
+
+@if (!Model.ShowPatientInfo)
+{
+    <style>
+        .form-shell > .form-section:nth-of-type(2) {
+            display: none;
+        }
+    </style>
+}
+
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
 <input asp-for="PricingMode" type="hidden" id="invoicePricingMode" />
@@ -22,26 +51,26 @@
 
 <div class="form-shell">
     <div class="form-section quotation-header-section">
-        <div class="form-section-title">Invoice Header</div>
+        <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
         <div class="workflow-info workflow-info-info mb-3">
             @if (Model.ShowPriceLevelSelector && !hasQuotationReference)
             {
-                <span>Pricing source for the current flow: choose one <strong>Price Level</strong> for the invoice, then item prices are filled from that selling price. If a level price is missing, the system falls back to each item's default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+                <span>แหล่งราคาสำหรับเอกสารนี้: เลือก <strong>Price Level</strong> สำหรับใบแจ้งหนี้ แล้วระบบจะดึงราคาสินค้าจากระดับราคานั้น หากไม่มีราคากำหนดไว้ ระบบจะ fallback ไปที่ <strong>Unit Price</strong> ปกติใน <a asp-controller="Items" asp-action="Index">สินค้า</a></span>
             }
             else if (hasQuotationReference)
             {
-                <span>Pricing source for the current flow: this invoice follows the quotation pricing that was already approved.</span>
+                <span>แหล่งราคาสำหรับเอกสารนี้: ใบแจ้งหนี้นี้อ้างอิงราคาจากใบเสนอราคาที่อนุมัติแล้ว</span>
             }
             else
             {
-                <span>Pricing source for the current flow: invoice lines start from each item's default <strong>Unit Price</strong> in <a asp-controller="Items" asp-action="Index">Items</a>.</span>
+                <span>แหล่งราคาสำหรับเอกสารนี้: ระบบจะเริ่มจาก <strong>Unit Price</strong> ปกติของสินค้าแต่ละตัวใน <a asp-controller="Items" asp-action="Index">สินค้า</a></span>
             }
         </div>
         <div class="row g-2 quotation-header-grid">
             <div class="col-lg-3 col-md-6">
                 <label asp-for="InvoiceNo" class="form-label"></label>
                 <input asp-for="InvoiceNo" class="form-control" readonly />
-                <div class="form-text">Auto-generated invoice number.</div>
+                <div class="form-text">ระบบสร้างเลขที่เอกสารให้อัตโนมัติ</div>
                 <span asp-validation-for="InvoiceNo" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
@@ -57,11 +86,11 @@
             <div class="col-lg-3 col-md-6">
                 @if (!Model.InvoiceId.HasValue)
                 {
-                    <label asp-for="QuotationId" class="form-label">Quotation (Optional)</label>
+                    <label asp-for="QuotationId" class="form-label">ใบเสนอราคา (ถ้ามี)</label>
                     <select asp-for="QuotationId" asp-items="Model.QuotationOptions" class="form-select" id="QuotationId">
-                        <option value="">No quotation</option>
+                        <option value="">ไม่อ้างอิงใบเสนอราคา</option>
                     </select>
-                    <div class="form-text">Select a quotation to prefill this invoice.</div>
+                    <div class="form-text">เลือกใบเสนอราคาเพื่อให้ระบบดึงข้อมูลมาเติมในเอกสารนี้</div>
                 }
                 else
                 {
@@ -72,7 +101,7 @@
             <div class="col-lg-3 col-md-6" id="invoiceAmountDueSection" style="@(Model.QuotationId.HasValue ? null : "display:none;")">
                 <label asp-for="AmountDueThisInvoice" class="form-label"></label>
                 <input asp-for="AmountDueThisInvoice" class="form-control" id="AmountDueThisInvoice" />
-                <div class="form-text">Use this when one quotation is billed across multiple invoice documents.</div>
+                <div class="form-text">ใช้กรณีใบเสนอราคา 1 ใบ ออกใบแจ้งหนี้หลายครั้ง</div>
                 <span asp-validation-for="AmountDueThisInvoice" class="text-danger"></span>
             </div>
             <div class="col-md-2">
@@ -80,8 +109,8 @@
                 <select asp-for="DiscountMode" asp-items="Model.DiscountModeOptions" class="form-select" id="DiscountMode"></select>
                 <div class="form-text" id="invoiceDiscountModeHelp">
                     @(Model.QuotationId.HasValue
-                        ? "Invoices linked to a quotation use the quotation net amount and do not allow invoice discounts."
-                        : "Choose line discount or header discount for standalone invoices.")
+                        ? "ใบแจ้งหนี้ที่อ้างอิงใบเสนอราคา จะใช้ยอดสุทธิจากใบเสนอราคาและไม่เปิดให้ลดราคาที่ใบแจ้งหนี้"
+                        : "เลือกได้ว่าจะใช้ส่วนลดรายบรรทัด หรือส่วนลดท้ายเอกสารสำหรับใบแจ้งหนี้ที่ไม่ได้อ้างอิงใบเสนอราคา")
                 </div>
                 <span asp-validation-for="DiscountMode" class="text-danger"></span>
             </div>
@@ -93,7 +122,7 @@
             <div class="col-md-2">
                 <label asp-for="HeaderDiscountAmount" class="form-label"></label>
                 <input asp-for="HeaderDiscountAmount" class="form-control" id="HeaderDiscountAmount" />
-                <div class="form-text" id="invoiceHeaderDiscountHelp">Used only in header discount mode.</div>
+                <div class="form-text" id="invoiceHeaderDiscountHelp">ใช้เฉพาะกรณีส่วนลดท้ายเอกสาร</div>
                 <span asp-validation-for="HeaderDiscountAmount" class="text-danger"></span>
             </div>
             <div class="col-md-2">
@@ -105,7 +134,7 @@
                 @if (Model.CanAccessAllBranches)
                 {
                     <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
-                        <option value="">Select branch</option>
+                        <option value="">เลือกสาขา</option>
                     </select>
                 }
                 else
@@ -119,9 +148,9 @@
                 <div class="col-md-3">
                     <label asp-for="PriceLevelId" class="form-label"></label>
                     <select asp-for="PriceLevelId" asp-items="Model.PriceLevelOptions" class="form-select" id="PriceLevelId">
-                        <option value="">Use default item price</option>
+                        <option value="">ใช้ราคาสินค้าปกติ</option>
                     </select>
-                    <div class="form-text">Apply one selling-price level to new lines in this invoice.</div>
+                    <div class="form-text">ใช้ระดับราคานี้กับรายการใหม่ในใบแจ้งหนี้</div>
                     <span asp-validation-for="PriceLevelId" class="text-danger"></span>
                 </div>
             }
@@ -142,34 +171,34 @@
                        id="invoiceCustomerSearch"
                        class="form-control"
                        autocomplete="off"
-                       placeholder="Search by customer code or customer name" />
+                       placeholder="ค้นหาจากรหัสลูกค้าหรือชื่อลูกค้า" />
                 <div id="invoiceCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
             </div>
             <span asp-validation-for="CustomerId" class="text-danger"></span>
             <div class="quotation-info-card mt-2" id="invoiceCustomerInfo">
-                <div class="quotation-info-card-title">Customer Information</div>
+                <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Customer Name</span>
+                        <span class="quotation-info-label">ชื่อลูกค้า</span>
                         <span class="quotation-info-value" id="invoiceCustomerName">-</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Tax ID</span>
+                        <span class="quotation-info-label">เลขประจำตัวผู้เสียภาษี</span>
                         <span class="quotation-info-value" id="invoiceCustomerTaxId">-</span>
                     </div>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value" id="invoiceCustomerPhone">-</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value" id="invoiceCustomerEmail">-</span>
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-label">ที่อยู่</span>
                     <span class="quotation-info-value" id="invoiceCustomerBillingAddress">-</span>
                 </div>
             </div>
@@ -178,22 +207,22 @@
         <div class="quotation-party-column">
             <label asp-for="SalespersonId" class="form-label"></label>
             <select asp-for="SalespersonId" asp-items="Model.SalespersonOptions" class="form-select" id="SalespersonId">
-                <option value="">Select salesperson</option>
+                <option value="">เลือกพนักงานขาย</option>
             </select>
             <span asp-validation-for="SalespersonId" class="text-danger"></span>
             <div class="quotation-info-card mt-2" id="invoiceSalespersonInfo">
-                <div class="quotation-info-card-title">Salesperson Information</div>
+                <div class="quotation-info-card-title">ข้อมูลพนักงานขาย</div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Salesperson Name</span>
+                    <span class="quotation-info-label">ชื่อพนักงานขาย</span>
                     <span class="quotation-info-value" id="invoiceSalespersonName">-</span>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value" id="invoiceSalespersonPhone">-</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value" id="invoiceSalespersonEmail">-</span>
                     </div>
                 </div>
@@ -202,63 +231,108 @@
     </div>
 
     <div class="form-section">
-        <div class="form-section-title mb-1">Invoice Line Entry</div>
+        <div class="form-section-title">ข้อมูลผู้ป่วย</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PatientFullName" class="form-label"></label>
+                <input asp-for="PatientFullName" class="form-control" />
+                <span asp-validation-for="PatientFullName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-3">
+                <label asp-for="PatientAge" class="form-label"></label>
+                <input asp-for="PatientAge" class="form-control" min="0" max="150" />
+                <span asp-validation-for="PatientAge" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-3">
+                <label asp-for="PatientGender" class="form-label"></label>
+                <select asp-for="PatientGender" asp-items="Model.PatientGenderOptions" class="form-select"></select>
+                <span asp-validation-for="PatientGender" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PatientHn" class="form-label"></label>
+                <input asp-for="PatientHn" class="form-control" />
+                <span asp-validation-for="PatientHn" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="TreatmentRightId" class="form-label"></label>
+                <select asp-for="TreatmentRightId" asp-items="Model.TreatmentRightOptions" class="form-select">
+                    <option value="">เลือกสิทธิการรักษา</option>
+                </select>
+                <span asp-validation-for="TreatmentRightId" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="PatientWard" class="form-label"></label>
+                <input asp-for="PatientWard" class="form-control" />
+                <span asp-validation-for="PatientWard" class="text-danger"></span>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <label asp-for="ReferringDoctorId" class="form-label"></label>
+                <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions" class="form-select">
+                    <option value="">เลือกแพทย์ส่ง</option>
+                </select>
+                <span asp-validation-for="ReferringDoctorId" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-title mb-1">เพิ่มรายการในใบแจ้งหนี้</div>
         <div class="table-meta mb-3">
             @(Model.ShowPriceLevelSelector && !hasQuotationReference
-                ? "Add items from the entry form first. The line unit price starts from the selected price level and can be adjusted here before issuing the invoice."
-                : "Add items from the entry form first. The line unit price starts from item master data and can be adjusted here before issuing the invoice.")
+                ? "เพิ่มรายการจากฟอร์มด้านล่างก่อน ราคาต่อหน่วยจะเริ่มจาก Price Level ที่เลือก และยังแก้ไขได้ก่อนออกเอกสาร"
+                : "เพิ่มรายการจากฟอร์มด้านล่างก่อน ราคาต่อหน่วยจะเริ่มจากข้อมูลสินค้า และยังแก้ไขได้ก่อนออกเอกสาร")
         </div>
         <div id="invoiceEntryAlert" class="danger-banner" style="display:none;"></div>
 
         <div class="invoice-entry-shell">
             <div class="invoice-entry-grid">
                 <div class="invoice-entry-field invoice-entry-item">
-                    <label class="form-label" for="invoiceEntryItemSearch">Item</label>
+                    <label class="form-label" for="invoiceEntryItemSearch">สินค้า</label>
                     <div class="search-dropdown">
                         <input type="text"
                                id="invoiceEntryItemSearch"
                                class="form-control"
                                autocomplete="off"
-                               placeholder="Search by item code, name, or part number" />
+                               placeholder="ค้นหาจากรหัส ชื่อ หรือ Part Number" />
                         <div id="invoiceEntryItemResults" class="search-dropdown-menu search-dropdown-menu-wide" style="display:none;"></div>
                     </div>
                 </div>
                 <div class="invoice-entry-field">
-                    <label class="form-label" for="invoiceEntryQuotedQty">Quoted Qty</label>
-                    <input type="number" step="1" min="1" data-qty-min="1" id="invoiceEntryQuotedQty" class="form-control js-integer-qty" value="1" />
+                    <label class="form-label" for="invoiceEntryQuotedQty">จำนวนตามใบเสนอราคา</label>
+                    <input type="number" step="0.01" min="0.01" id="invoiceEntryQuotedQty" class="form-control" value="1" />
                 </div>
                 <div class="invoice-entry-field">
-                    <label class="form-label" for="invoiceEntryQty">Qty This Invoice</label>
-                    <input type="number" step="1" min="1" data-qty-min="1" id="invoiceEntryQty" class="form-control js-integer-qty" value="1" />
+                    <label class="form-label" for="invoiceEntryQty">จำนวนที่ออกบิลครั้งนี้</label>
+                    <input type="number" step="0.01" min="0.01" id="invoiceEntryQty" class="form-control" value="1" />
                 </div>
                 <div class="invoice-entry-field">
-                    <label class="form-label" for="invoiceEntryUnitPrice">Unit Price</label>
+                    <label class="form-label" for="invoiceEntryUnitPrice">ราคาต่อหน่วย</label>
                     <input type="number" step="0.01" min="0" id="invoiceEntryUnitPrice" class="form-control" value="0" />
                 </div>
                 <div class="invoice-entry-field">
-                    <label class="form-label" for="invoiceEntryDiscount">Discount</label>
+                    <label class="form-label" for="invoiceEntryDiscount">ส่วนลด</label>
                     <input type="number" step="0.01" min="0" id="invoiceEntryDiscount" class="form-control" value="0" />
                 </div>
             </div>
 
             <div class="invoice-entry-detail-grid">
                 <div class="invoice-entry-card">
-                    <div class="invoice-entry-card-title">Item Detail</div>
-                    <div class="invoice-entry-meta" id="invoiceEntryItemMeta">Select an item to see product or service behavior.</div>
+                    <div class="invoice-entry-card-title">รายละเอียดสินค้า</div>
+                    <div class="invoice-entry-meta" id="invoiceEntryItemMeta">เลือกสินค้าเพื่อดูเงื่อนไขของสินค้า หรือบริการ</div>
 
                     <div class="invoice-entry-conditional js-entry-stock-section" style="display:none;">
-                        <label class="form-label" for="invoiceEntryCurrentStock">Current Stock</label>
+                        <label class="form-label" for="invoiceEntryCurrentStock">สต็อกปัจจุบัน</label>
                         <input type="text" id="invoiceEntryCurrentStock" class="form-control" readonly />
                     </div>
 
                     <div class="invoice-entry-conditional js-entry-serial-section" style="display:none;">
                         <label class="form-label">Serial Numbers</label>
                         <div id="invoiceEntrySerials" class="serial-checkbox-list"></div>
-                        <div class="form-text">Serials can be selected later for draft invoices, but they must be complete before issue.</div>
+                        <div class="form-text">สำหรับเอกสารฉบับร่าง สามารถเลือก Serial ภายหลังได้ แต่ก่อนออกเอกสารต้องเลือกให้ครบ</div>
                     </div>
 
                     <div class="invoice-entry-conditional js-entry-warranty-section" style="display:none;">
-                        <label class="form-label">Warranty</label>
+                        <label class="form-label">ประกัน</label>
                         <div class="invoice-warranty-row">
                             <input type="date" id="invoiceEntryWarrantyStart" class="form-control" />
                             <input type="date" id="invoiceEntryWarrantyEnd" class="form-control" />
@@ -266,39 +340,39 @@
                     </div>
 
                     <div class="invoice-entry-conditional js-entry-description-section" style="display:none;">
-                        <label class="form-label" for="invoiceEntryDescription">Description</label>
+                        <label class="form-label" for="invoiceEntryDescription">รายละเอียด</label>
                         <textarea id="invoiceEntryDescription" class="form-control" rows="4"></textarea>
                     </div>
 
                     <div class="invoice-entry-conditional js-entry-remark-section">
-                        <label class="form-label" for="invoiceEntryRemark">Line Remark</label>
+                        <label class="form-label" for="invoiceEntryRemark">หมายเหตุรายการ</label>
                         <textarea id="invoiceEntryRemark" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
 
                 <div class="invoice-entry-actions">
-                    <button type="button" class="btn btn-primary px-4" id="addInvoiceLine">Add to List</button>
+                    <button type="button" class="btn btn-primary px-4" id="addInvoiceLine">เพิ่มเข้ารายการ</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="form-section">
-        <div class="form-section-title mb-1">Invoice Lines</div>
-        <div class="table-meta mb-3">Product rows show stock, serials, and warranty. Service rows show description only.</div>
+        <div class="form-section-title mb-1">รายการในใบแจ้งหนี้</div>
+        <div class="table-meta mb-3">รายการสินค้าแสดงสต็อก Serial และประกัน ส่วนบริการจะแสดงเฉพาะรายละเอียด</div>
 
         <div class="table-responsive">
             <table class="table entity-table quote-editor-table" id="invoiceLinesTable">
                 <thead>
                     <tr>
-                        <th style="width: 30%;">Item</th>
-                        <th style="width: 10%;">Type</th>
-                        <th style="width: 10%;">Quoted Qty</th>
-                        <th style="width: 10%;">Qty This Invoice</th>
-                        <th style="width: 12%;">Unit Price</th>
-                        <th style="width: 10%;">Discount</th>
-                        <th style="width: 10%;">Line Total</th>
-                        <th style="width: 18%;" class="text-end">Action</th>
+                        <th style="width: 30%;">สินค้า</th>
+                        <th style="width: 10%;">ประเภท</th>
+                        <th style="width: 10%;">จำนวนอ้างอิง</th>
+                        <th style="width: 9%;">จำนวน</th>
+                        <th style="width: 11%;">ราคาต่อหน่วย</th>
+                        <th style="width: 9%;">ส่วนลด</th>
+                        <th style="width: 13%;">รวมบรรทัด</th>
+                        <th style="width: 18%;" class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody id="invoiceLineBody">
@@ -313,8 +387,8 @@
                         .Select(x => x.DisplayText)
                         .ToList();
                     var detailLabel = string.Equals(Model.Details[i].ItemType, "Service", StringComparison.OrdinalIgnoreCase)
-                        ? "Description"
-                        : "Remark";
+                        ? "รายละเอียด"
+                        : "หมายเหตุ";
                     <tr class="invoice-line-row invoice-line-main">
                         <td>
                             <input type="hidden" name="Details[@i].InvoiceDetailId" value="@Model.Details[i].InvoiceDetailId" />
@@ -334,7 +408,7 @@
                             <div class="fw-semibold js-item-display">@(string.IsNullOrWhiteSpace(Model.Details[i].ItemName) ? "-" : $"{Model.Details[i].ItemCode} - {Model.Details[i].ItemName}")</div>
                             <div class="table-meta js-item-part-display">Part No.: @(string.IsNullOrWhiteSpace(Model.Details[i].PartNumber) ? "-" : Model.Details[i].PartNumber)</div>
                             <div class="table-meta js-quotation-progress-display" style="@(Model.Details[i].QuotationDetailId.HasValue ? null : "display:none;")">
-                                Ordered from quotation: @(Model.Details[i].QuotedQty.ToString("N2")) | Issued Before: @(Model.Details[i].PreviouslyInvoicedQty?.ToString("N2") ?? "0.00") | Remaining: @(Model.Details[i].RemainingQuotedQty?.ToString("N2") ?? "-")
+                                อ้างอิงจากใบเสนอราคา: @(Model.Details[i].QuotedQty.ToString("N2")) | ออกบิลแล้ว: @(Model.Details[i].PreviouslyInvoicedQty?.ToString("N2") ?? "0.00") | คงเหลือ: @(Model.Details[i].RemainingQuotedQty?.ToString("N2") ?? "-")
                             </div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
                         </td>
@@ -342,11 +416,11 @@
                             <span class="js-item-type-display">@Model.Details[i].ItemType</span>
                         </td>
                         <td>
-                            <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].QuotedQty" value="@Model.Details[i].QuotedQty.ToString("0.##")" class="form-control js-quoted-qty-input js-integer-qty" />
+                            <input type="number" step="0.01" min="0.01" name="Details[@i].QuotedQty" value="@Model.Details[i].QuotedQty.ToString("0.##")" class="form-control js-quoted-qty-input" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].QuotedQty" data-valmsg-replace="true"></span>
                         </td>
                         <td>
-                            <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].Qty" value="@Model.Details[i].Qty.ToString("0.##")" class="form-control js-qty-input js-integer-qty" />
+                            <input type="number" step="0.01" min="0.01" name="Details[@i].Qty" value="@Model.Details[i].Qty.ToString("0.##")" class="form-control js-qty-input" />
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Qty" data-valmsg-replace="true"></span>
                         </td>
                         <td>
@@ -362,7 +436,7 @@
                         </td>
                         <td class="text-end">
                             <div class="table-actions">
-                                <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">ลบ</button>
                             </div>
                         </td>
                     </tr>
@@ -375,7 +449,7 @@
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Remark" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-stock-block" style="@(Model.Details[i].TrackStock ? null : "display:none;")">
-                                    <div class="detail-label">Current Stock</div>
+                                    <div class="detail-label">สต็อกปัจจุบัน</div>
                                     <div class="detail-value js-line-stock-value">@Model.Details[i].CurrentStock.ToString("N2")</div>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-serial-block" style="@(Model.Details[i].IsSerialControlled ? null : "display:none;")">
@@ -404,7 +478,7 @@
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SelectedSerialIds" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-warranty-block" style="@(Model.Details[i].IsSerialControlled ? null : "display:none;")">
-                                    <div class="detail-label">Warranty</div>
+                                    <div class="detail-label">ประกัน</div>
                                     <div class="invoice-warranty-row">
                                         <input type="date" name="Details[@i].CustomerWarrantyStartDate" value="@Model.Details[i].CustomerWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control js-warranty-start-input" />
                                         <input type="date" name="Details[@i].CustomerWarrantyEndDate" value="@Model.Details[i].CustomerWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control js-warranty-end-input" />
@@ -427,33 +501,33 @@
         {
             <div class="quotation-summary-grid">
                 <div class="quotation-summary-stack quotation-summary-stack-reference">
-                    <div class="quotation-summary-title">Quotation Reference Summary</div>
+                    <div class="quotation-summary-title">สรุปยอดจากใบเสนอราคา</div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">ยอดก่อนส่วนลด / Subtotal</span>
+                        <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
                         <span class="quotation-summary-amount" id="invoiceReferenceSubtotal">@Model.ReferenceSubtotal.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">ส่วนลด / Discount</span>
+                        <span class="quotation-summary-name">ส่วนลด</span>
                         <span class="quotation-summary-amount" id="invoiceReferenceDiscount">@Model.ReferenceDiscountAmount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">ราคาหลังส่วนลด / Net After Discount</span>
+                        <span class="quotation-summary-name">ยอดสุทธิหลังหักส่วนลด</span>
                         <span class="quotation-summary-amount" id="invoiceReferenceNet">@referenceNetAmount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">ภาษีมูลค่าเพิ่ม / VAT</span>
+                        <span class="quotation-summary-name">VAT</span>
                         <span class="quotation-summary-amount" id="invoiceReferenceVat">@Model.ReferenceVatAmount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row total">
-                        <span class="quotation-summary-name">ยอดรวมอ้างอิง / Total</span>
+                        <span class="quotation-summary-name">ยอดรวมอ้างอิง</span>
                         <span class="quotation-summary-amount" id="invoiceReferenceTotal">@Model.ReferenceTotalAmount.ToString("N2")</span>
                     </div>
                 </div>
 
                 <div class="quotation-summary-stack">
-                    <div class="quotation-summary-title">Invoice Summary</div>
+                    <div class="quotation-summary-title">สรุปใบแจ้งหนี้</div>
                     <div class="quotation-summary-row">
-                        <span class="quotation-summary-name">Amount Due This Invoice</span>
+                        <span class="quotation-summary-name">ยอดที่ออกบิลครั้งนี้</span>
                         <span class="quotation-summary-amount" id="invoiceAmountDueSummary">@((Model.AmountDueThisInvoice ?? Model.TotalAmount).ToString("N2"))</span>
                     </div>
                     <div class="quotation-summary-row">
@@ -461,7 +535,7 @@
                         <span class="quotation-summary-amount" id="invoiceVat">@Model.VatAmount.ToString("N2")</span>
                     </div>
                     <div class="quotation-summary-row total">
-                        <span class="quotation-summary-name">Total</span>
+                        <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                         <span class="quotation-summary-amount" id="invoiceTotal">@Model.TotalAmount.ToString("N2")</span>
                     </div>
                 </div>
@@ -471,11 +545,11 @@
         {
             <div class="quotation-summary-stack">
                 <div class="quotation-summary-row">
-                    <span class="quotation-summary-name">Subtotal</span>
+                    <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
                     <span class="quotation-summary-amount" id="invoiceSubtotal">@Model.Subtotal.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
-                    <span class="quotation-summary-name">Discount</span>
+                    <span class="quotation-summary-name">ส่วนลด</span>
                     <span class="quotation-summary-amount" id="invoiceDiscount">@Model.DiscountAmount.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
@@ -483,11 +557,11 @@
                     <span class="quotation-summary-amount" id="invoiceVat">@Model.VatAmount.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row total">
-                    <span class="quotation-summary-name">Total</span>
+                    <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                     <span class="quotation-summary-amount" id="invoiceTotal">@Model.TotalAmount.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
-                    <span class="quotation-summary-name">Balance</span>
+                    <span class="quotation-summary-name">ยอดคงเหลือ</span>
                     <span class="quotation-summary-amount" id="invoiceBalance">@Model.BalanceAmount.ToString("N2")</span>
                 </div>
             </div>

@@ -1,16 +1,26 @@
 @model BizCore.Models.ViewModels.PaymentFormViewModel
+@{
+    var selectedCustomer = Model.CustomerLookup.FirstOrDefault(x => x.CustomerId == Model.CustomerId);
+    var selectedCustomerDisplay = selectedCustomer is null
+        ? string.Empty
+        : $"{selectedCustomer.CustomerCode} - {selectedCustomer.CustomerName}";
+}
 
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="BranchId" type="hidden" />
+@if (Model.BillingNoteId.HasValue)
+{
+    <input asp-for="BillingNoteId" type="hidden" />
+}
 
 <div class="form-shell">
     <div class="form-section quotation-header-section">
-        <div class="form-section-title">Payment Header</div>
+        <div class="form-section-title">ข้อมูลเอกสาร</div>
         <div class="row g-2 quotation-header-grid">
             <div class="col-lg-3 col-md-6">
                 <label asp-for="PaymentNo" class="form-label"></label>
                 <input asp-for="PaymentNo" class="form-control" readonly />
-                <div class="form-text">Auto-generated monthly payment number.</div>
+                <div class="form-text">ระบบสร้างเลขที่รับชำระให้อัตโนมัติรายเดือน</div>
                 <span asp-validation-for="PaymentNo" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
@@ -24,14 +34,15 @@
                 <span asp-validation-for="ReferenceNo" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
-                <label class="form-label">Status</label>
-                <div class="form-control readonly-detail">Draft to Posted</div>
+                <label asp-for="BillingNoteId" class="form-label"></label>
+                <div class="form-control readonly-detail">@(Model.BillingNoteId.HasValue ? Model.BillingNoteNo : "-")</div>
+                <span asp-validation-for="BillingNoteId" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
                 <label asp-for="BranchId" class="form-label"></label>
                 <div class="form-control readonly-detail">@Model.BranchName</div>
             </div>
-            <div class="col-12">
+            <div class="col-lg-9">
                 <label asp-for="Remark" class="form-label"></label>
                 <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
                 <span asp-validation-for="Remark" class="text-danger"></span>
@@ -42,51 +53,59 @@
     <div class="quotation-party-grid">
         <div class="quotation-party-column">
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Customer Information</div>
+                <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                 <div class="mb-2">
                     <label asp-for="CustomerId" class="form-label"></label>
                     <input asp-for="CustomerId" type="hidden" id="paymentCustomerId" />
-                    <div class="search-dropdown">
-                        <input type="text"
-                               class="form-control"
-                               id="paymentCustomerSearch"
-                               placeholder="Search customer code, name, or tax ID"
-                               autocomplete="off" />
-                        <div id="paymentCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
-                    </div>
+                    @if (Model.LockCustomerSelection)
+                    {
+                        <div class="form-control readonly-detail" id="paymentCustomerSearch">@selectedCustomerDisplay</div>
+                    }
+                    else
+                    {
+                        <div class="search-dropdown">
+                            <input type="text"
+                                   class="form-control"
+                                   id="paymentCustomerSearch"
+                                   placeholder="ค้นหาจากรหัสลูกค้า ชื่อลูกค้า หรือเลขประจำตัวผู้เสียภาษี"
+                                   value="@selectedCustomerDisplay"
+                                   autocomplete="off" />
+                            <div id="paymentCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                        </div>
+                    }
                     <span asp-validation-for="CustomerId" class="text-danger"></span>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Customer Name</span>
+                        <span class="quotation-info-label">ชื่อลูกค้า</span>
                         <span class="quotation-info-value" id="paymentCustomerName">-</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Tax ID</span>
+                        <span class="quotation-info-label">เลขประจำตัวผู้เสียภาษี</span>
                         <span class="quotation-info-value" id="paymentCustomerTaxId">-</span>
                     </div>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value" id="paymentCustomerPhone">-</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value" id="paymentCustomerEmail">-</span>
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Billing Address</span>
+                    <span class="quotation-info-label">ที่อยู่วางบิล</span>
                     <span class="quotation-info-value" id="paymentCustomerBillingAddress">-</span>
                 </div>
-                <div class="table-meta mt-2"><span id="visibleInvoiceCount">0</span> open invoice(s). Allocation is optional.</div>
+                <div class="table-meta mt-2"><span id="visibleInvoiceCount">0</span> ใบแจ้งหนี้ค้างชำระที่เลือกได้</div>
             </div>
         </div>
 
         <div class="quotation-party-column">
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Payment Information</div>
+                <div class="quotation-info-card-title">ข้อมูลการชำระเงิน</div>
                 <div class="row g-2">
                     <div class="col-md-6">
                         <label asp-for="PaymentMethod" class="form-label"></label>
@@ -99,6 +118,23 @@
                         <span asp-validation-for="Amount" class="text-danger"></span>
                     </div>
                 </div>
+                @if (Model.BillingNoteId.HasValue)
+                {
+                    <div class="quotation-info-grid mt-3">
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">ยอดรวมใบวางบิล</span>
+                            <span class="quotation-info-value">@Model.BillingNoteTotalAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">ชำระแล้ว</span>
+                            <span class="quotation-info-value">@Model.BillingNotePaidAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                    <div class="quotation-info-field mt-2">
+                        <span class="quotation-info-label">ยอดคงเหลือใบวางบิล</span>
+                        <span class="quotation-info-value">@Model.BillingNoteBalanceAmount.ToString("N2")</span>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -106,8 +142,12 @@
     <div class="form-section">
         <div class="table-card-header px-0 pt-0">
             <div>
-                <h2 class="section-title">Invoice Allocation</h2>
-                <p class="section-subtitle">Open invoices of the selected customer can receive allocation, but payment can also be saved without any invoice link.</p>
+                <h2 class="section-title">การจัดสรรให้ใบแจ้งหนี้</h2>
+                <p class="section-subtitle">
+                    @(Model.BillingNoteId.HasValue
+                        ? "รายการด้านล่างมาจากใบวางบิลที่เลือก ระบบจะตัดยอดลงใบแจ้งหนี้ต้นทางตามจำนวนที่จัดสรร"
+                        : "สามารถจัดสรรยอดให้ใบแจ้งหนี้ค้างชำระของลูกค้าที่เลือก หรือบันทึกเป็นยอดยังไม่จัดสรรก็ได้")
+                </p>
             </div>
         </div>
 
@@ -115,13 +155,13 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Invoice No.</th>
-                        <th>Invoice Date</th>
-                        <th>Total</th>
-                        <th>Paid</th>
-                        <th>Balance</th>
-                        <th>Status</th>
-                        <th>Applied Amount</th>
+                        <th>เลขที่ใบแจ้งหนี้</th>
+                        <th>วันที่เอกสาร</th>
+                        <th>ยอดรวม</th>
+                        <th>ชำระแล้ว</th>
+                        <th>ยอดคงเหลือ</th>
+                        <th>สถานะ</th>
+                        <th>ยอดที่ตัดชำระ</th>
                     </tr>
                 </thead>
                 <tbody id="paymentAllocationBody">
@@ -160,15 +200,15 @@
     <div class="quotation-summary-wrap">
         <div class="quotation-summary-stack">
             <div class="quotation-summary-row total">
-                <span class="quotation-summary-name">Payment Amount</span>
+                <span class="quotation-summary-name">จำนวนเงินรับชำระ</span>
                 <span class="quotation-summary-amount" id="paymentAmountSummary">@Model.Amount.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Allocated Amount</span>
+                <span class="quotation-summary-name">ยอดที่จัดสรรแล้ว</span>
                 <span class="quotation-summary-amount" id="paymentAppliedSummary">@Model.TotalAppliedAmount.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Remaining Amount</span>
+                <span class="quotation-summary-name">ยอดคงเหลือที่ยังไม่จัดสรร</span>
                 <span class="quotation-summary-amount" id="paymentUnappliedSummary">@Model.UnappliedAmount.ToString("N2")</span>
             </div>
         </div>

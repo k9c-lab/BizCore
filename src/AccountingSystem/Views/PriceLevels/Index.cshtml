@@ -1,4 +1,4 @@
-@model IReadOnlyList<BizCore.Models.Entities.PriceLevel>
+﻿@model IReadOnlyList<BizCore.Models.Entities.PriceLevel>
 
 @{
     ViewData["Title"] = "Price Levels";
@@ -13,8 +13,7 @@
     <div>
         <div class="page-eyebrow">Sales Setup</div>
         <h1 class="page-title">Price Levels</h1>
-        <p class="page-subtitle">Define selling price types such as retail, wholesale, or online without changing the single-price flow for customers that do not use them.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary px-4">New Price Level</a>
         <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">Settings</a>
@@ -29,8 +28,7 @@
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Configured Price Levels</h2>
-            <p class="section-subtitle">These levels become the available selling price slots per item when multi-price is used.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.Count level(s)</div>
     </div>
     <div class="card-body">
@@ -77,3 +75,4 @@
         </div>
     </div>
 </div>
+

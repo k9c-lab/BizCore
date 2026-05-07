@@ -1,47 +1,49 @@
 @model BizCore.Models.ViewModels.InvoiceFormViewModel
 
 @{
-    ViewData["Title"] = "Create Invoice";
+    ViewData["Title"] = "สร้างใบแจ้งหนี้";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Create Invoice</h1>
-        <p class="page-subtitle">Create a draft invoice first or issue immediately when stock and serial assignment are ready.</p>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">สร้างใบแจ้งหนี้</h1>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Invoices</a>
+        <button type="submit" form="invoiceForm" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+        <button type="submit" form="invoiceForm" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกใบแจ้งหนี้</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบแจ้งหนี้</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <div class="pricing-path-card mb-3">
-            <div class="pricing-path-title">Where invoice prices come from</div>
-            <div class="pricing-path-text">
-                @if (Model.ShowPriceLevelSelector && !Model.QuotationId.HasValue)
-                {
-                    <span>Current mode: <strong>Multiple Price</strong>. Set up selling prices in <a asp-controller="Items" asp-action="Index">Master Data &gt; Items</a>, choose one price level on the invoice header, and the system will prefill new lines from that level with fallback to the default item price.</span>
-                }
-                else if (Model.QuotationId.HasValue)
-                {
-                    <span>Current mode: <strong>Quotation-Based</strong>. Prices follow the approved quotation that is being converted to this invoice.</span>
-                }
-                else
-                {
-                    <span>Current mode: <strong>Single Price</strong>. Default item prices are maintained in <a asp-controller="Items" asp-action="Index">Master Data &gt; Items</a>, then copied into invoice lines for review and override if needed.</span>
-                }
+        @if (Model.ShowPriceLevelSelector && !Model.QuotationId.HasValue)
+        {
+            <div class="pricing-path-card mb-3">
+                <div class="pricing-path-title">แหล่งที่มาของราคาในใบแจ้งหนี้</div>
+                <div class="pricing-path-text">
+                    <span>โหมดปัจจุบัน: <strong>หลายระดับราคา</strong> เลือกระดับราคาบนหัวเอกสาร แล้วระบบจะเติมราคาสินค้าให้อัตโนมัติตามระดับราคานั้น โดยถ้าไม่พบราคาจะใช้ราคาพื้นฐานของสินค้าแทน</span>
+                </div>
             </div>
-        </div>
+        }
+        else if (Model.QuotationId.HasValue)
+        {
+            <div class="pricing-path-card mb-3">
+                <div class="pricing-path-title">แหล่งที่มาของราคาในใบแจ้งหนี้</div>
+                <div class="pricing-path-text">
+                    <span>โหมดปัจจุบัน: <strong>อ้างอิงใบเสนอราคา</strong> ราคาในใบแจ้งหนี้จะอ้างอิงจากใบเสนอราคาที่อนุมัติแล้ว</span>
+                </div>
+            </div>
+        }
         <form asp-action="Create" method="post" id="invoiceForm">
             <partial name="_Form" model="Model" />
+
             <div class="form-actions mt-3">
-                <span class="table-meta">Save Draft keeps the invoice editable. Issue Invoice posts stock and serial movement immediately.</span>
+                <span class="table-meta">บันทึกฉบับร่างยังสามารถกลับมาแก้ไขได้ ส่วนการออกเอกสารจะตัดสต็อกและบันทึกการเคลื่อนไหวของ Serial ทันที</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">Save Draft</button>
-                    <button type="submit" name="submitAction" value="Issue" class="btn btn-primary px-4">Issue Invoice</button>
+                    <button type="submit" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+                    <button type="submit" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกใบแจ้งหนี้</button>
                 </div>
             </div>
         </form>

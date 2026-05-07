@@ -20,6 +20,7 @@ public abstract class CrudControllerBase : Controller
         ["Announcements"] = "Announcements.Menu",
         ["Quotations"] = "Sales.Quotations.Menu",
         ["Invoices"] = "Sales.Invoices.Menu",
+        ["BillingNotes"] = "Sales.BillingNotes.Menu",
         ["Payments"] = "Sales.Payments.Menu",
         ["Receipts"] = "Sales.Receipts.Menu",
         ["PurchaseRequests"] = "Purchasing.PR.Menu",
@@ -38,6 +39,8 @@ public abstract class CrudControllerBase : Controller
         ["Customers"] = "MasterData.Customers.Menu",
         ["Suppliers"] = "MasterData.Suppliers.Menu",
         ["Salespersons"] = "MasterData.Salespersons.Menu",
+        ["TreatmentRights"] = "MasterData.TreatmentRights.Menu",
+        ["ReferringDoctors"] = "MasterData.ReferringDoctors.Menu",
         ["Items"] = "MasterData.Items.Menu",
         ["Users"] = "MasterData.Users.Menu",
         ["RolePermissions"] = "MasterData.RolePermissions.Menu"

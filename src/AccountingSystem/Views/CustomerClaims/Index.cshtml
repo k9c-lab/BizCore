@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.CustomerClaimHeader>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.CustomerClaimHeader>
 
 @{
     ViewData["Title"] = "Customer Claims";
@@ -17,16 +17,14 @@
     <div>
         <div class="page-eyebrow">Warranty Module</div>
         <h1 class="page-title">Customer Claims</h1>
-        <p class="page-subtitle">Track customer warranty claims for sold serial-controlled items.</p>
-    </div>
+        </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Customer Claim Register</h2>
-            <p class="section-subtitle">Create claims from eligible sold serials in Serial Inquiry or Stock Inquiry.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount record(s)</div>
     </div>
     <div class="card-body">
@@ -108,3 +106,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

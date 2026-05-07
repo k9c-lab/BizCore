@@ -1,59 +1,57 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Supplier>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Supplier>
 
 @{
-    ViewData["Title"] = "Suppliers";
+    ViewData["Title"] = "ผู้ขาย";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Suppliers</h1>
-        <p class="page-subtitle">Maintain supplier records in a cleaner directory view, ready for the purchasing module.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">ผู้ขาย</h1>
+        </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Supplier</a>
+        <a asp-action="Create" class="btn btn-primary px-4">เพิ่มผู้ขาย</a>
     </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Supplier Directory</h2>
-            <p class="section-subtitle">Readable master data table for procurement and finance teams.</p>
-        </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+            <h2 class="section-title">รายการผู้ขาย</h2>
+            </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Code, name, tax ID, phone, or email" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="รหัส, ชื่อ, เลขประจำตัวผู้เสียภาษี, โทรศัพท์ หรืออีเมล" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Active" selected="@(status == "Active")">Active</option>
-                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Active" selected="@(status == "Active")">ใช้งาน</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">ไม่ใช้งาน</option>
                 </select>
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Supplier Code</th>
-                        <th>Supplier Name</th>
-                        <th>Phone</th>
-                        <th>Credit Limit</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>รหัสผู้ขาย</th>
+                        <th>ชื่อผู้ขาย</th>
+                        <th>โทรศัพท์</th>
+                        <th>วงเงินเครดิต</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,12 +64,12 @@
                         <td class="fw-semibold">@item.SupplierName</td>
                         <td>@(string.IsNullOrWhiteSpace(item.PhoneNumber) ? "-" : item.PhoneNumber)</td>
                         <td>@item.CreditLimit.ToString("N2")</td>
-                        <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
+                        <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "ใช้งาน" : "ไม่ใช้งาน")</span></td>
                         <td class="text-end">
                             <div class="table-actions">
-                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-secondary">Details</a>
-                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <a asp-action="Delete" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                <a asp-action="Details" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                                <a asp-action="Edit" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
+                                <a asp-action="Delete" asp-route-id="@item.SupplierId" class="btn btn-sm btn-outline-danger">ลบ</a>
                             </div>
                         </td>
                     </tr>
@@ -80,7 +78,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="6" class="table-empty">No suppliers yet. Add supplier records to prepare for purchasing workflows.</td>
+                        <td colspan="6" class="table-empty">ยังไม่มีข้อมูลผู้ขาย เริ่มเพิ่มผู้ขายเพื่อเตรียมใช้งานงานจัดซื้อได้เลย</td>
                     </tr>
                 }
                 </tbody>
@@ -89,3 +87,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

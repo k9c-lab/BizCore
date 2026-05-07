@@ -7,12 +7,12 @@ public class Item : IValidatableObject
     public int ItemId { get; set; }
 
     [Required]
-    [Display(Name = "Item Code")]
+    [Display(Name = "รหัสสินค้า")]
     [StringLength(30)]
     public string ItemCode { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Item Name")]
+    [Display(Name = "ชื่อสินค้า")]
     [StringLength(200)]
     public string ItemName { get; set; } = string.Empty;
 
@@ -22,7 +22,7 @@ public class Item : IValidatableObject
     public string PartNumber { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Item Type")]
+    [Display(Name = "ประเภท")]
     [StringLength(30)]
     public string ItemType { get; set; } = "Product";
 
@@ -30,18 +30,18 @@ public class Item : IValidatableObject
     [StringLength(20)]
     public string Unit { get; set; } = "EA";
 
-    [Display(Name = "Track Stock")]
+    [Display(Name = "ตัดสต็อก")]
     public bool TrackStock { get; set; } = true;
 
-    [Display(Name = "Serial Controlled")]
+    [Display(Name = "ควบคุม Serial")]
     public bool IsSerialControlled { get; set; }
 
     [Range(0, 9999999999999999.99)]
-    [Display(Name = "Unit Price")]
+    [Display(Name = "ราคาต่อหน่วย")]
     public decimal UnitPrice { get; set; }
 
     [Range(0, 9999999999999999.99)]
-    [Display(Name = "Current Stock")]
+    [Display(Name = "สต็อกปัจจุบัน")]
     public decimal CurrentStock { get; set; }
 
     public bool IsActive { get; set; } = true;

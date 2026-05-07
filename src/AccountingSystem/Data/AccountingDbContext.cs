@@ -20,6 +20,8 @@ public class AccountingDbContext : DbContext
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Salesperson> Salespersons => Set<Salesperson>();
+    public DbSet<TreatmentRight> TreatmentRights => Set<TreatmentRight>();
+    public DbSet<ReferringDoctor> ReferringDoctors => Set<ReferringDoctor>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<PriceLevel> PriceLevels => Set<PriceLevel>();
     public DbSet<ItemPrice> ItemPrices => Set<ItemPrice>();
@@ -37,9 +39,13 @@ public class AccountingDbContext : DbContext
     public DbSet<InvoiceHeader> InvoiceHeaders => Set<InvoiceHeader>();
     public DbSet<InvoiceDetail> InvoiceDetails => Set<InvoiceDetail>();
     public DbSet<InvoiceSerial> InvoiceSerials => Set<InvoiceSerial>();
+    public DbSet<BillingNoteHeader> BillingNoteHeaders => Set<BillingNoteHeader>();
+    public DbSet<BillingNoteInvoice> BillingNoteInvoices => Set<BillingNoteInvoice>();
+    public DbSet<BillingNoteLine> BillingNoteLines => Set<BillingNoteLine>();
     public DbSet<PaymentHeader> PaymentHeaders => Set<PaymentHeader>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<ReceiptHeader> ReceiptHeaders => Set<ReceiptHeader>();
+    public DbSet<ReceiptPrintLine> ReceiptPrintLines => Set<ReceiptPrintLine>();
     public DbSet<SupplierPaymentHeader> SupplierPaymentHeaders => Set<SupplierPaymentHeader>();
     public DbSet<PurchaseRequestHeader> PurchaseRequestHeaders => Set<PurchaseRequestHeader>();
     public DbSet<PurchaseRequestDetail> PurchaseRequestDetails => Set<PurchaseRequestDetail>();
@@ -160,6 +166,22 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.CommissionRate).HasPrecision(5, 2);
             entity.HasIndex(x => x.SalespersonCode).IsUnique();
             entity.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<TreatmentRight>(entity =>
+        {
+            entity.HasKey(x => x.TreatmentRightId);
+            entity.Property(x => x.TreatmentRightCode).HasMaxLength(30);
+            entity.Property(x => x.TreatmentRightName).HasMaxLength(200);
+            entity.HasIndex(x => x.TreatmentRightCode).IsUnique();
+        });
+
+        modelBuilder.Entity<ReferringDoctor>(entity =>
+        {
+            entity.HasKey(x => x.ReferringDoctorId);
+            entity.Property(x => x.DoctorCode).HasMaxLength(30);
+            entity.Property(x => x.DoctorName).HasMaxLength(200);
+            entity.HasIndex(x => x.DoctorCode).IsUnique();
         });
 
         modelBuilder.Entity<Item>(entity =>
@@ -460,6 +482,10 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.InvoiceId);
             entity.Property(x => x.ReferenceNo).HasMaxLength(50);
+            entity.Property(x => x.PatientFullName).HasMaxLength(200);
+            entity.Property(x => x.PatientGender).HasMaxLength(20);
+            entity.Property(x => x.PatientHn).HasMaxLength(50);
+            entity.Property(x => x.PatientWard).HasMaxLength(100);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
@@ -492,6 +518,14 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.Quotation)
                 .WithMany()
                 .HasForeignKey(x => x.QuotationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.TreatmentRight)
+                .WithMany()
+                .HasForeignKey(x => x.TreatmentRightId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReferringDoctor)
+                .WithMany()
+                .HasForeignKey(x => x.ReferringDoctorId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
@@ -529,6 +563,75 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<BillingNoteHeader>(entity =>
+        {
+            entity.HasKey(x => x.BillingNoteId);
+            entity.Property(x => x.BillingNoteNo).HasMaxLength(30);
+            entity.Property(x => x.SummaryMode).HasMaxLength(30);
+            entity.Property(x => x.SubtotalAmount).HasPrecision(18, 2);
+            entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(x => x.VatAmount).HasPrecision(18, 2);
+            entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            entity.Property(x => x.PaidAmount).HasPrecision(18, 2);
+            entity.Property(x => x.BalanceAmount).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.HasIndex(x => x.BillingNoteNo).IsUnique();
+            entity.HasOne(x => x.Customer)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BillingNoteInvoice>(entity =>
+        {
+            entity.HasKey(x => x.BillingNoteInvoiceId);
+            entity.Property(x => x.BilledAmount).HasPrecision(18, 2);
+            entity.HasIndex(x => x.InvoiceId);
+            entity.HasOne(x => x.BillingNoteHeader)
+                .WithMany(x => x.BillingNoteInvoices)
+                .HasForeignKey(x => x.BillingNoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.InvoiceHeader)
+                .WithMany(x => x.BillingNoteInvoices)
+                .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BillingNoteLine>(entity =>
+        {
+            entity.HasKey(x => x.BillingNoteLineId);
+            entity.Property(x => x.SummaryType).HasMaxLength(30);
+            entity.Property(x => x.Description).HasMaxLength(200);
+            entity.Property(x => x.Quantity).HasPrecision(18, 2);
+            entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            entity.HasOne(x => x.BillingNoteHeader)
+                .WithMany(x => x.BillingNoteLines)
+                .HasForeignKey(x => x.BillingNoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.TreatmentRight)
+                .WithMany()
+                .HasForeignKey(x => x.TreatmentRightId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<InvoiceSerial>(entity =>
         {
             entity.HasKey(x => x.InvoiceSerialId);
@@ -546,6 +649,11 @@ public class AccountingDbContext : DbContext
 
         modelBuilder.Entity<PaymentHeader>(entity =>
         {
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.HasOne(x => x.BillingNoteHeader)
+                .WithMany()
+                .HasForeignKey(x => x.BillingNoteId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasKey(x => x.PaymentId);
             entity.Property(x => x.Amount).HasPrecision(18, 2);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
@@ -600,6 +708,7 @@ public class AccountingDbContext : DbContext
             entity.HasKey(x => x.ReceiptId);
             entity.Property(x => x.TotalReceivedAmount).HasPrecision(18, 2);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.Property(x => x.PrintItemDescription).HasMaxLength(1000);
             entity.HasIndex(x => x.ReceiptNo).IsUnique();
             entity.HasIndex(x => x.PaymentId).IsUnique();
             entity.HasOne(x => x.Customer)
@@ -626,6 +735,18 @@ public class AccountingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.CancelledByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReceiptPrintLine>(entity =>
+        {
+            entity.HasKey(x => x.ReceiptPrintLineId);
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.ReceiptId, x.LineNumber }).IsUnique();
+            entity.HasOne(x => x.ReceiptHeader)
+                .WithMany(x => x.PrintLines)
+                .HasForeignKey(x => x.ReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SupplierPaymentHeader>(entity =>

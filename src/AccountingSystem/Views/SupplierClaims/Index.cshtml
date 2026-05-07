@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SerialClaimLog>
+﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SerialClaimLog>
 
 @{
     ViewData["Title"] = "Supplier Claims";
@@ -12,16 +12,14 @@
     <div>
         <div class="page-eyebrow">Supplier Claim Module</div>
         <h1 class="page-title">Supplier Claims</h1>
-        <p class="page-subtitle">Track simple serial-based supplier claim logs. Start a new claim from Serial Inquiry or Stock Inquiry.</p>
-    </div>
+        </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Claim Register</h2>
-            <p class="section-subtitle">Each record is a direct claim log from one selected serial.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.TotalCount record(s)</div>
     </div>
     <div class="card-body">
@@ -96,3 +94,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

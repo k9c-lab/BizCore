@@ -1,5 +1,206 @@
 # Session Notes
 
+## Latest Session Update - 2026-05-07 Payment Draft Flow, Screen Pattern Adoption, And Edge 403 Follow-up
+- Continued standardizing document UX across sales/finance screens.
+
+- Screen pattern decision was promoted from session-only memory into project standard:
+  - canonical rule location:
+    - `docs/IMPLEMENTATION_SPEC_WORKFLOW_STANDARD.md`
+  - agreed shared rules now documented there:
+    - `Index` pages should keep row actions minimal
+    - default row action pattern is `Details` only
+    - `Details` page is the main action hub
+    - important status-changing actions require confirmation
+    - cancellation for financial/audit-impact documents should require reason
+    - long create/edit forms should expose primary actions at top and bottom where appropriate
+    - use explicit `Back to list` wording instead of generic `Back`
+
+- Payment module was extended to support real `Draft` workflow rather than immediate post only:
+  - `Payments/Create`
+    - now has top and bottom actions:
+      - `Save Draft`
+      - `Post Payment`
+      - `Back to Payments List`
+  - added new view:
+    - `Views/Payments/Edit.cshtml`
+  - added shared client script partial:
+    - `Views/Payments/_PaymentEditorScripts.cshtml`
+    - keeps create/edit payment UI behavior consistent
+  - `PaymentsController` now supports:
+    - create draft
+    - edit draft
+    - post directly from create/edit
+    - post existing draft from details
+  - important draft rule:
+    - payment draft does **not** change invoice balances or billing-note balances
+    - balances are updated only when payment is actually posted
+  - details page for draft payment now supports:
+    - `Edit Draft`
+    - `Post Payment` with confirmation
+
+- Payment module UX / control improvements:
+  - `Payments/Index`
+    - reduced row actions to `Details` only
+    - removed direct `Generate Receipt` / `Cancel` from list page
+  - `Payments/Details`
+    - cancellation now requires explicit reason
+    - cancel dialog includes textarea for reason
+    - server-side validation also enforces cancel reason
+  - result:
+    - payment module now follows the same action pattern as invoice and billing note much more closely
+
+- Billing Note index follow-up:
+  - billing-note list now shows payment progress underneath status instead of using a separate payment column
+  - display format:
+    - status pill
+    - `Paid x / y`
+  - goal:
+    - reduce table width
+    - keep document state and payment progress visible in one place
+
+- Receipt module was aligned to the shared pattern:
+  - `Receipts/Index`
+    - reduced row actions to `Details` only
+    - removed direct `Print` / `Cancel` from list page
+  - `Receipts/Details`
+    - back button changed to explicit list wording
+    - cancel action now includes cancel-reason textarea in confirmation dialog
+  - `ReceiptsController`
+    - server-side validation now requires cancel reason before receipt cancellation
+
+- 403 production/deployment issue note:
+  - discussion paused migration-auto-run topic for later
+  - new operational issue observed / discussed:
+    - `403` appears on some customer machines after deploy
+    - issue appears especially associated with `Microsoft Edge`
+    - not necessarily all browsers / all machines
+  - current working suspicion:
+    - browser state / stale cookie / Edge profile state is a strong suspect
+    - cookie size is still a possible suspect because this system had oversized-cookie history before
+  - important current conclusion:
+    - not enough evidence yet to say `cookie too large` is definitely the only root cause
+    - need future debugging to separate:
+      - stale cookie / Edge cached auth state
+      - large auth cookie / header-size issue
+      - machine-specific browser policy / extension behavior
+  - suggested next debugging direction for later:
+    - compare normal Edge profile vs InPrivate
+    - test clearing domain cookie
+    - re-check current auth-cookie payload / claims size in code
+
+## Latest Session Update - 2026-05-07 UI Screen Pattern Standardization Note
+- Agreed a shared UI pattern for document-style modules such as:
+  - Quotation
+  - Invoice
+  - Billing Note
+  - Payment
+  - Receipt
+- Decided screen-pattern rules should not live only in ad-hoc session memory.
+- Standard location for this rule set:
+  - `docs/IMPLEMENTATION_SPEC_WORKFLOW_STANDARD.md`
+- Working UI pattern now documented there:
+  - `Index` pages should keep row actions minimal
+  - default `Index` action pattern is `Details` only
+  - important actions should move to `Details`
+  - `Details` page is the main action hub
+  - status-changing actions must have confirmation
+  - cancellation for financial/audit-impact documents should require reason
+  - long create/edit forms should expose primary actions at top and bottom where appropriate
+  - prefer explicit back-to-list wording instead of generic `Back`
+- Practical reason:
+  - keep all modules visually and behaviorally consistent
+  - reduce accidental status changes from list pages
+  - make future implementation decisions easier to repeat consistently
+  - avoid re-deciding the same UX pattern every session
+
+## Latest Session Update - 2026-05-04 Sales Follow-up Requirements For Billing Note And Separate Cash Receipt
+- New sales/accounting workflow requirements were clarified with the customer.
+- `Invoice` requirements:
+  - invoice must store patient information:
+    - `Patient Full Name`
+    - `Age`
+    - `Gender`
+    - `HN`
+    - `Treatment Right`
+    - `Ward`
+    - `Referring Doctor`
+  - each invoice has only one patient / one patient right
+  - `Treatment Right` should be master data
+  - `Referring Doctor` should be master data
+  - issued invoice should follow accounting-style control:
+    - draft can be edited
+    - issued invoice should not be edited directly
+    - if correction is needed after issue, prefer cancel and recreate rather than overwriting the same invoice
+- New `Billing Note` requirement:
+  - billing note is a separate document from invoice
+  - one billing note can collect many invoices
+  - user can choose which invoices to include
+  - one invoice can belong to only one billing note
+  - billing note summary must support at least 2 grouping modes:
+    - group by item
+    - group by patient right
+  - billing note should be treated as the main collection / billing document for this workflow
+- Payment direction discussed:
+  - payment should likely move to reference `Billing Note` rather than individual invoice for this customer workflow
+  - invoice remains source document
+  - billing note becomes the grouped collection document
+- Locking recommendation after billing note creation:
+  - if billing note is already issued/confirmed, linked invoices should not allow direct financial edits
+  - if billing note is still draft, safer workflow is remove invoice from billing note first, then edit invoice
+- Separate non-accounting cash customer document requirement:
+  - customer also wants a document for walk-in / cash cases that should not flow into normal accounting / AR process
+  - this should not be implemented as a checkbox on normal invoice
+  - recommended direction is a separate document/module with separate running number
+  - suggested shape:
+    - separate `Cash Receipt` / `Walk-in Receipt` style module
+    - not linked to normal invoice / billing note AR workflow
+    - separate numbering and reporting scope
+  - reason for separation:
+    - cleaner training
+    - less reporting confusion
+    - avoids mixing accounting and non-accounting flows inside the same invoice document
+
+## Latest Session Update - 2026-05-02 Neura Production Access Check and UI Language Rollback
+- Re-checked live customer deployment `neura` before deploying the newest local build.
+- Observed recurring production access issue again:
+  - `403 - Forbidden: Access is denied.`
+  - happened on the already-deployed site, before publishing the latest local pricing/settings changes
+- Production troubleshooting outcome:
+  - tested with `Incognito` and still saw the issue initially
+  - switched local dev app temporarily to production database `NMI_DB`
+  - local dev app could run against production DB successfully
+  - this suggested production DB itself was not the main blocker
+  - after deleting browser cookies for `https://neura.thevvapp.com`, the site returned to normal login flow and could be used again
+- Important conclusion:
+  - current auth cookie logic in code does **not** appear to be bloated like the previous 2026-04-29 issue
+  - login claims currently remain limited and no longer include large per-permission claim payloads
+  - this recurrence was most likely stale cookie/session state, not proof that the original cookie-bloat bug had returned in current code
+- Connection string handling during investigation:
+  - local `appsettings.json` was temporarily pointed to production DB for testing
+  - after verification, both dev appsettings files were switched back to local DB
+- SQL migration/deploy direction reaffirmed:
+  - continue with `SQL-based migration system`
+  - do not switch to EF Core Migrations just to work around current deployment friction
+  - migration runner/admin UI remains the preferred direction
+- Deployment note:
+  - migration scripts must still be present on the deployed server under `DatabaseMigrations`
+  - if `Settings -> Database Upgrade` shows no pending scripts on server, first confirm latest build and published migration files are actually present
+- UX / UI wording direction:
+  - temporarily rolled back key working screens from Thai/mixed UI wording back to English for stability
+  - updated major live workflow screens back to English:
+    - `Items`
+    - `Create/Edit/Details Item`
+    - `Quotation Create/Edit/Form/Details`
+    - `Invoice Create/Form`
+  - intentionally left print templates bilingual for now
+- Quotation UX cleanup completed:
+  - removed redundant quotation summary strip from create/edit flow
+  - kept only the main summary block
+- Quotation item dropdown issue:
+  - compared with `PurchaseRequests/Create`
+  - aligned quotation line editor wrapper with the same overflow pattern used by PR page
+  - this was done to prevent item dropdown clipping inside the line table area
+
 ## Latest Session Update - 2026-05-02 MultiPrice Document Flow and Migration Loader Fix
 - Extended multi-price from setup screens into live sales document entry while preserving legacy behavior.
 - Added sales document price-level support:
@@ -1934,3 +2135,283 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - quotation conversion from branches other than `Main Branch`
 - If continuing confirm-popover cleanup later:
   - audit remaining low-risk admin / support actions not yet converted
+
+## 2026-05-04 Invoice Patient Fields Phase 1
+- Implemented patient information on `Invoice`:
+  - `PatientFullName`
+  - `PatientAge`
+  - `PatientGender`
+  - `PatientHn`
+  - `TreatmentRightId`
+  - `PatientWard`
+  - `ReferringDoctorId`
+- Added new master data modules:
+  - `TreatmentRights`
+  - `ReferringDoctors`
+- Added CRUD controllers and views for both masters and wired them into the master-data sidebar.
+- Updated invoice flow:
+  - create/edit form now captures patient information
+  - details page now shows patient information
+  - print page now shows patient information
+  - invoice search now also checks patient name and HN
+- Added idempotent SQL migration script:
+  - `049_invoice_patient_fields_and_masters.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+- Added menu permissions:
+  - `MasterData.TreatmentRights.Menu`
+  - `MasterData.ReferringDoctors.Menu`
+- Build status:
+  - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false`
+  - passed with `0 warnings` and `0 errors`
+- Assumption currently used:
+  - patient gender is a fixed dropdown: `ไม่ระบุ`, `ชาย`, `หญิง`, `อื่นๆ`
+- Next recommended step:
+  - run migration `049`
+  - seed initial `TreatmentRights` and `ReferringDoctors`
+  - then start `Billing Note` design/implementation
+
+## 2026-05-04 Billing Note MVP
+- Implemented initial `Billing Note` module with its own menu under Sales:
+  - `BillingNotesController`
+  - `Index`, `Create`, `Details`, `Print`
+- Data model added:
+  - `BillingNoteHeader`
+  - `BillingNoteInvoice`
+  - `BillingNoteLine`
+- Current workflow:
+  - select one customer
+  - load open invoices that still have `BalanceAmount > 0`
+  - exclude invoices already linked to another billing note
+  - user selects many invoices
+  - system previews summary grouped by `TreatmentRight`
+  - save creates billing note immediately with status `Issued`
+- Current summary mode implemented:
+  - `TreatmentRight`
+  - output shape is `1 line = 1 treatment right + total amount`
+- Current behavior assumptions:
+  - billing note uses outstanding balance from invoice (`BalanceAmount`)
+  - only one customer per billing note
+  - invoice can belong to only one billing note via unique constraint on `BillingNoteInvoices.InvoiceId`
+  - no payment integration to billing note yet
+  - cancelling a billing note only changes billing-note status; it does not yet re-open invoice selection for a new billing note
+- SQL migration added:
+  - `050_billing_note_module.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+- Permission added:
+  - `Sales.BillingNotes.Menu`
+- Build status:
+  - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false`
+  - passed with only `NU1900` network warnings from NuGet vulnerability check
+- Next recommended step:
+  - run migrations `049` and `050`
+  - test create/details/print flow for billing note
+  - decide next phase:
+    - allow cancel to truly release invoices
+    - connect payment flow to billing note
+    - add `Summary by Item` mode
+
+## 2026-05-05 Billing Note Follow-up And Payment Direction
+- Confirmed business rules for patient / billing workflow:
+  - invoice stores patient information directly on invoice header
+  - current patient fields confirmed:
+    - patient full name
+    - age
+    - gender
+    - HN
+    - treatment right
+    - ward
+    - referring doctor
+  - `Treatment Right` and `Referring Doctor` are master data
+  - `PatientAge` is intentionally stored as a manually entered snapshot value on invoice, not calculated from date of birth
+- Confirmed billing-note grouping behavior:
+  - current implemented mode is `Summary by Treatment Right`
+  - output shape is `1 line = 1 treatment right + total amount`
+  - billing note should still keep invoice-level links in backend even when printed summary is collapsed
+- Confirmed coexistence with old sales flow:
+  - system must still allow the old invoice workflow
+  - billing note is an additional optional flow, not a replacement for all invoices
+  - default behavior should remain normal invoice usage unless user intentionally groups invoices into a billing note
+- Confirmed accounting / control recommendation:
+  - draft invoice can still be edited
+  - issued invoice should not be directly edited in normal accounting practice
+  - if invoice is already inside billing note, direct financial edits should be restricted even more strongly
+- Confirmed next implementation direction:
+  - next major step after billing-note creation is `Payment by Billing Note`
+  - if an invoice is linked to an active billing note, payment should ideally go through billing note rather than direct invoice payment
+  - this avoids duplicate collection paths and keeps AR / receipt flow aligned with the customer's real billing process
+- Partial implementation work has already started for `Payment by Billing Note` but was not finalized in this session:
+  - `PaymentHeader` has been prepared to reference `BillingNoteId`
+  - `BillingNoteHeader` has been prepared to track `PaidAmount` and `BalanceAmount`
+  - `PaymentsController` has already been adjusted to:
+    - open payment form from `BillingNoteId`
+    - prefill customer / branch / outstanding amount from billing note
+    - block direct invoice payment when invoice is already linked to an active billing note
+    - allow direct invoice payment only when invoice is not linked to an active billing note
+    - update billing-note paid / balance amounts when payment is posted or cancelled
+  - payment UI now reflects both flows more clearly:
+    - payment create page explains whether source is invoice flow or billing-note flow
+    - payment list shows linked billing note when present
+- Recommended continuation point for next session:
+  - finish remaining `Payment by Billing Note` detail / receipt presentation polish if needed
+  - add SQL migration for payment-to-billing-note linkage and billing-note payment balances
+  - then test:
+    - create billing note
+    - receive payment from billing note
+    - cancel payment
+    - confirm invoice balances and billing-note balances stay synchronized
+- Billing note discount enhancement completed on `2026-05-05`:
+  - added whole-document discount on billing note create flow
+  - billing note now stores:
+    - `SubtotalAmount`
+    - `DiscountAmount`
+    - `VatAmount`
+    - `TotalAmount`
+  - print summary now shows:
+    - pre-VAT amount
+    - discount
+    - VAT
+    - grand total
+  - current calculation assumption:
+    - billing note is built from outstanding invoice balances
+    - VAT is prorated from invoice-level VAT for remaining balance
+    - document discount is applied before VAT and VAT is recalculated on the remaining taxable base
+  - migration added:
+    - `052_billing_note_discount_summary.sql`
+- Next billing note workflow improvement requested:
+  - billing note should support `Save Draft`
+  - draft billing note must remain editable before final issue/confirm
+  - this should apply especially to:
+    - selected invoices
+    - document discount
+    - remark
+    - summary preview before final issue
+
+## 2026-05-06 Billing Notes UX, Invoice Polish, And Cancellation Rules
+- Continued polishing core sales workflow with focus on `Invoice` and `Billing Note`
+
+- Invoice module status:
+  - invoice flow is now considered functionally close to complete for current handover/testing needs
+  - `Invoices/Index` was simplified:
+    - removed quotation/reference columns
+    - reduced row actions to `Details` only
+    - added billing-note visibility column so users can immediately see whether an invoice has already been grouped into a billing note
+  - invoice list date display was adjusted to short numeric style
+  - `Invoices/Create`:
+    - default VAT was changed to `VAT`
+    - quotation-related quantity field is hidden when invoice is not created from quotation
+    - top action buttons were added for long-form usability
+    - redundant cancel button was removed in favor of back-to-list action
+    - pricing explanatory text for single-price mode was removed
+  - `Invoices/Edit`:
+    - now mirrors create-page top actions
+    - supports direct `Issue Invoice` from edit page
+  - invoice line-item UX:
+    - delete-row behavior was fixed so last-row deletion no longer leaves confusing empty row remnants
+    - item table column labels/widths were adjusted, including renaming invoice quantity column to simpler Thai wording
+  - invoice print:
+    - salesperson block is hidden when no data exists
+    - patient information section was compacted to save space
+    - ward and referring doctor now share space more efficiently
+
+- Patient info productization:
+  - added system setting `Sales.EnablePatientInfo`
+  - invoice screens now support hiding patient information when this setting is disabled:
+    - create
+    - edit
+    - details
+    - print
+  - default remains `true` to avoid breaking current healthcare customer behavior
+  - migration added:
+    - `056_system_settings_enable_patient_info.sql`
+
+- Billing Note UX and language cleanup:
+  - rewrote the main billing-note views to clean up corrupted Thai text and improve consistency:
+    - `BillingNotes/Create`
+    - `BillingNotes/Details`
+    - `BillingNotes/Index`
+    - `BillingNotes/Print`
+  - `BillingNoteCreateViewModel` display names and validation messages were normalized to Thai
+  - `BillingNotes/Index` now follows the same UX policy as invoice list:
+    - row action reduced to `Details` only
+  - back buttons were aligned to the naming style used elsewhere:
+    - `กลับไปรายการใบวางบิล`
+  - `Preview` wording in billing-note create flow was localized to Thai
+
+- Billing Note Create improvements:
+  - added client-side validation when clicking `Load Invoices` without selecting customer
+  - customer selector in document header and customer selector in invoice-load filter are now synchronized, so users no longer need to choose customer twice
+  - top action buttons were added to billing-note create/edit pages:
+    - save draft
+    - issue billing note
+    - back to billing-note list
+
+- Billing Note Details / Draft workflow improvements:
+  - draft billing note details page now supports direct `Issue Billing Note`
+  - added `IssueDraft` controller action so user can issue directly from billing-note details without reopening edit flow
+  - added confirmation dialogs for issue actions:
+    - billing-note create/edit
+    - billing-note details
+
+- Billing Note summary modes:
+  - system now supports both summary modes:
+    - `Summary by Treatment Right`
+    - `Summary by Item`
+  - billing note lines now carry quantity for item-summary mode
+  - billing note details and print were updated to reflect the active summary mode
+  - migration added previously for this enhancement:
+    - `055_billing_note_item_summary_quantity.sql`
+
+- Billing Note print:
+  - print now follows invoice-style print structure more closely
+  - removed referenced-invoices section from print as requested
+  - changed label from invoice-count wording to simpler quantity wording where appropriate
+  - print summary remains:
+    - pre-VAT amount
+    - discount
+    - VAT
+    - grand total
+
+- Billing Note cancellation behavior:
+  - important rule change implemented:
+    - invoices linked only to `Cancelled` billing notes are now available again for selection in new billing notes
+  - implementation approach:
+    - system still keeps historical `BillingNoteInvoices` records
+    - but active locking now ignores links where `BillingNoteHeader.Status = Cancelled`
+  - this was applied in both:
+    - invoice-loading query for billing-note create/edit
+    - validation before saving/issuing billing note
+
+- Cancellation reason rule:
+  - decided that cancellation of key sales documents should require explicit reason
+  - current implementation completed for:
+    - `Invoice`
+    - `Billing Note`
+  - both document types now:
+    - require cancel reason on submit
+    - validate reason server-side even if frontend is bypassed
+  - UI changes:
+    - invoice cancel dialog now includes cancel-reason textarea
+    - billing-note cancel dialog now includes cancel-reason textarea
+    - billing-note details page displays stored cancel reason after cancellation
+  - note:
+    - invoice details page already had history area showing cancel reason, so this work mainly enforced required input and updated cancel dialog
+
+- Build / verification notes:
+  - several edits required full file rewrites because some views had broken Thai encoding and line-based patching was unreliable
+  - one normal build failed temporarily because `BizCore.dll` was locked by a running process
+  - verification was completed successfully by building to alternate output directory:
+    - `dotnet build BizCore.csproj -p:UseAppHost=false -p:OutDir=D:\accountingCodex\scratch_build\`
+
+- Suggested next continuation:
+  - continue polishing `Billing Note` language and layout if any Thai text still appears corrupted in running UI
+  - translate remaining invoice cancel / issue notices in controllers to Thai for full consistency
+  - consider applying required cancel-reason pattern to other cancellable documents later:
+    - quotation
+    - payment / receipt reversals
+    - purchasing documents

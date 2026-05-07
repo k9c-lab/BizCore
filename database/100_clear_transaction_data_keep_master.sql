@@ -41,6 +41,9 @@ BEGIN TRY
         DELETE FROM dbo.CustomerClaimHeaders;
 
     /* Finance documents */
+    IF OBJECT_ID(N'dbo.ReceiptPrintLines', N'U') IS NOT NULL
+        DELETE FROM dbo.ReceiptPrintLines;
+
     IF OBJECT_ID(N'dbo.ReceiptHeaders', N'U') IS NOT NULL
         DELETE FROM dbo.ReceiptHeaders;
 
@@ -52,6 +55,16 @@ BEGIN TRY
 
     IF OBJECT_ID(N'dbo.SupplierPaymentHeaders', N'U') IS NOT NULL
         DELETE FROM dbo.SupplierPaymentHeaders;
+
+    /* Billing note documents */
+    IF OBJECT_ID(N'dbo.BillingNoteLines', N'U') IS NOT NULL
+        DELETE FROM dbo.BillingNoteLines;
+
+    IF OBJECT_ID(N'dbo.BillingNoteInvoices', N'U') IS NOT NULL
+        DELETE FROM dbo.BillingNoteInvoices;
+
+    IF OBJECT_ID(N'dbo.BillingNoteHeaders', N'U') IS NOT NULL
+        DELETE FROM dbo.BillingNoteHeaders;
 
     /* Sales documents */
     IF OBJECT_ID(N'dbo.InvoiceSerials', N'U') IS NOT NULL
@@ -144,10 +157,14 @@ BEGIN TRY
     IF OBJECT_ID(N'dbo.SupplierClaimHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.SupplierClaimHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.CustomerClaimHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.CustomerClaimHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.SerialClaimLogs', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.SerialClaimLogs', RESEED, 0);
+    IF OBJECT_ID(N'dbo.ReceiptPrintLines', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.ReceiptPrintLines', RESEED, 0);
     IF OBJECT_ID(N'dbo.ReceiptHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.ReceiptHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.PaymentAllocations', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.PaymentAllocations', RESEED, 0);
     IF OBJECT_ID(N'dbo.PaymentHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.PaymentHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.SupplierPaymentHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.SupplierPaymentHeaders', RESEED, 0);
+    IF OBJECT_ID(N'dbo.BillingNoteLines', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.BillingNoteLines', RESEED, 0);
+    IF OBJECT_ID(N'dbo.BillingNoteInvoices', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.BillingNoteInvoices', RESEED, 0);
+    IF OBJECT_ID(N'dbo.BillingNoteHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.BillingNoteHeaders', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceSerials', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceSerials', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceDetails', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceDetails', RESEED, 0);
     IF OBJECT_ID(N'dbo.InvoiceHeaders', N'U') IS NOT NULL DBCC CHECKIDENT (N'dbo.InvoiceHeaders', RESEED, 0);

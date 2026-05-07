@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.PricingSettingsViewModel
+﻿@model BizCore.Models.ViewModels.PricingSettingsViewModel
 
 @{
     ViewData["Title"] = "Settings";
@@ -13,8 +13,7 @@
     <div>
         <div class="page-eyebrow">Administration</div>
         <h1 class="page-title">System Settings</h1>
-        <p class="page-subtitle">Manage product behavior switches without changing the legacy workflow for existing customers.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">Users</a>
         <a asp-controller="RolePermissions" asp-action="Index" class="btn btn-outline-secondary">Role Permissions</a>
@@ -59,8 +58,7 @@
         <div class="table-card-header px-0 pt-0">
             <div>
                 <h2 class="section-title">Database Upgrade</h2>
-                <p class="section-subtitle">Run safe system migrations for this customer instance without touching customer business data.</p>
-            </div>
+                </div>
             <div class="table-meta">@Model.MigrationStatus.PendingScripts.Count pending / @Model.MigrationStatus.AppliedScripts.Count applied</div>
         </div>
 
@@ -144,3 +142,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

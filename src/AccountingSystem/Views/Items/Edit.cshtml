@@ -1,35 +1,34 @@
 @model BizCore.Models.Entities.Item
 
 @{
-    ViewData["Title"] = "Edit Item";
+    ViewData["Title"] = "แก้ไขสินค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Edit Item</h1>
-        <p class="page-subtitle">Refine item setup with cleaner spacing and clearer control visibility.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">แก้ไขสินค้าและบริการ</h1>
+        </div>
     <div class="page-actions">
-        <button type="submit" form="itemForm" class="btn btn-primary px-4">Save Changes</button>
-        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">Selling Prices</a>
-        <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">View Details</a>
+        <button type="submit" form="itemForm" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
+        <a asp-action="Pricing" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">ราคาขาย</a>
+        <a asp-action="Details" asp-route-id="@Model.ItemId" class="btn btn-outline-secondary">ดูรายละเอียด</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
         <div class="workflow-info workflow-info-info mb-3">
-            Update the item's <strong>Unit Price</strong> here when you want future quotations and invoices to default to a new selling price.
+            หากต้องการให้ใบเสนอราคาและใบแจ้งหนี้ใหม่ใช้ราคาตั้งต้นใหม่ สามารถปรับ <strong>ราคาต่อหน่วย</strong> ได้ที่นี่
         </div>
         <form asp-action="Edit" method="post" id="itemForm">
             <input type="hidden" asp-for="ItemId" />
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Validation remains unchanged and now appears more prominently.</span>
+                <span class="table-meta">แก้ไขข้อมูลหลักของสินค้าได้ที่นี่ ส่วนการกำหนดราคาหลายระดับยังอยู่ที่ <strong>ราคาขาย</strong></span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
                 </div>
             </div>
         </form>

@@ -1,17 +1,16 @@
-@model BizCore.Models.Entities.Customer
+﻿@model BizCore.Models.Entities.Customer
 
 @{
-    ViewData["Title"] = "Edit Customer";
+    ViewData["Title"] = "แก้ไขลูกค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Edit Customer</h1>
-        <p class="page-subtitle">Update customer details with a cleaner business form layout.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">แก้ไขลูกค้า</h1>
+        </div>
     <div class="page-actions">
-        <a asp-action="Details" asp-route-id="@Model.CustomerId" class="btn btn-outline-secondary">View Details</a>
+        <a asp-action="Details" asp-route-id="@Model.CustomerId" class="btn btn-outline-secondary">ดูรายละเอียด</a>
     </div>
 </div>
 
@@ -21,10 +20,10 @@
             <input type="hidden" asp-for="CustomerId" />
             <partial name="_Form" model="Model" />
             <div class="form-actions">
-                <span class="table-meta">Inline validation remains active on every field.</span>
+                <span class="table-meta">ระบบตรวจสอบข้อมูลในแต่ละช่องระหว่างแก้ไขเหมือนเดิม</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
                 </div>
             </div>
         </form>
@@ -34,3 +33,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

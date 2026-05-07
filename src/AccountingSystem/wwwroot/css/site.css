@@ -17,14 +17,14 @@
 }
 
 html {
-  font-size: 13px;
+  font-size: 14px;
   position: relative;
   min-height: 100%;
 }
 
 @media (min-width: 768px) {
   html {
-    font-size: 14px;
+    font-size: 15px;
   }
 }
 
@@ -652,8 +652,9 @@ a {
 .entity-table thead th {
   white-space: nowrap;
   text-transform: uppercase;
-  font-size: 0.72rem;
-  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   color: #475467;
   background: rgba(248, 250, 252, 0.95);
   border-bottom-width: 1px;
@@ -842,6 +843,10 @@ a {
 .quote-editor-table td {
   padding: 0.75rem 0.7rem;
   vertical-align: top;
+}
+
+.quote-editor-table th {
+  font-size: 0.8rem;
 }
 
 .quote-editor-table .form-control,

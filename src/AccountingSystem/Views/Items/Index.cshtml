@@ -1,7 +1,7 @@
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.Item>
 
 @{
-    ViewData["Title"] = "Items";
+    ViewData["Title"] = "สินค้าและบริการ";
     var search = ViewData["Search"] as string;
     var itemType = ViewData["ItemType"] as string;
     var status = ViewData["Status"] as string;
@@ -9,69 +9,67 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Core Module</div>
-        <h1 class="page-title">Items</h1>
-        <p class="page-subtitle">Manage stock items and maintain the default selling price used by the current single-price sales flow.</p>
-    </div>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">สินค้าและบริการ</h1>
+        </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Item</a>
+        <a asp-action="Create" class="btn btn-primary px-4">เพิ่มรายการ</a>
     </div>
 </div>
 
 <div class="workflow-info workflow-info-info mb-3">
-    This is the current item pricing setup screen. In the active single-price flow, sales documents use each item's <strong>Unit Price</strong> as the default selling price.
+    หน้านี้ใช้สำหรับตั้งค่าสินค้าและราคา โดยในโหมดราคาเดียว ระบบจะใช้ <strong>ราคาต่อหน่วย</strong> ของสินค้าเป็นราคาขายตั้งต้นในเอกสารขาย
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Item Catalog</h2>
-            <p class="section-subtitle">Operational inventory list with pricing and control flags surfaced clearly.</p>
-        </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+            <h2 class="section-title">รายการสินค้าและบริการ</h2>
+            </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Code, name, or part number" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="รหัส, ชื่อสินค้า หรือ Part Number" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="itemType">Type</label>
+                <label class="form-label" for="itemType">ประเภท</label>
                 <select id="itemType" name="itemType" class="form-select">
-                    <option value="">All</option>
-                    <option value="Product" selected="@(itemType == "Product")">Product</option>
-                    <option value="Service" selected="@(itemType == "Service")">Service</option>
-                    <option value="Spare Part" selected="@(itemType == "Spare Part")">Spare Part</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Product" selected="@(itemType == "Product")">สินค้า</option>
+                    <option value="Service" selected="@(itemType == "Service")">บริการ</option>
+                    <option value="Spare Part" selected="@(itemType == "Spare Part")">อะไหล่</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Active" selected="@(status == "Active")">Active</option>
-                    <option value="Inactive" selected="@(status == "Inactive")">Inactive</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Active" selected="@(status == "Active")">ใช้งาน</option>
+                    <option value="Inactive" selected="@(status == "Inactive")">ปิดใช้งาน</option>
                 </select>
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Item Code</th>
-                        <th>Item Name</th>
+                        <th>รหัสสินค้า</th>
+                        <th>ชื่อสินค้า</th>
                         <th>Part Number</th>
-                        <th>Type</th>
-                        <th>Unit</th>
-                        <th>Unit Price</th>
-                        <th>Stock</th>
+                        <th>ประเภท</th>
+                        <th>หน่วย</th>
+                        <th>ราคาต่อหน่วย</th>
+                        <th>สต็อก</th>
                         <th>Serial</th>
-                        <th>Pricing</th>
-                        <th class="text-end">Actions</th>
+                        <th>ราคา</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,22 +81,22 @@
                         <td><span class="code-chip">@item.ItemCode</span></td>
                         <td class="fw-semibold">@item.ItemName</td>
                         <td>@(string.IsNullOrWhiteSpace(item.PartNumber) ? "-" : item.PartNumber)</td>
-                        <td>@item.ItemType</td>
+                        <td>@(item.ItemType == "Product" ? "สินค้า" : item.ItemType == "Service" ? "บริการ" : item.ItemType == "Spare Part" ? "อะไหล่" : item.ItemType)</td>
                         <td>@item.Unit</td>
                         <td>@item.UnitPrice.ToString("N2")</td>
                         <td>@(item.TrackStock ? item.CurrentStock.ToString("N2") : "-")</td>
-                        <td>@(item.IsSerialControlled ? "Serial" : "Standard")</td>
-                        <td><span class="table-meta">Base price + optional level prices</span></td>
+                        <td>@(item.IsSerialControlled ? "ควบคุม Serial" : "ทั่วไป")</td>
+                        <td><span class="table-meta">ราคาพื้นฐาน + ราคาตามระดับ</span></td>
                         <td class="text-end">
                             <div class="table-actions">
-                                <a asp-action="Details" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">Details</a>
-                                <a asp-action="Pricing" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">Selling Prices</a>
+                                <a asp-action="Details" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                                <a asp-action="Pricing" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-secondary">ราคาขาย</a>
                                 @if (item.TrackStock)
                                 {
-                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" class="btn btn-sm btn-outline-primary">Ledger</a>
+                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" class="btn btn-sm btn-outline-primary">สมุดสต็อก</a>
                                 }
-                                <a asp-action="Edit" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <a asp-action="Delete" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-danger">Delete</a>
+                                <a asp-action="Edit" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
+                                <a asp-action="Delete" asp-route-id="@item.ItemId" class="btn btn-sm btn-outline-danger">ลบ</a>
                             </div>
                         </td>
                     </tr>
@@ -107,7 +105,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="10" class="table-empty">No items yet. Add products or services to start testing sales and inventory flows.</td>
+                        <td colspan="10" class="table-empty">ยังไม่มีข้อมูลสินค้าและบริการ</td>
                     </tr>
                 }
                 </tbody>

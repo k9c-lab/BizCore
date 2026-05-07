@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.UserFormViewModel
+﻿@model BizCore.Models.ViewModels.UserFormViewModel
 
 @{
     ViewData["Title"] = "Edit User";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Administration</div>
         <h1 class="page-title">Edit User</h1>
-        <p class="page-subtitle">Update account details, role, and access status.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-action="Details" asp-route-id="@Model.UserId" class="btn btn-outline-secondary">Back</a>
     </div>
@@ -34,4 +33,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
 

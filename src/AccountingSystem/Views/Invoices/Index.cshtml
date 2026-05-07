@@ -1,7 +1,7 @@
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.InvoiceHeader>
 
 @{
-    ViewData["Title"] = "Invoices";
+    ViewData["Title"] = "ใบแจ้งหนี้";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -10,66 +10,63 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Sales Module</div>
-        <h1 class="page-title">Invoices</h1>
-        <p class="page-subtitle">Direct sales invoices with stock deduction and serial issue on save.</p>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">ใบแจ้งหนี้</h1>
     </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Invoice</a>
+        <a asp-action="Create" class="btn btn-primary px-4">สร้างใบแจ้งหนี้</a>
     </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Invoice Register</h2>
-            <p class="section-subtitle">Direct invoices can be paid through the Payment module. Draft and unpaid issued invoices can be cancelled safely.</p>
+            <h2 class="section-title">รายการใบแจ้งหนี้</h2>
         </div>
-        <div class="table-meta">@Model.TotalCount record(s)</div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Invoice no., quotation no., reference, customer, or salesperson" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ใบแจ้งหนี้, ลูกค้า, คนไข้, HN หรือพนักงานขาย" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
-                    <option value="Issued" selected="@(status == "Issued")">Issued</option>
-                    <option value="PartiallyPaid" selected="@(status == "PartiallyPaid")">Partially Paid</option>
-                    <option value="Paid" selected="@(status == "Paid")">Paid</option>
-                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Draft" selected="@(status == "Draft")">ฉบับร่าง</option>
+                    <option value="Issued" selected="@(status == "Issued")">ออกเอกสารแล้ว</option>
+                    <option value="PartiallyPaid" selected="@(status == "PartiallyPaid")">ชำระบางส่วน</option>
+                    <option value="Paid" selected="@(status == "Paid")">ชำระครบแล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิกแล้ว</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Invoice No.</th>
-                        <th>Quotation No.</th>
-                        <th>Reference No.</th>
-                        <th>Invoice Date</th>
-                        <th>Customer</th>
-                        <th>Branch</th>
-                        <th>Total Amount</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th>เลขที่ใบแจ้งหนี้</th>
+                        <th>วันที่เอกสาร</th>
+                        <th>ลูกค้า</th>
+                        <th>สาขา</th>
+                        <th>ยอดรวม</th>
+                        <th>ใบวางบิล</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,72 +74,37 @@
                 {
                     @foreach (var invoice in Model)
                     {
-                        var canReceivePayment = invoice.BalanceAmount > 0 &&
-                            (invoice.Status == "Issued" || invoice.Status == "PartiallyPaid");
+                        var linkedBillingNote = invoice.BillingNoteInvoices
+                            .Select(x => x.BillingNoteHeader)
+                            .FirstOrDefault(x => x != null);
                         <tr>
                             <td><span class="code-chip">@invoice.InvoiceNo</span></td>
-                            <td>@(string.IsNullOrWhiteSpace(invoice.Quotation?.QuotationNumber) ? "-" : invoice.Quotation!.QuotationNumber)</td>
-                            <td>@(string.IsNullOrWhiteSpace(invoice.ReferenceNo) ? "-" : invoice.ReferenceNo)</td>
-                            <td>@invoice.InvoiceDate.ToString("dd MMM yyyy")</td>
+                            <td>@invoice.InvoiceDate.ToString("dd/M/yyyy")</td>
                             <td class="fw-semibold">@invoice.Customer?.CustomerName</td>
                             <td>@(invoice.Branch?.BranchName ?? "-")</td>
                             <td>@invoice.TotalAmount.ToString("N2")</td>
                             <td>
+                                @if (linkedBillingNote is not null)
+                                {
+                                    <div>@await Html.PartialAsync("_StatusPill", linkedBillingNote.Status)</div>
+                                    <div class="table-meta">
+                                        <a asp-controller="BillingNotes" asp-action="Details" asp-route-id="@linkedBillingNote.BillingNoteId">
+                                            @linkedBillingNote.BillingNoteNo
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="table-meta">ยังไม่ทำใบวางบิล</span>
+                                }
+                            </td>
+                            <td>
                                 <div>@await Html.PartialAsync("_StatusPill", invoice.Status)</div>
-                                <div class="table-meta">Paid @invoice.PaidAmount.ToString("N2") / @invoice.TotalAmount.ToString("N2")</div>
+                                <div class="table-meta">ชำระแล้ว @invoice.PaidAmount.ToString("N2") / @invoice.TotalAmount.ToString("N2")</div>
                             </td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    @if (canReceivePayment)
-                                    {
-                                        <a asp-controller="Payments" asp-action="Create" asp-route-customerId="@invoice.CustomerId" asp-route-invoiceId="@invoice.InvoiceId" class="btn btn-sm btn-outline-success">Receive Payment</a>
-                                    }
-                                    @if (invoice.Status == "Draft")
-                                    {
-                                        <a asp-action="Edit" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-primary">Edit</a>
-                                        <form asp-action="Issue" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="issueInvoiceListConfirm_@invoice.InvoiceId"
-                                                        aria-expanded="false">
-                                                    Issue
-                                                </button>
-                                                <div class="confirm-popover" id="issueInvoiceListConfirm_@invoice.InvoiceId" hidden>
-                                                    <div class="confirm-popover-title">Issue this invoice?</div>
-                                                    <div class="confirm-popover-text">This will change the invoice status to Issued.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    @if ((invoice.Status == "Draft" || invoice.Status == "Issued") && invoice.PaidAmount <= 0 && !invoice.PaymentAllocations.Any())
-                                    {
-                                        <form asp-action="Cancel" asp-route-id="@invoice.InvoiceId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
-                                                        data-confirm-target="cancelInvoiceListConfirm_@invoice.InvoiceId"
-                                                        aria-expanded="false">
-                                                    Cancel
-                                                </button>
-                                                <div class="confirm-popover" id="cancelInvoiceListConfirm_@invoice.InvoiceId" hidden>
-                                                    <div class="confirm-popover-title">Cancel this invoice?</div>
-                                                    <div class="confirm-popover-text">This will mark the invoice as cancelled and keep the document in history.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
+                                    <a asp-action="Details" asp-route-id="@invoice.InvoiceId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
                                 </div>
                             </td>
                         </tr>
@@ -150,7 +112,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="9" class="table-empty">No invoices yet. Create the first direct invoice from customer and item master data.</td></tr>
+                    <tr><td colspan="8" class="table-empty">ยังไม่มีใบแจ้งหนี้ เริ่มสร้างเอกสารแรกจากข้อมูลลูกค้าและสินค้าได้เลย</td></tr>
                 }
                 </tbody>
             </table>

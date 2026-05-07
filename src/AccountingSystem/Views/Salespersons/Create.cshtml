@@ -1,4 +1,4 @@
-@model BizCore.Models.Entities.Salesperson
+﻿@model BizCore.Models.Entities.Salesperson
 
 @{
     ViewData["Title"] = "Create Salesperson";
@@ -8,8 +8,7 @@
     <div>
         <div class="page-eyebrow">Core Module</div>
         <h1 class="page-title">Create Salesperson</h1>
-        <p class="page-subtitle">Capture team details in a cleaner CRM-style create form.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <button type="submit" form="salespersonForm" class="btn btn-primary px-4">Save Salesperson</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
@@ -34,3 +33,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

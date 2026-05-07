@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.StockInquiryPageViewModel
+﻿@model BizCore.Models.ViewModels.StockInquiryPageViewModel
 
 @{
     ViewData["Title"] = "Stock Inquiry";
@@ -8,16 +8,14 @@
     <div>
         <div class="page-eyebrow">Inventory Inquiry</div>
         <h1 class="page-title">Stock Inquiry</h1>
-        <p class="page-subtitle">Read-only stock visibility for @Model.BranchName.</p>
-    </div>
+        </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
             <h2 class="section-title">Stock Balances</h2>
-            <p class="section-subtitle">Current item-level stock and control flags.</p>
-        </div>
+            </div>
         <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
     </div>
     <div class="card-body">
@@ -112,3 +110,4 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
+

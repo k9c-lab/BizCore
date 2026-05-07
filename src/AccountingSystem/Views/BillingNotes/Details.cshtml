@@ -1,0 +1,237 @@
+@model BizCore.Models.Entities.BillingNoteHeader
+
+@{
+    ViewData["Title"] = "รายละเอียดใบวางบิล";
+    var canCancel = string.Equals(Model.Status, "Issued", StringComparison.OrdinalIgnoreCase);
+    var canEdit = string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase);
+    var canReceivePayment = Model.Status == "Issued" || Model.Status == "PartiallyPaid";
+    var isItemMode = string.Equals(Model.SummaryMode, "Item", StringComparison.OrdinalIgnoreCase);
+    var summaryModeLabel = isItemMode ? "สรุปตามรายการสินค้า" : "สรุปตามสิทธิการรักษา";
+    var summarySectionTitle = isItemMode ? "สรุปรายการสินค้า" : "สรุปตามสิทธิการรักษา";
+    var descriptionHeader = isItemMode ? "รายการสินค้า" : "สิทธิการรักษา";
+    string FormatQuantity(decimal quantity) => quantity % 1m == 0m ? quantity.ToString("N0") : quantity.ToString("N2");
+}
+
+@if (TempData["BillingNoteNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">รายละเอียดใบวางบิล</h1>
+        <p class="page-subtitle">@summaryModeLabel และตรวจสอบใบแจ้งหนี้ต้นทางที่ถูกรวมในเอกสารนี้</p>
+    </div>
+    <div class="page-actions">
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.BillingNoteId" class="btn btn-primary">แก้ไขฉบับร่าง</a>
+            <form asp-action="IssueDraft" asp-route-id="@Model.BillingNoteId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-success js-confirm-popover-toggle" data-confirm-target="issueBillingDetailsConfirm" aria-expanded="false">
+                        ออกใบวางบิล
+                    </button>
+                    <div class="confirm-popover" id="issueBillingDetailsConfirm" hidden>
+                        <div class="confirm-popover-title">ยืนยันออกใบวางบิลนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">หลังออกเอกสารแล้ว จะไม่สามารถแก้ไขได้เหมือนฉบับร่าง</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-success">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        @if (canReceivePayment)
+        {
+            <a asp-controller="Payments" asp-action="Create" asp-route-billingNoteId="@Model.BillingNoteId" class="btn btn-success">รับชำระเงิน</a>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.BillingNoteId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelBillingConfirm" aria-expanded="false">
+                        ยกเลิกใบวางบิล
+                    </button>
+                    <div class="confirm-popover" id="cancelBillingConfirm" hidden>
+                        <div class="confirm-popover-title">ยืนยันยกเลิกใบวางบิลนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">การยกเลิกจะคงประวัติเอกสารใบวางบิลนี้ไว้ในระบบ</div>
+                        <div class="mt-2">
+                            <label for="cancelBillingReason" class="form-label">เหตุผลการยกเลิก</label>
+                            <textarea id="cancelBillingReason" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลการยกเลิก" required></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.BillingNoteId })', '_blank', 'noopener');">พิมพ์</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบวางบิล</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">ข้อมูลใบวางบิล</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">เลขที่ใบวางบิล</div>
+                        <div class="form-control readonly-detail">@Model.BillingNoteNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">วันที่ใบวางบิล</div>
+                        <div class="form-control readonly-detail">@Model.BillingNoteDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">ลูกค้า</div>
+                        <div class="form-control readonly-detail">@Model.Customer?.CustomerName</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">สาขา</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">รูปแบบสรุป</div>
+                        <div class="form-control readonly-detail">@summaryModeLabel</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">จำนวนใบแจ้งหนี้</div>
+                        <div class="form-control readonly-detail">@Model.InvoiceCount</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">ยอดรวมทั้งสิ้น</div>
+                        <div class="form-control readonly-detail">@Model.TotalAmount.ToString("N2")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">สถานะ</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">หมายเหตุ</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.CancelReason))
+                    {
+                        <div class="col-12">
+                            <div class="detail-label">เหตุผลการยกเลิก</div>
+                            <div class="form-control readonly-detail readonly-detail-multiline">@Model.CancelReason</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card content-card">
+            <div class="card-body">
+                <div class="form-section-title mb-3">@summarySectionTitle</div>
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>ลำดับ</th>
+                                <th>@descriptionHeader</th>
+                                <th>จำนวน</th>
+                                <th>ยอดรวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.BillingNoteLines.OrderBy(x => x.LineNumber))
+                        {
+                            <tr>
+                                <td>@line.LineNumber</td>
+                                <td>@line.Description</td>
+                                <td>@FormatQuantity(line.Quantity)</td>
+                                <td>@line.TotalAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card content-card">
+            <div class="card-body">
+                <div class="form-section-title mb-3">ใบแจ้งหนี้ที่รวมในใบวางบิล</div>
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>เลขที่ใบแจ้งหนี้</th>
+                                <th>วันที่</th>
+                                <th>คนไข้</th>
+                                <th>HN</th>
+                                <th>สิทธิการรักษา</th>
+                                <th>ยอดที่รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var link in Model.BillingNoteInvoices.OrderBy(x => x.InvoiceHeader!.InvoiceDate).ThenBy(x => x.InvoiceId))
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Invoices" asp-action="Details" asp-route-id="@link.InvoiceId" target="_blank" rel="noopener">
+                                        @link.InvoiceHeader?.InvoiceNo
+                                    </a>
+                                </td>
+                                <td>@link.InvoiceHeader?.InvoiceDate.ToString("dd/MM/yyyy")</td>
+                                <td>@(string.IsNullOrWhiteSpace(link.InvoiceHeader?.PatientFullName) ? "-" : link.InvoiceHeader!.PatientFullName)</td>
+                                <td>@(string.IsNullOrWhiteSpace(link.InvoiceHeader?.PatientHn) ? "-" : link.InvoiceHeader!.PatientHn)</td>
+                                <td>@(link.InvoiceHeader?.TreatmentRight is null ? "ไม่ระบุสิทธิการรักษา" : $"{link.InvoiceHeader.TreatmentRight.TreatmentRightCode} - {link.InvoiceHeader.TreatmentRight.TreatmentRightName}")</td>
+                                <td>@link.BilledAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="quotation-summary-wrap">
+                    <div class="quotation-summary-stack">
+                        <div class="quotation-summary-title">สรุปใบวางบิล</div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">จำนวนใบแจ้งหนี้</span>
+                            <span class="quotation-summary-amount">@Model.InvoiceCount.ToString("N0")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ยอดก่อน VAT</span>
+                            <span class="quotation-summary-amount">@Model.SubtotalAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ส่วนลด</span>
+                            <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">VAT</span>
+                            <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row">
+                            <span class="quotation-summary-name">ชำระแล้ว</span>
+                            <span class="quotation-summary-amount">@Model.PaidAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">ยอดคงเหลือ</span>
+                            <span class="quotation-summary-amount">@Model.BalanceAmount.ToString("N2")</span>
+                        </div>
+                        <div class="quotation-summary-row total">
+                            <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
+                            <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

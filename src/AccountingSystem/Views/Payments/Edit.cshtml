@@ -1,0 +1,42 @@
+@model BizCore.Models.ViewModels.PaymentFormViewModel
+
+@{
+    ViewData["Title"] = "แก้ไขฉบับร่างการรับชำระ";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานลูกหนี้</div>
+        <h1 class="page-title">แก้ไขฉบับร่างการรับชำระ</h1>
+        <p class="page-subtitle">ปรับข้อมูลฉบับร่างก่อนบันทึกรับชำระจริง โดยฉบับร่างจะยังไม่กระทบยอดใบแจ้งหนี้หรือใบวางบิล</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="paymentForm" name="submitAction" value="draft" class="btn btn-outline-primary js-payment-submit-button">บันทึกฉบับร่าง</button>
+        <button type="submit" form="paymentForm" name="submitAction" value="post" class="btn btn-primary px-4 js-payment-submit-button">บันทึกรับชำระ</button>
+        <a asp-action="Details" asp-route-id="@Model.PaymentId" class="btn btn-outline-secondary">กลับไปรายละเอียดการรับชำระ</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.PaymentId" method="post" id="paymentForm">
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <span class="table-meta">
+                    เมื่อบันทึกฉบับร่าง ระบบจะเก็บข้อมูลไว้ก่อนโดยยังไม่ตัดชำระจริง และเมื่อกดบันทึกรับชำระ ระบบจึงจะอัปเดตยอดคงเหลือของเอกสารต้นทาง
+                </span>
+                <div class="page-actions">
+                    <span class="table-meta text-danger" id="postPaymentReason"></span>
+                    <a asp-action="Details" asp-route-id="@Model.PaymentId" class="btn btn-outline-secondary">กลับไปรายละเอียดการรับชำระ</a>
+                    <button type="submit" name="submitAction" value="draft" class="btn btn-outline-primary js-payment-submit-button">บันทึกฉบับร่าง</button>
+                    <button type="submit" name="submitAction" value="post" class="btn btn-primary px-4 js-payment-submit-button">บันทึกรับชำระ</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_PaymentEditorScripts" model="Model" />
+}

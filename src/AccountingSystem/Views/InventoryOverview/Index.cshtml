@@ -1,4 +1,4 @@
-@model BizCore.Models.ViewModels.InventoryOverviewViewModel
+﻿@model BizCore.Models.ViewModels.InventoryOverviewViewModel
 
 @{
     ViewData["Title"] = "Inventory Overview";
@@ -10,8 +10,7 @@
     <div>
         <div class="page-eyebrow">Inventory Summary</div>
         <h1 class="page-title">Inventory Overview</h1>
-        <p class="page-subtitle">Executive stock position and movement summary for @Model.BranchName.</p>
-    </div>
+        </div>
     <div class="page-actions">
         <a asp-controller="StockInquiry" asp-action="Index" class="btn btn-outline-secondary">Stock Inquiry</a>
     </div>
@@ -77,8 +76,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Movement by Type</h2>
-                        <p class="section-subtitle">What is driving stock movement in the selected period.</p>
-                    </div>
+                        </div>
                 </div>
                 <div class="dashboard-meter-list">
                     @foreach (var row in Model.MovementRows.Take(8))
@@ -108,8 +106,7 @@
                 <div class="table-card-header px-0 pt-0">
                     <div>
                         <h2 class="section-title">Stock by Branch</h2>
-                        <p class="section-subtitle">Where the current stock quantity is sitting.</p>
-                    </div>
+                        </div>
                 </div>
                 <div class="dashboard-meter-list">
                     @foreach (var row in Model.BranchStockRows.Take(8))
@@ -141,8 +138,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Top Stock Items</h2>
-                    <p class="section-subtitle">Items with the highest on-hand quantity.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.TopStockRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -182,8 +178,7 @@
             <div class="table-card-header">
                 <div>
                     <h2 class="section-title">Low Stock Items</h2>
-                    <p class="section-subtitle">Items that are close to running low.</p>
-                </div>
+                    </div>
                 <div class="table-meta">@Model.LowStockRows.Count row(s)</div>
             </div>
             <div class="card-body">
@@ -225,3 +220,4 @@
         background: #2563eb;
     }
 </style>
+

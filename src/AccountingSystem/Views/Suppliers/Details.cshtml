@@ -1,18 +1,18 @@
 @model BizCore.Models.Entities.Supplier
 
 @{
-    ViewData["Title"] = "Supplier Details";
+    ViewData["Title"] = "รายละเอียดผู้ขาย";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Master Data</div>
-        <h1 class="page-title">Supplier Details</h1>
-        <p class="page-subtitle">Review supplier profile, purchasing setting, and contact information.</p>
+        <div class="page-eyebrow">ข้อมูลหลัก</div>
+        <h1 class="page-title">รายละเอียดผู้ขาย</h1>
+        <p class="page-subtitle">ตรวจสอบข้อมูลผู้ขาย วงเงินเครดิต และข้อมูลติดต่อ</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Edit" asp-route-id="@Model.SupplierId" class="btn btn-primary">Edit Supplier</a>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Edit" asp-route-id="@Model.SupplierId" class="btn btn-primary">แก้ไขผู้ขาย</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -20,26 +20,26 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Supplier Profile</div>
+                <div class="form-section-title">ข้อมูลผู้ขาย</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Supplier Code</div>
+                        <div class="detail-label">รหัสผู้ขาย</div>
                         <div class="form-control readonly-detail">@Model.SupplierCode</div>
                     </div>
                     <div class="col-lg-5 col-md-6">
-                        <div class="detail-label">Supplier Name</div>
+                        <div class="detail-label">ชื่อผู้ขาย</div>
                         <div class="form-control readonly-detail">@Model.SupplierName</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@(Model.IsActive ? "Active" : "Inactive")</div>
+                        <div class="detail-label">สถานะ</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "ใช้งาน" : "ไม่ใช้งาน")</div>
                     </div>
                     <div class="col-lg-2 col-md-6">
-                        <div class="detail-label">Credit Limit</div>
+                        <div class="detail-label">วงเงินเครดิต</div>
                         <div class="form-control readonly-detail">@Model.CreditLimit.ToString("N2")</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Tax ID</div>
+                        <div class="detail-label">เลขประจำตัวผู้เสียภาษี</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.TaxId) ? "-" : Model.TaxId)</div>
                     </div>
                 </div>
@@ -48,19 +48,19 @@
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Contact Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลติดต่อ</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-label">อีเมล</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-label">ที่อยู่</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</span>
                         </div>
                     </div>
@@ -68,15 +68,15 @@
 
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Purchasing Usage</div>
+                        <div class="quotation-info-card-title">การใช้งานในงานจัดซื้อ</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Purchase Orders</span>
-                                <span class="quotation-info-value">Uses supplier code, tax ID, and supplier address.</span>
+                                <span class="quotation-info-label">ใบสั่งซื้อ</span>
+                                <span class="quotation-info-value">ใช้รหัสผู้ขาย เลขประจำตัวผู้เสียภาษี และที่อยู่ของผู้ขาย</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Availability</span>
-                                <span class="quotation-info-value">@(Model.IsActive ? "Selectable in documents" : "Hidden from normal selection")</span>
+                                <span class="quotation-info-label">การใช้งาน</span>
+                                <span class="quotation-info-value">@(Model.IsActive ? "เลือกใช้ในเอกสารได้" : "ซ่อนจากการเลือกใช้งานปกติ")</span>
                             </div>
                         </div>
                     </div>
@@ -85,4 +85,3 @@
         </div>
     </div>
 </div>
-
