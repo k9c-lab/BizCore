@@ -1,0 +1,223 @@
+@model BizCore.Models.Entities.CashSaleHeader
+
+@{
+    ViewData["Title"] = "รายละเอียดเอกสารขายสด";
+    var canIssue = Model.Status == "Draft";
+    var canCancel = Model.Status == "Draft" || Model.Status == "Issued";
+}
+
+@if (TempData["CashSaleNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">รายละเอียดเอกสารขายสด</h1>
+        <p class="page-subtitle">เอกสารนี้ใช้ปิดการขายนอกระบบในเอกสารเดียว และไม่มีการรับชำระหรือใบวางบิลต่อจาก flow นี้</p>
+    </div>
+    <div class="page-actions">
+        @if (Model.Status == "Draft")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.CashSaleId" class="btn btn-primary">แก้ไขเอกสารขายสด</a>
+        }
+        @if (canIssue)
+        {
+            <form asp-action="Issue" asp-route-id="@Model.CashSaleId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="issueCashSaleConfirm" aria-expanded="false">ออกเอกสารขายสด</button>
+                    <div class="confirm-popover" id="issueCashSaleConfirm" hidden>
+                        <div class="confirm-popover-title">ออกเอกสารขายสดนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่อยืนยัน ระบบจะตัดสต๊อกและเปลี่ยนสถานะเป็นออกเอกสารแล้ว</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.CashSaleId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelCashSaleConfirm" aria-expanded="false">ยกเลิกเอกสาร</button>
+                    <div class="confirm-popover" id="cancelCashSaleConfirm" hidden>
+                        <div class="confirm-popover-title">ยกเลิกเอกสารขายสดนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ถ้าเอกสารถูกออกแล้ว ระบบจะคืนสต๊อกกลับ และบันทึกเหตุผลการยกเลิกไว้ในประวัติเอกสาร</div>
+                        <div class="mt-2">
+                            <label for="cancelCashSaleReason" class="form-label">เหตุผลการยกเลิก</label>
+                            <textarea id="cancelCashSaleReason" name="cancelReason" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.CashSaleId })', '_blank', 'noopener');">พิมพ์</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to list</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section">
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">เลขที่เอกสารขายสด</div>
+                        <div class="form-control readonly-detail">@Model.CashSaleNo</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">วันที่ขายสด</div>
+                        <div class="form-control readonly-detail">@Model.CashSaleDate.ToString("dd MMM yyyy")</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">เลขอ้างอิง</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">สถานะ</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">ลูกค้า</div>
+                        <div class="form-control readonly-detail">@(Model.Customer?.CustomerName ?? "-")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">พนักงานขาย</div>
+                        <div class="form-control readonly-detail">@(Model.Salesperson?.SalespersonName ?? "-")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">สาขา</div>
+                        <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="detail-label">หมายเหตุ</div>
+                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.CancelReason))
+                    {
+                        <div class="col-12">
+                            <div class="detail-label">เหตุผลการยกเลิก</div>
+                            <div class="form-control readonly-detail readonly-detail-multiline">@Model.CancelReason</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">ข้อมูลผู้ป่วย</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">ชื่อ-สกุลคนไข้</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PatientFullName) ? "-" : Model.PatientFullName)</div>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
+                        <div class="detail-label">อายุ</div>
+                        <div class="form-control readonly-detail">@(Model.PatientAge?.ToString() ?? "-")</div>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
+                        <div class="detail-label">เพศ</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PatientGender) ? "-" : Model.PatientGender)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">HN</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PatientHn) ? "-" : Model.PatientHn)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">สิทธิการรักษา</div>
+                        <div class="form-control readonly-detail">@(Model.TreatmentRight is null ? "-" : $"{Model.TreatmentRight.TreatmentRightCode} - {Model.TreatmentRight.TreatmentRightName}")</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">Ward</div>
+                        <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PatientWard) ? "-" : Model.PatientWard)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">แพทย์ส่ง</div>
+                        <div class="form-control readonly-detail">@(Model.ReferringDoctor is null ? "-" : $"{Model.ReferringDoctor.DoctorCode} - {Model.ReferringDoctor.DoctorName}")</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">รายการสินค้าและบริการ</div>
+                <div class="table-responsive">
+                    <table class="table entity-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width:72px;">ลำดับ</th>
+                                <th>รายการ</th>
+                                <th style="width:110px;" class="text-end">จำนวน</th>
+                                <th style="width:120px;" class="text-end">ราคา/หน่วย</th>
+                                <th style="width:120px;" class="text-end">ส่วนลด</th>
+                                <th style="width:140px;" class="text-end">รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var line in Model.CashSaleDetails.OrderBy(x => x.LineNumber))
+                        {
+                            <tr>
+                                <td class="text-center">@line.LineNumber</td>
+                                <td>
+                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
+                                    @if (!string.IsNullOrWhiteSpace(line.Item?.PartNumber))
+                                    {
+                                        <div class="table-meta">Part No: @line.Item.PartNumber</div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(line.Remark))
+                                    {
+                                        <div class="table-meta">@line.Remark</div>
+                                    }
+                                    @if (line.CashSaleSerials.Any())
+                                    {
+                                        <div class="table-meta">Serial: @string.Join(", ", line.CashSaleSerials.Where(x => x.SerialNumber != null).Select(x => x.SerialNumber!.SerialNo))</div>
+                                    }
+                                </td>
+                                <td class="text-end">@line.Qty.ToString("N2")</td>
+                                <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                                <td class="text-end">@line.DiscountAmount.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@line.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="row justify-content-end">
+                    <div class="col-lg-4">
+                        <table class="table table-sm summary-table">
+                            <tbody>
+                                <tr>
+                                    <th>Subtotal</th>
+                                    <td class="text-end">@Model.Subtotal.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <th>Discount</th>
+                                    <td class="text-end">@Model.DiscountAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <th>VAT</th>
+                                    <td class="text-end">@Model.VatAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <th>Total</th>
+                                    <td class="text-end fw-bold">@Model.TotalAmount.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

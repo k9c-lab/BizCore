@@ -1,43 +1,48 @@
-﻿@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
+@model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
 
 @{
-    ViewData["Title"] = "Record Supplier Payment";
+    ViewData["Title"] = "บันทึกการชำระเงินให้ผู้จำหน่าย";
     var hasPurchaseOrderContext = Model.PurchaseOrderId.HasValue;
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Record Supplier Payment</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">บันทึกการชำระเงินให้ผู้จำหน่าย</h1>
+        <p class="page-subtitle">บันทึกรายการชำระเงินที่ผูกกับใบสั่งซื้อ และใช้หน้ารายละเอียดเป็นจุดหลักสำหรับพิมพ์หรือยกเลิกเอกสาร</p>
+    </div>
     <div class="page-actions">
+        <button type="submit" form="supplierPaymentForm" class="btn btn-primary px-4">บันทึกการชำระเงิน</button>
         @if (hasPurchaseOrderContext)
         {
-            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">Back to PO</a>
+            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">กลับไปรายละเอียดใบสั่งซื้อ</a>
         }
         else
         {
-            <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+            <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการชำระเงิน</a>
         }
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post" class="form-shell">
+        <form asp-action="Create" method="post" class="form-shell" id="supplierPaymentForm">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="All" class="form-alert"></div>
             @await Html.PartialAsync("_Form", Model)
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Post Payment</button>
-                @if (hasPurchaseOrderContext)
-                {
-                    <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">Back to PO</a>
-                }
-                else
-                {
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                }
+                <span class="table-meta">เมื่อบันทึกแล้ว ระบบจะสร้างรายการชำระเงินสถานะ Posted ทันที</span>
+                <div class="page-actions">
+                    @if (hasPurchaseOrderContext)
+                    {
+                        <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">กลับไปรายละเอียดใบสั่งซื้อ</a>
+                    }
+                    else
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการชำระเงิน</a>
+                    }
+                    <button type="submit" class="btn btn-primary px-4">บันทึกการชำระเงิน</button>
+                </div>
             </div>
         </form>
     </div>
@@ -46,4 +51,3 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

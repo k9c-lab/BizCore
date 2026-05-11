@@ -2089,6 +2089,143 @@ textarea.form-control {
   margin-top: 0.15rem;
 }
 
+.permission-page-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.permission-summary-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.9));
+}
+
+.permission-summary-label {
+  display: block;
+  color: #475467;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.permission-summary-value {
+  display: block;
+  margin-top: 0.22rem;
+  color: #0f172a;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.permission-module-card {
+  padding: 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.permission-module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.95rem;
+}
+
+.permission-module-title {
+  color: #16345f;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.permission-module-text,
+.permission-module-meta,
+.permission-group-meta,
+.permission-code {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.permission-module-meta {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.permission-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.permission-group-card {
+  padding: 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.permission-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.permission-group-title {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.permission-group-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.permission-item-stack {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.permission-option-compact {
+  min-height: 0;
+  padding: 0.75rem 0.8rem;
+}
+
+.permission-option-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.permission-option-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.permission-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.45rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 999px;
+  background: rgba(219, 234, 254, 0.62);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .pricing-path-card {
   background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%);
   border: 1px solid #d6e7fb;
@@ -2106,4 +2243,17 @@ textarea.form-control {
 .pricing-path-text {
   color: #51657f;
   line-height: 1.5;
+}
+
+@media (max-width: 991.98px) {
+  .permission-page-summary,
+  .permission-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .permission-module-header,
+  .permission-group-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

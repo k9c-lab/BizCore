@@ -1,7 +1,7 @@
-﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SupplierPaymentHeader>
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SupplierPaymentHeader>
 
 @{
-    ViewData["Title"] = "Supplier Payments";
+    ViewData["Title"] = "การชำระเงินให้ผู้จำหน่าย";
     var search = ViewData["Search"]?.ToString();
     var status = ViewData["Status"]?.ToString();
     var dateFrom = ViewData["DateFrom"]?.ToString();
@@ -15,65 +15,62 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Supplier Payments</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">การชำระเงินให้ผู้จำหน่าย</h1>
+        <p class="page-subtitle">ติดตามรายการชำระเงินให้ผู้จำหน่ายจากหน้านี้ และไปดำเนินการต่อที่หน้ารายละเอียดเอกสารตาม pattern หลักของระบบ</p>
+    </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary">Record Payment</a>
+        <a asp-action="Create" class="btn btn-primary px-4">บันทึกการชำระเงิน</a>
     </div>
 </div>
 
 <div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">รายการชำระเงินให้ผู้จำหน่าย</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
+    </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
-            <div class="list-filter-field">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Payment no., PO no., reference, or supplier" />
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ชำระเงิน, เลขที่ PO, เลขอ้างอิง หรือผู้จำหน่าย" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
+                    <option value="">ทั้งหมด</option>
                     <option value="Posted" selected="@(status == "Posted")">Posted</option>
                     <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <button type="submit" class="btn btn-primary">Apply</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างตัวกรอง</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
-    </div>
-</div>
 
-<div class="card content-card table-card mt-3">
-    <div class="table-card-header">
-        <div>
-            <h2 class="section-title">Payment Register</h2>
-            </div>
-        <div class="table-meta">@Model.TotalCount row(s)</div>
-    </div>
-    <div class="card-body">
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Payment No.</th>
-                        <th>Date</th>
-                        <th>PO No.</th>
-                        <th>Supplier</th>
-                        <th>Branch</th>
-                        <th class="text-end">Amount</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>เลขที่ชำระเงิน</th>
+                        <th>วันที่</th>
+                        <th>เลขที่ใบสั่งซื้อ</th>
+                        <th>ผู้จำหน่าย</th>
+                        <th>สาขา</th>
+                        <th class="text-end">จำนวนเงิน</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,7 +78,7 @@
                 {
                     <tr>
                         <td><span class="code-chip">@payment.PaymentNo</span></td>
-                        <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                        <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
                         <td>
                             @if (payment.PurchaseOrderHeader is not null)
                             {
@@ -100,19 +97,19 @@
                         <td class="text-end">@payment.Amount.ToString("N2")</td>
                         <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
                         <td class="text-end">
-                            <a asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                            <div class="table-actions">
+                                <a asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                            </div>
                         </td>
                     </tr>
                 }
                 @if (!Model.Items.Any())
                 {
-                    <tr><td colspan="8" class="table-empty">No supplier payments found.</td></tr>
+                    <tr><td colspan="8" class="table-empty">ยังไม่มีรายการชำระเงินให้ผู้จำหน่าย</td></tr>
                 }
                 </tbody>
             </table>
         </div>
+        <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
-
-<partial name="_Pager" model="Model.Pagination" />
-

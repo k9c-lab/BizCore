@@ -20,13 +20,13 @@
             const itemMeta = row.querySelector(".js-item-meta");
 
             if (serialFlag) {
-                serialFlag.textContent = item?.IsSerialControlled ? "Yes" : "No";
+                serialFlag.textContent = item?.IsSerialControlled ? "มี" : "ไม่มี";
             }
 
             if (itemMeta) {
                 itemMeta.textContent = item
-                    ? `Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"} | Last price: ${money(item.UnitPrice)}`
-                    : "Select item from master data.";
+                    ? `Part No.: ${item.PartNumber || "-"} | ${item.ItemType || "Product"} | ราคาล่าสุด: ${money(item.UnitPrice)}`
+                    : "กรุณาเลือกสินค้าจาก master data";
             }
         };
 
@@ -42,7 +42,7 @@
                 .slice(0, 12);
 
             if (matches.length === 0) {
-                results.innerHTML = `<div class="search-dropdown-empty">No matching items found.</div>`;
+                results.innerHTML = `<div class="search-dropdown-empty">ไม่พบสินค้าที่ค้นหา</div>`;
                 results.style.display = "block";
                 return;
             }
@@ -64,19 +64,19 @@
                     <input type="hidden" class="js-line-number" name="Details[${index}].LineNumber" value="${index + 1}" />
                     <input type="hidden" name="Details[${index}].ItemId" id="Details_${index}__ItemId" value="" class="js-item-id" />
                     <div class="search-dropdown">
-                        <input type="text" class="form-control js-item-search" placeholder="Search item code, name, or part no." autocomplete="off" />
+                        <input type="text" class="form-control js-item-search" placeholder="ค้นหารหัสสินค้า ชื่อสินค้า หรือ Part No." autocomplete="off" />
                         <div id="prItemResults_${index}" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                     </div>
-                    <div class="table-meta js-item-meta">Select item from master data.</div>
+                    <div class="table-meta js-item-meta">กรุณาเลือกสินค้าจาก master data</div>
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>
                 </td>
-                <td><span class="js-serial-flag badge-soft">No</span></td>
+                <td><span class="js-serial-flag badge-soft">ไม่มี</span></td>
                 <td>
                     <input type="number" step="1" min="1" data-qty-min="1" name="Details[${index}].RequestedQty" id="Details_${index}__RequestedQty" value="1" class="form-control js-integer-qty" />
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].RequestedQty" data-valmsg-replace="true"></span>
                 </td>
                 <td><input type="text" name="Details[${index}].Remark" id="Details_${index}__Remark" class="form-control" /></td>
-                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button></td>`;
+                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger js-remove-line">ลบ</button></td>`;
             return row;
         };
 

@@ -114,12 +114,8 @@
             vertical-align: top;
             color: #111827;
         }
-        .document-meta td:first-child {
-            white-space: nowrap;
-        }
-        .meta-value-nowrap {
-            white-space: nowrap;
-        }
+        .document-meta td:first-child { white-space: nowrap; }
+        .meta-value-nowrap { white-space: nowrap; }
         .print-section { margin-top: 16px; }
         .party-section {
             padding: 0 0 10px;
@@ -195,9 +191,7 @@
         .summary-table td {
             padding: 4px 0 4px 18px;
         }
-        .summary-table td:first-child {
-            text-align: left;
-        }
+        .summary-table td:first-child { text-align: left; }
         .summary-table td:last-child {
             text-align: right;
             min-width: 120px;
@@ -317,7 +311,7 @@
                             <th class="col-qty"><span class="bi-label-th">รับเข้า</span><span class="bi-label-en">Received</span></th>
                             <th class="col-price"><span class="bi-label-th">ราคาต่อหน่วย</span><span class="bi-label-en">Unit Price</span></th>
                             <th class="col-total"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
-                            <th class="col-serials">Serial No.</th>
+                            <th class="col-serials"><span class="bi-label-th">Serial</span><span class="bi-label-en">Serial No.</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,6 +353,7 @@
             @if (hasRemark)
             {
                 <section class="print-section">
+                    <div class="section-label">หมายเหตุ / Remark</div>
                     <div class="remark-box">@Model.Remark</div>
                 </section>
             }
@@ -386,4 +381,3 @@
     </script>
 </body>
 </html>
-

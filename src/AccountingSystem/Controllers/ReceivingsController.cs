@@ -1,4 +1,4 @@
-using BizCore.Data;
+﻿using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
@@ -104,7 +104,7 @@ public class ReceivingsController : CrudControllerBase
         }
         else if (purchaseOrderId.HasValue)
         {
-            TempData["ReceivingNotice"] = "Selected purchase order is not available for receiving.";
+            TempData["ReceivingNotice"] = "เนเธกเนเธเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเธชเธฒเธกเธฒเธฃเธ–เธเธณเธกเธฒเธชเธฃเนเธฒเธเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธ”เน";
             return RedirectToAction(nameof(Index), "PurchaseOrders");
         }
 
@@ -174,7 +174,7 @@ public class ReceivingsController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Receiving number or serial number must be unique.");
+            ModelState.AddModelError(string.Empty, "เน€เธฅเธเธ—เธตเนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธซเธฃเธทเธญเธซเธกเธฒเธขเน€เธฅเธ serial เธเนเธณเนเธเธฃเธฐเธเธ");
             return View(model);
         }
     }
@@ -199,7 +199,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (receiving.Status != "Draft")
         {
-            TempData["ReceivingNotice"] = "Only Draft receiving documents can be edited.";
+            TempData["ReceivingNotice"] = "เนเธเนเนเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธชเธ–เธฒเธเธฐ Draft เน€เธ—เนเธฒเธเธฑเนเธ";
             return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
         }
 
@@ -224,7 +224,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (receiving.Status != "Draft")
         {
-            TempData["ReceivingNotice"] = "Only Draft receiving documents can be edited.";
+            TempData["ReceivingNotice"] = "เนเธเนเนเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธชเธ–เธฒเธเธฐ Draft เน€เธ—เนเธฒเธเธฑเนเธ";
             return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
         }
 
@@ -277,7 +277,7 @@ public class ReceivingsController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Receiving number or serial number must be unique.");
+            ModelState.AddModelError(string.Empty, "เน€เธฅเธเธ—เธตเนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธซเธฃเธทเธญเธซเธกเธฒเธขเน€เธฅเธ serial เธเนเธณเนเธเธฃเธฐเธเธ");
             return View("Create", model);
         }
     }
@@ -331,14 +331,14 @@ public class ReceivingsController : CrudControllerBase
 
         if (!string.Equals(receiving.Status, "Draft", StringComparison.OrdinalIgnoreCase))
         {
-            TempData["ReceivingNotice"] = "Only Draft receiving documents can be posted.";
+            TempData["ReceivingNotice"] = "เนเธเธชเธ•เนเนเธ”เนเน€เธเธเธฒเธฐเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธชเธ–เธฒเธเธฐ Draft เน€เธ—เนเธฒเธเธฑเนเธ";
             return RedirectToAction(nameof(Details), new { id });
         }
 
         var model = await BuildFormModelFromReceivingAsync(receiving);
         if (!await ValidateReceivingAsync(model))
         {
-            TempData["ReceivingNotice"] = GetFirstModelStateErrorMessage("Post Receiving is blocked because this draft is not complete.");
+            TempData["ReceivingNotice"] = GetFirstModelStateErrorMessage("เธขเธฑเธเนเธเธชเธ•เนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธเนเธญเธกเธนเธฅเธเธเธฑเธเธฃเนเธฒเธเธขเธฑเธเนเธกเนเธเธฃเธเธ–เนเธงเธ");
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -359,13 +359,13 @@ public class ReceivingsController : CrudControllerBase
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            TempData["ReceivingNotice"] = "Receiving posted successfully.";
+            TempData["ReceivingNotice"] = "เนเธเธชเธ•เนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
             return RedirectToAction(nameof(Details), new { id });
         }
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            TempData["ReceivingNotice"] = "Receiving number or serial number must be unique.";
+            TempData["ReceivingNotice"] = "เน€เธฅเธเธ—เธตเนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเธซเธฃเธทเธญเธซเธกเธฒเธขเน€เธฅเธ serial เธเนเธณเนเธเธฃเธฐเธเธ";
             return RedirectToAction(nameof(Details), new { id });
         }
     }
@@ -394,6 +394,9 @@ public class ReceivingsController : CrudControllerBase
             .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.PurchaseOrderDetail)
             .Include(x => x.ReceivingDetails)
+                .ThenInclude(x => x.PurchaseOrderAllocation!)
+                    .ThenInclude(x => x.Branch)
+            .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.ReceivingDetails)
                 .ThenInclude(x => x.ReceivingSerials)
@@ -406,7 +409,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (receiving.Status != "Posted")
         {
-            TempData["ReceivingNotice"] = "Print is available after receiving is posted.";
+            TempData["ReceivingNotice"] = "เธเธดเธกเธเนเนเธ”เนเธซเธฅเธฑเธเธเธฒเธเนเธเธชเธ•เนเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธฅเนเธง";
             return RedirectToAction(nameof(Details), new { id = receiving.ReceivingId });
         }
 
@@ -435,7 +438,7 @@ public class ReceivingsController : CrudControllerBase
             return NotFound();
         }
 
-        var blockReason = await GetCancelBlockedReasonAsync(receiving);
+        var blockReason = await GetCancelBlockedReasonAsync(receiving, cancelReason);
         if (!string.IsNullOrWhiteSpace(blockReason))
         {
             TempData["ReceivingNotice"] = blockReason;
@@ -471,7 +474,7 @@ public class ReceivingsController : CrudControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["ReceivingNotice"] = "Receiving cancelled successfully.";
+        TempData["ReceivingNotice"] = "เธขเธเน€เธฅเธดเธเนเธเธฃเธฑเธเธชเธดเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -771,11 +774,16 @@ public class ReceivingsController : CrudControllerBase
         po.UpdatedDate = DateTime.UtcNow;
     }
 
-    private async Task<string?> GetCancelBlockedReasonAsync(ReceivingHeader receiving)
+    private async Task<string?> GetCancelBlockedReasonAsync(ReceivingHeader receiving, string? cancelReason)
     {
         if (receiving.Status == "Cancelled")
         {
-            return "Cancelled receiving documents are read-only.";
+            return "ใบรับสินค้าที่ถูกยกเลิกแล้วไม่สามารถแก้ไขต่อได้";
+        }
+
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            return "กรุณาระบุเหตุผลที่ยกเลิก";
         }
 
         if (receiving.Status == "Draft")
@@ -785,14 +793,14 @@ public class ReceivingsController : CrudControllerBase
 
         if (receiving.Status != "Posted")
         {
-            return $"Cancel Receiving is available only for Draft or Posted receiving documents. Current status is {receiving.Status}.";
+            return $"ยกเลิกได้เฉพาะใบรับสินค้าสถานะ Draft หรือ Posted เท่านั้น สถานะปัจจุบันคือ {receiving.Status}";
         }
 
         foreach (var detail in receiving.ReceivingDetails)
         {
             if (detail.Item?.TrackStock == true && detail.Item.CurrentStock < detail.QtyReceived)
             {
-                return $"Cancel Receiving is blocked because item {detail.Item.ItemCode} does not have enough stock to reverse.";
+                return $"เธขเธฑเธเธขเธเน€เธฅเธดเธเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธชเธดเธเธเนเธฒ {detail.Item.ItemCode} เธกเธตเธชเธ•เนเธญเธเนเธกเนเธเธญเธชเธณเธซเธฃเธฑเธเธขเนเธญเธเธฃเธฒเธขเธเธฒเธฃ";
             }
         }
 
@@ -814,7 +822,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (serials.Count != serialNos.Count)
         {
-            return "Cancel Receiving is blocked because one or more receiving serials are no longer in stock records.";
+            return "เธขเธฑเธเธขเธเน€เธฅเธดเธเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธกเธต serial เธเธฒเธเธฃเธฒเธขเธเธฒเธฃเนเธกเนเธญเธขเธนเนเนเธ stock records เนเธฅเนเธง";
         }
 
         var unavailable = serials.FirstOrDefault(x =>
@@ -823,7 +831,7 @@ public class ReceivingsController : CrudControllerBase
             x.CurrentCustomerId.HasValue);
         if (unavailable is not null)
         {
-            return $"Cancel Receiving is blocked because serial {unavailable.SerialNo} has already been used by another workflow.";
+            return $"เธขเธฑเธเธขเธเน€เธฅเธดเธเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐ serial {unavailable.SerialNo} เธ–เธนเธเนเธเนเธเธฒเธเนเธ workflow เธญเธทเนเธเนเธฅเนเธง";
         }
 
         var serialIds = serials.Select(x => x.SerialId).ToList();
@@ -832,7 +840,7 @@ public class ReceivingsController : CrudControllerBase
             .AnyAsync(x => serialIds.Contains(x.SerialId));
         if (hasClaim)
         {
-            return "Cancel Receiving is blocked because one or more serials already have supplier claim history.";
+            return "เธขเธฑเธเธขเธเน€เธฅเธดเธเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธกเธต serial เธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธกเธตเธเธฃเธฐเธงเธฑเธ•เธด supplier claim เนเธฅเนเธง";
         }
 
         return null;
@@ -913,14 +921,14 @@ public class ReceivingsController : CrudControllerBase
     {
         if (!model.PurchaseOrderId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Please select a purchase order.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเนเธเธชเธฑเนเธเธเธทเนเธญ");
             return false;
         }
 
         var selectedLookup = model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == model.PurchaseOrderId.Value);
         if (selectedLookup is null)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Selected PO is not available for receiving.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เนเธกเนเธเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเธชเธฒเธกเธฒเธฃเธ–เธฃเธฑเธเธชเธดเธเธเนเธฒเนเธ”เน");
             return false;
         }
 
@@ -930,7 +938,7 @@ public class ReceivingsController : CrudControllerBase
         var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId.Value);
         if (!supplierExists)
         {
-            ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
+            ModelState.AddModelError(nameof(model.SupplierId), "เนเธกเนเธเธเธเธนเนเธเธณเธซเธเนเธฒเธขเธ—เธตเนเน€เธฅเธทเธญเธ");
         }
 
         var requestLines = model.Details
@@ -947,31 +955,31 @@ public class ReceivingsController : CrudControllerBase
                 (!line.PurchaseOrderAllocationId.HasValue && x.PurchaseOrderDetailId == line.PurchaseOrderDetailId));
             if (lookupLine is null)
             {
-                ModelState.AddModelError(nameof(model.Details), "One or more receiving lines are not valid for the selected PO.");
+                ModelState.AddModelError(nameof(model.Details), "เธกเธตเธฃเธฒเธขเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเธเธฒเธเธฃเธฒเธขเธเธฒเธฃเนเธกเนเธ•เธฃเธเธเธฑเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเน€เธฅเธทเธญเธ");
                 continue;
             }
 
             if (line.QtyReceivedInput > lookupLine.RemainingQty)
             {
-                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Qty received cannot exceed remaining PO quantity.");
+                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "เธเธณเธเธงเธเธฃเธฑเธเน€เธเนเธฒเธ•เนเธญเธเนเธกเนเน€เธเธดเธเธเธณเธเธงเธเธเธเน€เธซเธฅเธทเธญเธเธญเธ PO");
             }
 
             if (lookupLine.IsSerialControlled && line.QtyReceivedInput != Math.Truncate(line.QtyReceivedInput))
             {
-                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Serial-controlled items must be received in whole numbers.");
+                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "เธชเธดเธเธเนเธฒเธเธธเธก serial เธ•เนเธญเธเธฃเธฑเธเน€เธเนเธฒเน€เธเนเธเธเธณเธเธงเธเน€เธ•เนเธก");
             }
 
             var serials = ExtractSerialNumbers(line);
             if (serials.Count != serials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same receiving line.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "เธซเนเธฒเธกเธกเธต serial เธเนเธณเนเธเธฃเธฒเธขเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเน€เธ”เธตเธขเธงเธเธฑเธ");
             }
 
             if (line.SupplierWarrantyStartDate.HasValue &&
                 line.SupplierWarrantyEndDate.HasValue &&
                 line.SupplierWarrantyEndDate.Value.Date < line.SupplierWarrantyStartDate.Value.Date)
             {
-                ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "Supplier warranty end date must be on or after the supplier warranty start date.");
+                ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "เธงเธฑเธเธชเธดเนเธเธชเธธเธ”เธเธฃเธฐเธเธฑเธเธเธนเนเธเธณเธซเธเนเธฒเธขเธ•เนเธญเธเนเธกเนเธเนเธญเธเธงเธฑเธเน€เธฃเธดเนเธกเธ•เนเธ");
             }
         }
 
@@ -981,7 +989,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (serialNos.Count != serialNos.Distinct(StringComparer.OrdinalIgnoreCase).Count())
         {
-            ModelState.AddModelError(string.Empty, "Duplicate serial numbers are not allowed.");
+            ModelState.AddModelError(string.Empty, "เธซเนเธฒเธกเธกเธตเธซเธกเธฒเธขเน€เธฅเธ serial เธเนเธณ");
         }
 
         if (serialNos.Count > 0)
@@ -992,7 +1000,7 @@ public class ReceivingsController : CrudControllerBase
 
             if (existingSerials)
             {
-                ModelState.AddModelError(string.Empty, "One or more serial numbers already exist in stock.");
+                ModelState.AddModelError(string.Empty, "เธกเธตเธซเธกเธฒเธขเน€เธฅเธ serial เธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธเนเธณเธญเธขเธนเนเนเธเธชเธ•เนเธญเธเนเธฅเนเธง");
             }
         }
 
@@ -1003,21 +1011,21 @@ public class ReceivingsController : CrudControllerBase
     {
         if (!model.PurchaseOrderId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Please select a purchase order.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเนเธเธชเธฑเนเธเธเธทเนเธญ");
             return false;
         }
 
         var postedLines = NormalizeReceivingDetails(model.Details);
         if (postedLines.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Enter quantity for at least one receiving line.");
+            ModelState.AddModelError(nameof(model.Details), "เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธเธณเธเธงเธเธฃเธฑเธเน€เธเนเธฒเธญเธขเนเธฒเธเธเนเธญเธข 1 เธฃเธฒเธขเธเธฒเธฃ");
             return false;
         }
 
         var selectedLookup = model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == model.PurchaseOrderId.Value);
         if (selectedLookup is null)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Selected PO is not available for receiving.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เนเธกเนเธเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเธชเธฒเธกเธฒเธฃเธ–เธฃเธฑเธเธชเธดเธเธเนเธฒเนเธ”เน");
             return false;
         }
 
@@ -1027,7 +1035,7 @@ public class ReceivingsController : CrudControllerBase
         var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId.Value);
         if (!supplierExists)
         {
-            ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
+            ModelState.AddModelError(nameof(model.SupplierId), "เนเธกเนเธเธเธเธนเนเธเธณเธซเธเนเธฒเธขเธ—เธตเนเน€เธฅเธทเธญเธ");
         }
 
         var requestLines = model.Details
@@ -1044,13 +1052,13 @@ public class ReceivingsController : CrudControllerBase
                 (!line.PurchaseOrderAllocationId.HasValue && x.PurchaseOrderDetailId == line.PurchaseOrderDetailId));
             if (lookupLine is null)
             {
-                ModelState.AddModelError(nameof(model.Details), "One or more receiving lines are not valid for the selected PO.");
+                ModelState.AddModelError(nameof(model.Details), "เธกเธตเธฃเธฒเธขเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเธเธฒเธเธฃเธฒเธขเธเธฒเธฃเนเธกเนเธ•เธฃเธเธเธฑเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเน€เธฅเธทเธญเธ");
                 continue;
             }
 
             if (line.QtyReceivedInput > lookupLine.RemainingQty)
             {
-                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Qty received cannot exceed remaining PO quantity.");
+                ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "เธเธณเธเธงเธเธฃเธฑเธเน€เธเนเธฒเธ•เนเธญเธเนเธกเนเน€เธเธดเธเธเธณเธเธงเธเธเธเน€เธซเธฅเธทเธญเธเธญเธ PO");
             }
 
             if (lookupLine.IsSerialControlled)
@@ -1059,29 +1067,29 @@ public class ReceivingsController : CrudControllerBase
 
                 if (line.QtyReceivedInput != Math.Truncate(line.QtyReceivedInput))
                 {
-                    ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "Serial-controlled items must be received in whole numbers.");
+                    ModelState.AddModelError($"Details[{i}].QtyReceivedInput", "เธชเธดเธเธเนเธฒเธเธธเธก serial เธ•เนเธญเธเธฃเธฑเธเน€เธเนเธฒเน€เธเนเธเธเธณเธเธงเธเน€เธ•เนเธก");
                 }
 
                 if (serials.Count == 0)
                 {
-                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "Serial numbers are required for serial-controlled items.");
+                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธซเธกเธฒเธขเน€เธฅเธ serial เธชเธณเธซเธฃเธฑเธเธชเธดเธเธเนเธฒเธเธธเธก serial");
                 }
 
                 if (serials.Count != (int)line.QtyReceivedInput)
                 {
-                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "Serial count must exactly match qty received for serial-controlled items.");
+                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "เธเธณเธเธงเธ serial เธ•เนเธญเธเน€เธ—เนเธฒเธเธฑเธเธเธณเธเธงเธเธฃเธฑเธเน€เธเนเธฒเธชเธณเธซเธฃเธฑเธเธชเธดเธเธเนเธฒเธเธธเธก serial");
                 }
 
                 if (serials.Count != serials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
                 {
-                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same receiving line.");
+                    ModelState.AddModelError($"Details[{i}].SerialEntryText", "เธซเนเธฒเธกเธกเธต serial เธเนเธณเนเธเธฃเธฒเธขเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเน€เธ”เธตเธขเธงเธเธฑเธ");
                 }
 
                 if (line.SupplierWarrantyStartDate.HasValue &&
                     line.SupplierWarrantyEndDate.HasValue &&
                     line.SupplierWarrantyEndDate.Value.Date < line.SupplierWarrantyStartDate.Value.Date)
                 {
-                    ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "Supplier warranty end date must be on or after the supplier warranty start date.");
+                    ModelState.AddModelError($"Details[{i}].SupplierWarrantyEndDate", "เธงเธฑเธเธชเธดเนเธเธชเธธเธ”เธเธฃเธฐเธเธฑเธเธเธนเนเธเธณเธซเธเนเธฒเธขเธ•เนเธญเธเนเธกเนเธเนเธญเธเธงเธฑเธเน€เธฃเธดเนเธกเธ•เนเธ");
                 }
             }
         }
@@ -1092,7 +1100,7 @@ public class ReceivingsController : CrudControllerBase
 
         if (serialNos.Count != serialNos.Distinct(StringComparer.OrdinalIgnoreCase).Count())
         {
-            ModelState.AddModelError(string.Empty, "Duplicate serial numbers are not allowed.");
+            ModelState.AddModelError(string.Empty, "เธซเนเธฒเธกเธกเธตเธซเธกเธฒเธขเน€เธฅเธ serial เธเนเธณ");
         }
 
         if (serialNos.Count > 0)
@@ -1103,7 +1111,7 @@ public class ReceivingsController : CrudControllerBase
 
             if (existingSerials)
             {
-                ModelState.AddModelError(string.Empty, "One or more serial numbers already exist in stock.");
+                ModelState.AddModelError(string.Empty, "เธกเธตเธซเธกเธฒเธขเน€เธฅเธ serial เธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธเนเธณเธญเธขเธนเนเนเธเธชเธ•เนเธญเธเนเธฅเนเธง");
             }
         }
 
@@ -1225,3 +1233,4 @@ public class ReceivingsController : CrudControllerBase
         return FormatPeriodPrefixedCode(NumberPrefix, date, nextSequence);
     }
 }
+

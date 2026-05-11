@@ -7,24 +7,24 @@ public class PurchaseOrderFormViewModel
 {
     public int? PurchaseOrderId { get; set; }
 
-    [Required]
-    [Display(Name = "PO No.")]
+    [Required(ErrorMessage = "กรุณาระบุเลขที่ใบสั่งซื้อ")]
+    [Display(Name = "เลขที่ใบสั่งซื้อ")]
     [StringLength(30)]
     public string PONo { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาระบุวันที่ใบสั่งซื้อ")]
     [DataType(DataType.Date)]
-    [Display(Name = "PO Date")]
+    [Display(Name = "วันที่ใบสั่งซื้อ")]
     public DateTime PODate { get; set; } = DateTime.Today;
 
-    [Required]
-    [Display(Name = "Supplier")]
+    [Required(ErrorMessage = "กรุณาเลือกผู้จำหน่าย")]
+    [Display(Name = "ผู้จำหน่าย")]
     public int? SupplierId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
-    [Display(Name = "Purchase Request")]
+    [Display(Name = "ใบขอซื้อ")]
     public int? PurchaseRequestId { get; set; }
 
     public string? PurchaseRequestNo { get; set; }
@@ -35,11 +35,11 @@ public class PurchaseOrderFormViewModel
     public bool CanAccessAllBranches { get; set; }
 
     [StringLength(50)]
-    [Display(Name = "Reference No.")]
+    [Display(Name = "เลขที่อ้างอิง")]
     public string? ReferenceNo { get; set; }
 
     [DataType(DataType.Date)]
-    [Display(Name = "Expected Receive Date")]
+    [Display(Name = "วันที่คาดว่าจะรับสินค้า")]
     public DateTime? ExpectedReceiveDate { get; set; }
 
     [StringLength(500)]
@@ -51,18 +51,18 @@ public class PurchaseOrderFormViewModel
     [Range(typeof(decimal), "0", "9999999999999999.99")]
     public decimal DiscountAmount { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
     [StringLength(10)]
-    [Display(Name = "VAT Type")]
+    [Display(Name = "ประเภทภาษี")]
     public string VatType { get; set; } = "VAT";
 
     [Range(typeof(decimal), "0", "9999999999999999.99")]
-    [Display(Name = "VAT Amount")]
+    [Display(Name = "จำนวนภาษีมูลค่าเพิ่ม")]
     public decimal VatAmount { get; set; }
 
     public decimal TotalAmount { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาระบุสถานะเอกสาร")]
     [StringLength(20)]
     public string Status { get; set; } = "Draft";
 

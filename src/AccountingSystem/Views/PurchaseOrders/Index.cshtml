@@ -1,61 +1,56 @@
-﻿@inject IUserPermissionService PermissionService
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseOrderHeader>
 
 @{
-    ViewData["Title"] = "Purchase Orders";
+    ViewData["Title"] = "ใบสั่งซื้อ";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
     var canCreatePO = PermissionService.HasPermission(User, "PO.Create");
     var canCreatePR = PermissionService.HasPermission(User, "PR.Create");
-    var canSubmitPO = PermissionService.HasPermission(User, "PO.Submit");
-    var canApprovePO = PermissionService.HasPermission(User, "PO.Approve");
-    var canRejectPO = PermissionService.HasPermission(User, "PO.Reject");
-    var canCancelPO = PermissionService.HasPermission(User, "PO.Cancel");
-    var canReceiveGoods = PermissionService.HasPermission(User, "Receiving.Create") || PermissionService.HasPermission(User, "PO.Receive");
-    var canRecordSupplierPayment = PermissionService.HasPermission(User, "SupplierPayment.Create");
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Purchase Orders</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">ใบสั่งซื้อ</h1>
+        <p class="page-subtitle">ติดตามใบสั่งซื้อทั้งหมดจากหน้านี้ และไปดำเนินการต่อที่หน้ารายละเอียดเอกสารตาม pattern หลักของระบบ</p>
+    </div>
     <div class="page-actions">
         @if (canCreatePO)
         {
-            <a asp-action="Create" class="btn btn-primary px-4">New PO</a>
+            <a asp-action="Create" class="btn btn-primary px-4">สร้างใบสั่งซื้อ</a>
         }
         else if (canCreatePR)
         {
-            <a asp-controller="PurchaseRequests" asp-action="Create" class="btn btn-primary px-4">New PR</a>
+            <a asp-controller="PurchaseRequests" asp-action="Create" class="btn btn-outline-primary px-4">สร้างใบขอซื้อ</a>
         }
     </div>
 </div>
 
-@if (TempData["ReceivingNotice"] is string receivingNotice && !string.IsNullOrWhiteSpace(receivingNotice))
+@if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
 {
-    @await Html.PartialAsync("_Notice", receivingNotice)
+    @await Html.PartialAsync("_Notice", notice)
 }
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">PO Register</h2>
-            </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+            <h2 class="section-title">รายการใบสั่งซื้อ</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="PO no., reference, supplier, or tax ID" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ PO, เลขอ้างอิง, ผู้จำหน่าย หรือเลขผู้เสียภาษี" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
+                    <option value="">ทั้งหมด</option>
                     <option value="Draft" selected="@(status == "Draft")">Draft</option>
                     <option value="Submitted" selected="@(status == "Submitted")">Submitted</option>
                     <option value="Approved" selected="@(status == "Approved")">Approved</option>
@@ -66,30 +61,31 @@
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างตัวกรอง</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
+
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>PO No.</th>
-                        <th>Date</th>
-                        <th>Supplier</th>
-                        <th>Branch</th>
-                        <th>Total</th>
-                        <th>Payment</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>เลขที่ใบสั่งซื้อ</th>
+                        <th>วันที่</th>
+                        <th>ผู้จำหน่าย</th>
+                        <th>สาขา</th>
+                        <th>ยอดรวม</th>
+                        <th>การชำระ</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -97,8 +93,6 @@
                 {
                     @foreach (var po in Model)
                     {
-                        var hasReceiving = po.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
-                        var hasOpenLines = po.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
                         var postedSupplierPayments = po.SupplierPayments.Where(x => x.Status == "Posted").ToList();
                         var poPaidAmount = postedSupplierPayments.Sum(x => x.Amount);
                         var poBalanceAmount = Math.Max(po.TotalAmount - poPaidAmount, 0m);
@@ -107,193 +101,24 @@
                             : poBalanceAmount <= 0m
                                 ? "Paid"
                                 : "Partially Paid";
-                        var canPay = canRecordSupplierPayment && po.Status is "Approved" or "PartiallyReceived" or "FullyReceived" && poBalanceAmount > 0m;
-                        var payBlockedReason = !canRecordSupplierPayment
-                            ? "You do not have permission to record supplier payments."
-                            : po.Status is not ("Approved" or "PartiallyReceived" or "FullyReceived")
-                                ? $"Pay is available only for Approved or received purchase orders. Current status is {po.Status}."
-                                : "This purchase order has already been fully paid.";
-                        var canSubmit = canSubmitPO && (po.Status is "Draft" or "Rejected") && po.PurchaseOrderDetails.Any();
-                        var submitBlockedReason = po.Status is "Draft" or "Rejected"
-                            ? canSubmitPO
-                                ? "Submit is blocked because no PO lines exist."
-                                : "You do not have permission to submit purchase orders."
-                            : $"Submit is available only for Draft or Rejected purchase orders. Current status is {po.Status}.";
-                        var canApprove = canApprovePO && po.Status == "Submitted";
-                        var approveBlockedReason = !canApprovePO
-                            ? "You do not have permission to approve purchase orders."
-                            : po.Status == "Submitted"
-                                ? "Approve is blocked."
-                                : $"Approve is available only for Submitted purchase orders. Current status is {po.Status}.";
-                        var canReject = canRejectPO && po.Status == "Submitted";
-                        var rejectBlockedReason = !canRejectPO
-                            ? "You do not have permission to reject purchase orders."
-                            : po.Status == "Submitted"
-                                ? "Reject is blocked."
-                                : $"Reject is available only for Submitted purchase orders. Current status is {po.Status}.";
-                        var canCancel = canCancelPO && (po.Status == "Draft" || po.Status == "Submitted" || po.Status == "Approved" || po.Status == "Rejected") && !hasReceiving;
-                        var cancelBlockedReason = po.Status == "Cancelled"
-                            ? "Cancelled purchase orders are read-only."
-                            : hasReceiving || po.Status is "PartiallyReceived" or "FullyReceived"
-                                ? "Cancel PO is blocked because receiving already exists."
-                                : canCancelPO
-                                    ? $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {po.Status}."
-                                    : "You do not have permission to cancel purchase orders.";
-                        var canReceive = canReceiveGoods && (po.Status == "Approved" || po.Status == "PartiallyReceived") && hasOpenLines;
-                        var receiveBlockedReason = !canReceiveGoods
-                            ? "You do not have permission to receive goods."
-                            : po.Status == "Cancelled"
-                            ? "Receive Goods is blocked because the PO is cancelled."
-                            : po.Status == "FullyReceived" || !hasOpenLines
-                                ? "Receive Goods is blocked because the PO is already fully received."
-                                : "Receive Goods is available only after PO approval.";
                         <tr>
                             <td><span class="code-chip">@po.PONo</span></td>
-                            <td>@po.PODate.ToString("dd MMM yyyy")</td>
+                            <td>@po.PODate.ToString("dd/MM/yyyy")</td>
                             <td>
                                 <div class="fw-semibold">@po.Supplier?.SupplierName</div>
-                                <div class="table-meta">Payment: @paymentStatus</div>
+                                <div class="table-meta">เลขผู้เสียภาษี: @(string.IsNullOrWhiteSpace(po.Supplier?.TaxId) ? "-" : po.Supplier!.TaxId)</div>
                             </td>
                             <td>@(po.Branch?.BranchName ?? "-")</td>
                             <td>
                                 <div>@po.TotalAmount.ToString("N2")</div>
-                                <div class="table-meta">Paid @poPaidAmount.ToString("N2")</div>
-                                <div class="table-meta">Balance @poBalanceAmount.ToString("N2")</div>
+                                <div class="table-meta">จ่ายแล้ว @poPaidAmount.ToString("N2")</div>
+                                <div class="table-meta">คงเหลือ @poBalanceAmount.ToString("N2")</div>
                             </td>
                             <td>@await Html.PartialAsync("_StatusPill", paymentStatus)</td>
                             <td>@await Html.PartialAsync("_StatusPill", po.Status)</td>
                             <td class="text-end">
-                                <div class="table-actions table-actions-multirow">
-                                    <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = po.PurchaseOrderId })', '_blank', 'noopener');">Print</button>
-                                    @if (canSubmit)
-                                    {
-                                        <form asp-action="Submit" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="submitPoConfirm_@po.PurchaseOrderId"
-                                                        aria-expanded="false">
-                                                    Submit
-                                                </button>
-                                                <div class="confirm-popover" id="submitPoConfirm_@po.PurchaseOrderId" hidden>
-                                                    <div class="confirm-popover-title">Submit this PO?</div>
-                                                    <div class="confirm-popover-text">This will send the purchase order into the approval workflow.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
-                                    }
-                                    @if (canApprove)
-                                    {
-                                        <form asp-action="Approve" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="approvePoConfirm_@po.PurchaseOrderId"
-                                                        aria-expanded="false">
-                                                    Approve
-                                                </button>
-                                                <div class="confirm-popover" id="approvePoConfirm_@po.PurchaseOrderId" hidden>
-                                                    <div class="confirm-popover-title">Approve this PO?</div>
-                                                    <div class="confirm-popover-text">This will approve the purchase order and allow downstream receiving.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
-                                    }
-                                    @if (canReject)
-                                    {
-                                        <form asp-action="Reject" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
-                                                        data-confirm-target="rejectPoConfirm_@po.PurchaseOrderId"
-                                                        aria-expanded="false">
-                                                    Reject
-                                                </button>
-                                                <div class="confirm-popover" id="rejectPoConfirm_@po.PurchaseOrderId" hidden>
-                                                    <div class="confirm-popover-title">Reject this PO?</div>
-                                                    <div class="confirm-popover-text">A reject reason is required before this purchase order is returned for correction.</div>
-                                                    <div class="confirm-popover-field">
-                                                        <label class="confirm-popover-label" for="rejectPoReason_@po.PurchaseOrderId">Reject Reason</label>
-                                                        <textarea id="rejectPoReason_@po.PurchaseOrderId" name="rejectReason" class="form-control" rows="3" placeholder="Required reason" required></textarea>
-                                                    </div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
-                                    }
-                                    @if (canReceive)
-                                    {
-                                        <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@po.PurchaseOrderId" class="btn btn-sm btn-outline-success">Receive</a>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@receiveBlockedReason">Receive</button>
-                                    }
-                                    @if (canPay)
-                                    {
-                                        <a asp-controller="SupplierPayments" asp-action="Create" asp-route-purchaseOrderId="@po.PurchaseOrderId" class="btn btn-sm btn-outline-primary">Pay</a>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@payBlockedReason">Pay</button>
-                                    }
-                                    @if (canCancel)
-                                    {
-                                        <form asp-action="Cancel" asp-route-id="@po.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
-                                                        data-confirm-target="cancelPoConfirm_@po.PurchaseOrderId"
-                                                        aria-expanded="false">
-                                                    Cancel
-                                                </button>
-                                                <div class="confirm-popover" id="cancelPoConfirm_@po.PurchaseOrderId" hidden>
-                                                    <div class="confirm-popover-title">Cancel this PO?</div>
-                                                    <div class="confirm-popover-text">Optional reason helps explain why this purchase order was cancelled.</div>
-                                                    <div class="confirm-popover-field">
-                                                        <label class="confirm-popover-label" for="cancelPoReason_@po.PurchaseOrderId">Cancel Reason</label>
-                                                        <textarea id="cancelPoReason_@po.PurchaseOrderId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
-                                                    </div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel</button>
-                                    }
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
                                 </div>
                             </td>
                         </tr>
@@ -301,7 +126,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="8" class="table-empty">No purchase orders yet. Start with a supplier PO.</td></tr>
+                    <tr><td colspan="8" class="table-empty">ยังไม่มีรายการใบสั่งซื้อ</td></tr>
                 }
                 </tbody>
             </table>
@@ -309,4 +134,3 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
-

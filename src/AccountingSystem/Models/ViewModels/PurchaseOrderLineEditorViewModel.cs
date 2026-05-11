@@ -7,10 +7,10 @@ public class PurchaseOrderLineEditorViewModel
     public int? PurchaseOrderDetailId { get; set; }
     public int LineNumber { get; set; }
 
-    [Required(ErrorMessage = "Please select an item.")]
+    [Required(ErrorMessage = "กรุณาเลือกสินค้า")]
     public int? ItemId { get; set; }
 
-    [Range(typeof(decimal), "0.01", "9999999999999999.99")]
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "จำนวนสั่งซื้อต้องมากกว่า 0")]
     public decimal Qty { get; set; } = 1m;
 
     public decimal ReceivedQty { get; set; }

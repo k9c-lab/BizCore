@@ -1,5 +1,160 @@
 # Session Notes
 
+## Latest Session Update - 2026-05-08 Cash Sale Migration Fix And Patient Info Completion
+- Followed up the new `Cash Sale` / outside-AR sales module after first implementation.
+
+- Found and fixed SQL migration mismatch for permission seed:
+  - original `058_cash_sale_module.sql` used wrong column names for existing permission tables
+  - wrong assumptions used:
+    - `Permissions.PermissionName`
+    - `Permissions.Category`
+    - `RolePermissions.PermissionCode`
+  - actual project schema confirmed from older permission migration:
+    - `Permissions(Code, Name, Module)`
+    - `RolePermissions(RoleName, PermissionId)`
+  - fixed in all 3 copies:
+    - `database/058_cash_sale_module.sql`
+    - `database/system-migrations/058_cash_sale_module.sql`
+    - `src/AccountingSystem/DatabaseMigrations/058_cash_sale_module.sql`
+
+- Customer then reported on `CashSales/Create` that patient-related selectors could not be used:
+  - gender
+  - treatment right
+  - referring doctor
+
+- Root cause confirmed:
+  - first cash-sale implementation intentionally did not include patient columns in `CashSaleHeader`
+  - create/edit view reused invoice-style form, so patient section appeared but cash-sale persistence did not actually support those fields yet
+
+- Cash sale patient-info support was then completed:
+  - added fields to `CashSaleHeader`:
+    - `PatientFullName`
+    - `PatientAge`
+    - `PatientGender`
+    - `PatientHn`
+    - `TreatmentRightId`
+    - `PatientWard`
+    - `ReferringDoctorId`
+  - updated `AccountingDbContext` mapping for:
+    - lengths
+    - foreign keys to `TreatmentRights`
+    - foreign keys to `ReferringDoctors`
+  - updated `CashSalesController` so create/edit:
+    - load gender options
+    - load treatment-right options
+    - load referring-doctor options
+    - save patient fields to database
+    - show patient section according to current system setting
+  - updated cash-sale details page to display patient information
+  - updated cash-sale print page to display patient information
+
+- New migration added for cash-sale patient fields:
+  - `059_cash_sale_patient_fields.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Important run order for database update:
+  1. `058_cash_sale_module.sql`
+  2. `059_cash_sale_patient_fields.sql`
+
+- Verification:
+  - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false -p:OutDir=d:\accountingCodex\scratch_build\cashsale_patient_build\`
+  - result:
+    - `0 warnings`
+    - `0 errors`
+
+- Current module status at end of session:
+  - `Cash Sale` is now a separate module under Sales
+  - has:
+    - create
+    - edit
+    - details
+    - print
+    - draft
+    - issue
+    - cancel with reason
+    - stock posting on issue
+    - stock reverse on cancel
+    - serial handling
+    - patient information support similar to invoice
+  - still important current assumption:
+    - user must still choose an existing `Customer`
+    - anonymous / free-text walk-in customer capture has not been implemented yet
+    - no AR / payment allocation / receipt chain is created from this document
+
+## Latest Session Update - 2026-05-07 Separate Cash Sale Module For Outside-AR Sales
+- Added a new separate sales module for `outside-system` / `cash sale` workflow so users can record sales without sending them into the normal `Invoice -> Payment -> Receipt -> AR` chain.
+
+- New module shape:
+  - controller:
+    - `CashSalesController`
+  - views:
+    - `Views/CashSales/Index.cshtml`
+    - `Views/CashSales/Create.cshtml`
+    - `Views/CashSales/Edit.cshtml`
+    - `Views/CashSales/Details.cshtml`
+    - `Views/CashSales/Print.cshtml`
+  - new menu permission:
+    - `Sales.CashSales.Menu`
+
+- Data model added:
+  - `CashSaleHeader`
+  - `CashSaleDetail`
+  - `CashSaleSerial`
+
+- SQL migration added:
+  - `058_cash_sale_module.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Workflow implemented:
+  - `Draft`
+    - can create/edit without touching stock
+  - `Issue`
+    - posts stock immediately
+    - marks selected serials as `Sold`
+    - stores current customer on serial
+  - `Cancel`
+    - allows cancel from `Draft` or `Issued`
+    - if already issued, stock is reversed back
+    - sold serials are released back to `InStock`
+    - cancel requires explicit reason
+
+- UX direction:
+  - create/edit page intentionally reuses invoice-style editor pattern so users can work with familiar screen behavior
+  - module has its own `Details` and `Print` page
+  - print is available directly from cash-sale document itself
+  - row action pattern follows project standard:
+    - `Index` shows `Details` only
+
+- Important current assumption:
+  - cash sale still requires selecting an existing `Customer`
+  - this round does **not** add anonymous/walk-in free-text customer capture yet
+  - this round also does **not** create AR, payment allocation, or receipt records
+  - cash sale is treated as a one-document sale completion flow
+
+- Follow-up completed in the same date:
+  - cash sale was upgraded to support healthcare/patient data like invoice
+  - added fields to `CashSaleHeader`:
+    - `PatientFullName`
+    - `PatientAge`
+    - `PatientGender`
+    - `PatientHn`
+    - `TreatmentRightId`
+    - `PatientWard`
+    - `ReferringDoctorId`
+  - create/edit now loads and saves:
+    - gender
+    - treatment right
+    - referring doctor
+  - details / print now show patient information as part of the cash-sale document
+  - migration added:
+    - `059_cash_sale_patient_fields.sql`
+
 ## Latest Session Update - 2026-05-07 Payment Draft Flow, Screen Pattern Adoption, And Edge 403 Follow-up
 - Continued standardizing document UX across sales/finance screens.
 
@@ -2415,3 +2570,108 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
     - quotation
     - payment / receipt reversals
     - purchasing documents
+
+## 2026-05-11
+
+- Master Data permissions / role work:
+  - added menu permissions for:
+    - `MasterData.PriceLevels.Menu`
+    - `MasterData.Settings.Menu`
+  - switched `PriceLevels` and `Settings` away from direct admin-role gating into the permission system
+  - added migration:
+    - `060_master_data_menu_permissions.sql`
+  - added new role:
+    - `Accounting`
+  - seeded starter permissions for `Accounting` to support billing-side sales documents and purchase-order creation workflow
+  - added migration:
+    - `061_accounting_role_permissions.sql`
+  - `Role Permissions` screen was reorganized into grouped cards to make permission assignment easier to scan and manage
+
+- Cash Sale:
+  - `CashSales/Print` was aligned to the same print pattern as `Invoices/Print`
+  - cash sale print now respects the same patient-info visibility flag used by invoice print
+
+- Sidebar wording:
+  - changed sidebar label from `แพทย์ส่ง` to `แพทย์`
+  - change was intentionally limited to sidebar/menu wording only
+
+- Purchase Request (`PR`) workflow / UX:
+  - standardized `PurchaseRequests` pages to the main document pattern:
+    - `Index`
+    - `Create`
+    - `Edit`
+    - `Details`
+  - row action on list reduced to `Details`
+  - details page became the main action hub for:
+    - edit
+    - submit
+    - approve
+    - reject
+    - create PO
+    - cancel
+  - cancel now requires explicit reason in both UI and server-side validation
+  - fixed edit-page draft-save bug caused by missing `PurchaseRequestId` hidden field
+  - added `PurchaseRequests/Print` and later aligned it to bilingual Thai/English document-print style
+  - removed workflow-info helper box and section subtitles to keep details/list pages cleaner
+
+- Purchase Order (`PO`) workflow / UX:
+  - standardized `PurchaseOrders` pages to the main document pattern:
+    - `Index`
+    - `Create`
+    - `Edit`
+    - `Details`
+    - `Print`
+  - print was aligned to the bilingual Thai/English house style used by other document prints
+  - removed workflow-info helper box from details page
+  - details page was later repaired by fully rewriting the file after Thai text became corrupted from encoding issues
+  - PO cancel now requires explicit reason and the details-page dialog/server validation were made consistent
+  - `PurchaseOrderFormViewModel` and related line model now have Thai-friendly required/range messages to avoid mixed messages like `The ... field is required.`
+
+- Receiving workflow / UX:
+  - standardized `Receivings` pages to the main document pattern:
+    - `Index`
+    - `Create`
+    - `Details`
+    - `Print`
+  - cancel now requires explicit reason in UI and server-side validation
+  - details page was expanded to show item-level receiving information more clearly:
+    - item code / item name
+    - received quantity
+    - unit
+    - receiving branch / allocation branch
+    - PO line reference
+    - supplier warranty dates
+    - serial numbers
+    - line remark
+  - receiving details query now includes allocation-branch data so the page can show branch-specific receiving context
+
+- Supplier Payment workflow / UX:
+  - standardized `SupplierPayments` pages to the main document pattern:
+    - `Index`
+    - `Create`
+    - `Details`
+    - `Print`
+  - added supplier payment print page in bilingual Thai/English style
+  - cancel now requires explicit reason in both UI and server-side validation
+  - fixed EF Core no-tracking include cycle on `SupplierPayments/Details` and `SupplierPayments/Print`
+    - root cause:
+      - `SupplierPayment -> PurchaseOrderHeader -> SupplierPayments` was included in a no-tracking query
+    - fix:
+      - removed the cyclic include
+      - loaded payment history for the linked PO in a separate query
+
+- Message / validation cleanup:
+  - reviewed and corrected message / validation behavior across:
+    - `PurchaseRequests`
+    - `PurchaseOrders`
+    - `Receivings`
+    - `SupplierPayments`
+  - translated remaining English validation text in purchasing-related view models/controllers where touched
+  - aligned destructive-action dialogs and server-side validation so they enforce the same rules
+
+- Build / verification:
+  - purchasing-related changes were verified with multiple targeted builds to alternate output directories under `scratch_build`
+  - latest verification for current batch completed successfully with:
+    - `0 errors`
+  - transient warnings seen in some builds:
+    - `NU1900` from inability to access NuGet vulnerability feed in the current environment

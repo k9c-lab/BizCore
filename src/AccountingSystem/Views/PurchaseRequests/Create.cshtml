@@ -1,28 +1,30 @@
-﻿@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
+@model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
 
 @{
-    ViewData["Title"] = "Create Purchase Request";
+    ViewData["Title"] = "สร้างใบขอซื้อ";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Create Purchase Request</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">สร้างใบขอซื้อ</h1>
+        <p class="page-subtitle">บันทึกใบขอซื้อเป็นฉบับร่างก่อน แล้วส่งอนุมัติจากหน้ารายละเอียดเอกสาร</p>
+    </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to PRs</a>
+        <button type="submit" form="purchaseRequestForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบขอซื้อ</a>
     </div>
 </div>
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="purchaseRequestForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Save as Draft first, then submit from the PR details page.</span>
+                <span class="table-meta">เมื่อบันทึกแล้ว ระบบจะเก็บเอกสารเป็นสถานะ Draft และให้ไปส่งอนุมัติจากหน้ารายละเอียด</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบขอซื้อ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
                 </div>
             </div>
         </form>
@@ -33,4 +35,3 @@
     <partial name="_ValidationScriptsPartial" />
     <partial name="_FormScripts" />
 }
-

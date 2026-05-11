@@ -4,7 +4,7 @@
 @{
     var isEdit = Model.ReceivingId.HasValue;
     var formAction = isEdit ? "Edit" : "Create";
-    var pageTitle = isEdit ? "Edit Receiving Draft" : "Create Receiving";
+    var pageTitle = isEdit ? "แก้ไขใบรับสินค้าฉบับร่าง" : "สร้างใบรับสินค้า";
     ViewData["Title"] = pageTitle;
     var selectedPo = Model.PurchaseOrderLookup.FirstOrDefault(x => x.PurchaseOrderId == Model.PurchaseOrderId);
     var canPostPermission = PermissionService.HasPermission(User, "Receiving.Post");
@@ -13,30 +13,30 @@
     var postBlockedReason = canPost
         ? string.Empty
         : !canPostPermission
-            ? "You do not have permission to post receiving documents."
-            : "Post Receiving is blocked because no open purchase orders are available.";
+            ? "คุณไม่มีสิทธิ์โพสต์ใบรับสินค้า"
+            : "ยังโพสต์ใบรับสินค้าไม่ได้ เพราะไม่มีใบสั่งซื้อที่ยังรับสินค้าได้";
     var hasSelectedPo = Model.PurchaseOrderId.HasValue;
-    var startFromPoMessage = "Start receiving from an approved purchase order by using the Receive Goods action.";
-    var backLabel = isEdit ? "Back to Details" : "Back to Receivings";
+    var startFromPoMessage = "เริ่มรับสินค้าจากใบสั่งซื้อที่อนุมัติแล้ว โดยใช้ปุ่ม รับสินค้า จากหน้าใบสั่งซื้อ";
+    var backLabel = isEdit ? "กลับไปรายละเอียดใบรับสินค้า" : "กลับไปรายการใบรับสินค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
         <h1 class="page-title">@pageTitle</h1>
-        </div>
+        <p class="page-subtitle">@(isEdit ? "แก้ไขได้เฉพาะใบรับสินค้าสถานะ Draft และค่อยไปโพสต์หรือยกเลิกจากหน้ารายละเอียดเอกสาร" : "บันทึกใบรับสินค้าเป็นฉบับร่างก่อน หรือโพสต์ทันทีเมื่อข้อมูลครบถ้วน")</p>
+    </div>
     <div class="page-actions">
+        <button type="submit" form="receivingForm" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="topSaveDraftButton" disabled="@(!canSaveDraft)">บันทึกฉบับร่าง</button>
+        <button type="submit" form="receivingForm" class="btn btn-primary px-4" name="command" value="Post" id="topPostReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">โพสต์ใบรับสินค้า</button>
         @if (isEdit)
         {
-            <button type="submit" form="receivingForm" class="btn btn-primary" name="command" value="Post" id="topPostReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">Post Receiving</button>
             <a asp-action="Details" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary">@backLabel</a>
         }
         else
         {
             <a asp-action="Index" class="btn btn-outline-secondary">@backLabel</a>
         }
-        <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
-        <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
     </div>
 </div>
 
@@ -63,7 +63,7 @@
             <div asp-validation-summary="All" class="form-alert"></div>
             <div class="form-shell">
                 <div class="form-section quotation-header-section">
-                    <div class="form-section-title">Receiving Header</div>
+                    <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                     <div class="row g-2 quotation-header-grid">
                         <div class="col-lg-3 col-md-6">
                             <label asp-for="ReceivingNo" class="detail-label"></label>
@@ -77,7 +77,7 @@
                         <div class="col-lg-3 col-md-6">
                             <label asp-for="PurchaseOrderId" class="detail-label"></label>
                             <select asp-for="PurchaseOrderId" asp-items="Model.PurchaseOrderOptions" class="form-select" id="receivingPurchaseOrder">
-                                <option value="">Select purchase order</option>
+                                <option value="">เลือกใบสั่งซื้อ</option>
                             </select>
                             <span asp-validation-for="PurchaseOrderId" class="text-danger"></span>
                         </div>
@@ -87,11 +87,11 @@
                             <span asp-validation-for="DeliveryNoteNo" class="text-danger"></span>
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">Status</div>
+                            <div class="detail-label">สถานะ</div>
                             <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", isEdit ? Model.Status : "Draft")</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">PO No.</div>
+                            <div class="detail-label">เลขที่ใบสั่งซื้อ</div>
                             <div class="form-control readonly-detail" id="receivingPoNo">@(selectedPo?.PONo ?? "-")</div>
                         </div>
                         <div class="col-md-3">
@@ -99,11 +99,11 @@
                             <input asp-for="SupplierId" class="form-control readonly-detail" id="receivingSupplierId" readonly />
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">Supplier</div>
+                            <div class="detail-label">ผู้จำหน่าย</div>
                             <div class="form-control readonly-detail" id="receivingSupplierName">@(selectedPo?.SupplierName ?? "-")</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">Branch</div>
+                            <div class="detail-label">สาขา</div>
                             <div class="form-control readonly-detail" id="receivingBranchName">@(selectedPo?.BranchName ?? Model.BranchName ?? "-")</div>
                         </div>
                         <div class="col-12">
@@ -117,24 +117,24 @@
                 <div class="quotation-party-grid">
                     <div class="quotation-party-column">
                         <div class="quotation-info-card">
-                            <div class="quotation-info-card-title">PO Information</div>
+                            <div class="quotation-info-card-title">ข้อมูลใบสั่งซื้อ</div>
                             <div class="quotation-info-grid">
                                 <div class="quotation-info-field">
-                                    <span class="quotation-info-label">PO No.</span>
+                                    <span class="quotation-info-label">เลขที่ใบสั่งซื้อ</span>
                                     <span class="quotation-info-value" id="poInfoNo">@(selectedPo?.PONo ?? "-")</span>
                                 </div>
                                 <div class="quotation-info-field">
-                                    <span class="quotation-info-label">Supplier</span>
+                                    <span class="quotation-info-label">ผู้จำหน่าย</span>
                                     <span class="quotation-info-value" id="poInfoSupplier">@(selectedPo?.SupplierName ?? "-")</span>
                                 </div>
                             </div>
                             <div class="quotation-info-grid">
                                 <div class="quotation-info-field">
-                                    <span class="quotation-info-label">VAT Type</span>
+                                    <span class="quotation-info-label">ประเภทภาษี</span>
                                     <span class="quotation-info-value" id="receivingVatType">@(selectedPo?.VatType ?? "-")</span>
                                 </div>
                                 <div class="quotation-info-field">
-                                    <span class="quotation-info-label">Open Lines</span>
+                                    <span class="quotation-info-label">รายการคงเหลือ</span>
                                     <span class="quotation-info-value" id="receivingOpenLines">@(selectedPo?.Lines.Count.ToString() ?? "0")</span>
                                 </div>
                             </div>
@@ -143,10 +143,10 @@
 
                     <div class="quotation-party-column">
                         <div class="quotation-info-card">
-                            <div class="quotation-info-card-title">PO Financial Summary</div>
+                            <div class="quotation-info-card-title">สรุปมูลค่าใบสั่งซื้อ</div>
                             <div class="quotation-summary-stack">
                                 <div class="quotation-summary-row">
-                                    <span class="quotation-summary-name">Subtotal</span>
+                                    <span class="quotation-summary-name">ยอดก่อนภาษี</span>
                                     <span class="quotation-summary-amount" id="receivingSubtotal">@((selectedPo?.Subtotal ?? 0m).ToString("N2"))</span>
                                 </div>
                                 <div class="quotation-summary-row">
@@ -154,7 +154,7 @@
                                     <span class="quotation-summary-amount" id="receivingVatAmount">@((selectedPo?.VatAmount ?? 0m).ToString("N2"))</span>
                                 </div>
                                 <div class="quotation-summary-row total">
-                                    <span class="quotation-summary-name">Total</span>
+                                    <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                                     <span class="quotation-summary-amount" id="receivingTotalAmount">@((selectedPo?.TotalAmount ?? 0m).ToString("N2"))</span>
                                 </div>
                             </div>
@@ -165,8 +165,8 @@
                 <div class="form-section">
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                         <div>
-                            <div class="form-section-title mb-1">Receiving Lines</div>
-                            <div class="table-meta">Enter received quantities for the branch allocation. Serial-controlled lines require one serial per unit.</div>
+                            <div class="form-section-title mb-1">รายการรับสินค้า</div>
+                            <div class="table-meta">ระบุจำนวนรับเข้าตาม allocation ของสาขา และถ้าเป็นสินค้าคุม serial ต้องใส่ serial ให้ครบตามจำนวนรับ</div>
                         </div>
                     </div>
                     <div class="receiving-lines-stack" id="receivingLineBody">
@@ -195,83 +195,83 @@
                                             <div class="table-meta">PO Line @Model.Details[i].LineNumber | Deliver to @(string.IsNullOrWhiteSpace(Model.Details[i].AllocationBranchName) ? Model.BranchName : Model.Details[i].AllocationBranchName)</div>
                                         </div>
                                         <div class="receiving-line-status-wrap">
-                                            <span class="badge-soft">@(Model.Details[i].IsSerialControlled ? "Serial-controlled" : "Standard receiving")</span>
-                                            <span class="receiving-line-status is-muted js-line-status">Not receiving</span>
+                                            <span class="badge-soft">@(Model.Details[i].IsSerialControlled ? "คุม Serial" : "รับสินค้าแบบปกติ")</span>
+                                            <span class="receiving-line-status is-muted js-line-status">ยังไม่รับ</span>
                                         </div>
                                     </div>
-                                    <div class="receiving-line-hint is-muted js-line-hint">Enter Qty Receive to include this item in the receiving.</div>
+                                    <div class="receiving-line-hint is-muted js-line-hint">กรอกจำนวนรับเข้าเพื่อรวมรายการนี้ในเอกสารรับสินค้า</div>
 
                                     <div class="receiving-line-metrics">
                                         <div class="receiving-line-metric">
-                                            <span>Ordered</span>
+                                            <span>สั่งซื้อ</span>
                                             <strong>@Model.Details[i].OrderedQty.ToString("N2")</strong>
                                         </div>
                                         <div class="receiving-line-metric">
-                                            <span>Received</span>
+                                            <span>รับแล้ว</span>
                                             <strong>@Model.Details[i].ReceivedQty.ToString("N2")</strong>
                                         </div>
                                         <div class="receiving-line-metric">
-                                            <span>Remaining</span>
+                                            <span>คงเหลือ</span>
                                             <strong>@Model.Details[i].RemainingQty.ToString("N2")</strong>
                                         </div>
                                         <div class="receiving-line-metric">
-                                            <span>Unit Price</span>
+                                            <span>ราคาต่อหน่วย</span>
                                             <strong>@Model.Details[i].UnitPrice.ToString("N2")</strong>
                                         </div>
                                         <div class="receiving-line-metric">
-                                            <span>Line Total</span>
+                                            <span>รวมเงิน</span>
                                             <strong>@Model.Details[i].LineTotal.ToString("N2")</strong>
                                         </div>
                                     </div>
 
                                     <div class="receiving-line-entry-grid">
                                         <div class="receiving-entry-block">
-                                            <label class="detail-label">Qty Receive</label>
+                                            <label class="detail-label">จำนวนรับเข้า</label>
                                         <input type="number" step="1" min="0" data-qty-min="0" max="@Model.Details[i].RemainingQty.ToString("0.##")" name="Details[@i].QtyReceivedInput" value="@Model.Details[i].QtyReceivedInput.ToString("0.##")" class="form-control js-receive-qty js-integer-qty" />
                                         <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].QtyReceivedInput" data-valmsg-replace="true"></span>
                                         </div>
 
                                         <div class="receiving-entry-block">
-                                            <div class="detail-label">Supplier Warranty</div>
+                                            <div class="detail-label">ประกันผู้จำหน่าย</div>
                                         @if (Model.Details[i].IsSerialControlled)
                                         {
                                             <div class="row g-2">
                                                 <div class="col-6">
-                                                    <input type="date" name="Details[@i].SupplierWarrantyStartDate" value="@Model.Details[i].SupplierWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control" title="Supplier warranty start" />
+                                                    <input type="date" name="Details[@i].SupplierWarrantyStartDate" value="@Model.Details[i].SupplierWarrantyStartDate?.ToString("yyyy-MM-dd")" class="form-control" title="วันเริ่มต้นประกันผู้จำหน่าย" />
                                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
                                                 </div>
                                                 <div class="col-6">
-                                                    <input type="date" name="Details[@i].SupplierWarrantyEndDate" value="@Model.Details[i].SupplierWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control" title="Supplier warranty end" />
+                                                    <input type="date" name="Details[@i].SupplierWarrantyEndDate" value="@Model.Details[i].SupplierWarrantyEndDate?.ToString("yyyy-MM-dd")" class="form-control" title="วันสิ้นสุดประกันผู้จำหน่าย" />
                                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
                                                 </div>
                                             </div>
                                         }
                                         else
                                         {
-                                            <span class="table-meta">Not required</span>
+                                            <span class="table-meta">ไม่จำเป็น</span>
                                         }
                                         </div>
 
                                         <div class="receiving-entry-block receiving-entry-wide">
-                                            <label class="detail-label">Remark</label>
-                                        <input type="text" name="Details[@i].Remark" value="@Model.Details[i].Remark" class="form-control mb-2" placeholder="Remark" />
+                                            <label class="detail-label">หมายเหตุ</label>
+                                        <input type="text" name="Details[@i].Remark" value="@Model.Details[i].Remark" class="form-control mb-2" placeholder="หมายเหตุ" />
                                         @if (Model.Details[i].IsSerialControlled)
                                         {
-                                            <div class="detail-label mt-2">Serial Numbers</div>
+                                            <div class="detail-label mt-2">หมายเลข Serial</div>
                                             <input type="hidden" name="Details[@i].SerialEntryText" value="" />
                                             <div class="serial-stack js-serial-stack" data-line-index="@i">
                                             @for (var s = 0; s < Math.Max(Model.Details[i].Serials.Count, 1); s++)
                                             {
-                                                <input type="text" name="Details[@i].Serials[@s].SerialNo" value="@(s < Model.Details[i].Serials.Count ? Model.Details[i].Serials[s].SerialNo : string.Empty)" class="form-control js-serial-input" placeholder="Serial no. @(s + 1)" />
+                                                <input type="text" name="Details[@i].Serials[@s].SerialNo" value="@(s < Model.Details[i].Serials.Count ? Model.Details[i].Serials[s].SerialNo : string.Empty)" class="form-control js-serial-input" placeholder="Serial @(s + 1)" />
                                             }
                                             </div>
-                                            <div class="table-meta text-danger js-serial-count">Serial count must equal Qty Receive.</div>
+                                            <div class="table-meta text-danger js-serial-count">จำนวน serial ต้องเท่ากับจำนวนรับเข้า</div>
                                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].SerialEntryText" data-valmsg-replace="true"></span>
                                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Serials" data-valmsg-replace="true"></span>
                                         }
                                         else
                                         {
-                                            <span class="table-meta">No serial input needed.</span>
+                                            <span class="table-meta">ไม่ต้องระบุ serial</span>
                                         }
                                         </div>
                                     </div>
@@ -283,7 +283,7 @@
             </div>
 
             <div class="form-actions mt-3">
-                <span class="table-meta" id="receivingPostReason">Save Draft keeps this receiving editable. Post Receiving updates stock and creates serial records.</span>
+                <span class="table-meta" id="receivingPostReason">บันทึกฉบับร่างจะยังแก้ไขเอกสารนี้ได้ ส่วนการโพสต์จะอัปเดตสต๊อกและสร้าง serial record ทันที</span>
                 <div class="page-actions">
                     @if (isEdit)
                     {
@@ -293,9 +293,8 @@
                     {
                         <a asp-action="Index" class="btn btn-outline-secondary">@backLabel</a>
                     }
-                    <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
-                    <button type="submit" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="saveDraftButton" disabled="@(!canSaveDraft)">Save Draft</button>
-                    <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">Post Receiving</button>
+                    <button type="submit" class="btn btn-outline-primary px-4" name="command" value="SaveDraft" id="saveDraftButton" disabled="@(!canSaveDraft)">บันทึกฉบับร่าง</button>
+                    <button type="submit" class="btn btn-primary px-4" name="command" value="Post" id="postReceivingButton" disabled="@(!canPost)" data-can-post-permission="@canPostPermission.ToString().ToLowerInvariant()">โพสต์ใบรับสินค้า</button>
                 </div>
             </div>
         </form>
@@ -339,9 +338,9 @@
             };
 
             const buildSerialInput = (lineIndex, serialIndex, value = "") =>
-                `<input type="text" name="Details[${lineIndex}].Serials[${serialIndex}].SerialNo" value="${escapeHtml(value)}" class="form-control js-serial-input" placeholder="Serial no. ${serialIndex + 1}" />`;
+                `<input type="text" name="Details[${lineIndex}].Serials[${serialIndex}].SerialNo" value="${escapeHtml(value)}" class="form-control js-serial-input" placeholder="Serial ${serialIndex + 1}" />`;
 
-            const getLineLabel = row => row.querySelector(".receiving-line-title")?.textContent?.trim() || "Receiving line";
+            const getLineLabel = row => row.querySelector(".receiving-line-title")?.textContent?.trim() || "รายการรับสินค้า";
 
             const setLineStatus = (row, status, message, tone) => {
                 const badge = row.querySelector(".js-line-status");
@@ -377,9 +376,9 @@
                 let reason = "";
 
                 if (!canPostPermission) {
-                    reason = "You do not have permission to post receiving documents.";
+                    reason = "คุณไม่มีสิทธิ์โพสต์ใบรับสินค้า";
                 } else if (!selected) {
-                    reason = "Select a purchase order before posting.";
+                    reason = "กรุณาเลือกใบสั่งซื้อก่อนโพสต์ใบรับสินค้า";
                 } else {
                     let totalQty = 0;
                     lineBody.querySelectorAll(".receiving-line-row").forEach(row => {
@@ -392,30 +391,30 @@
                         }
 
                         if (qty < 0 && !reason) {
-                            reason = `Cannot post: ${lineLabel} has negative Qty Receive.`;
+                            reason = `ยังโพสต์ไม่ได้: ${lineLabel} มีจำนวนรับเข้าติดลบ`;
                         }
 
                         if (qty > remaining && !reason) {
-                            reason = `Cannot post: ${lineLabel} Qty Receive exceeds remaining quantity.`;
+                            reason = `ยังโพสต์ไม่ได้: ${lineLabel} มีจำนวนรับเข้ามากกว่าจำนวนคงเหลือ`;
                         }
 
                         const isSerial = row.querySelector('input[name$=".IsSerialControlled"]')?.value === "true";
                         const countLabel = row.querySelector(".js-serial-count");
-                        let lineStatus = "Ready";
-                        let lineMessage = "Ready to post this line.";
+                        let lineStatus = "พร้อม";
+                        let lineMessage = "รายการนี้พร้อมสำหรับการโพสต์";
                         let lineTone = "ready";
 
                         if (qty <= 0) {
-                            lineStatus = "Not receiving";
-                            lineMessage = "Enter Qty Receive to include this item in the receiving.";
+                            lineStatus = "ยังไม่รับ";
+                            lineMessage = "กรอกจำนวนรับเข้าเพื่อรวมรายการนี้ในเอกสารรับสินค้า";
                             lineTone = "muted";
                         } else if (qty < 0) {
-                            lineStatus = "Qty issue";
-                            lineMessage = "Qty Receive cannot be negative.";
+                            lineStatus = "จำนวนไม่ถูกต้อง";
+                            lineMessage = "จำนวนรับเข้าต้องไม่ติดลบ";
                             lineTone = "warning";
                         } else if (qty > remaining) {
-                            lineStatus = "Qty issue";
-                            lineMessage = `Qty Receive cannot exceed remaining quantity (${money(remaining)}).`;
+                            lineStatus = "จำนวนไม่ถูกต้อง";
+                            lineMessage = `จำนวนรับเข้าต้องไม่เกินจำนวนคงเหลือ (${money(remaining)})`;
                             lineTone = "warning";
                         }
 
@@ -424,8 +423,8 @@
                             const isReceivingLine = qty > 0;
                             const matchesQty = isReceivingLine && count === qty && Number.isInteger(qty);
                             countLabel.textContent = isReceivingLine
-                                ? `Serial count: ${count}. Must equal Qty Receive.`
-                                : "Serials are required only when Qty Receive is greater than 0.";
+                                ? `จำนวน serial: ${count} ต้องเท่ากับจำนวนรับเข้า`
+                                : "ต้องระบุ serial เมื่อมีจำนวนรับเข้ามากกว่า 0";
                             countLabel.classList.toggle("text-danger", isReceivingLine && !matchesQty);
                             countLabel.classList.toggle("text-success", matchesQty);
                             countLabel.classList.toggle("text-muted", !isReceivingLine);
@@ -436,22 +435,22 @@
                             }
 
                             if (qty > 0 && !Number.isInteger(qty) && !reason) {
-                                reason = `Cannot post: ${lineLabel} serial-controlled quantity must be a whole number.`;
+                                reason = `ยังโพสต์ไม่ได้: ${lineLabel} เป็นสินค้าคุม serial จึงต้องรับเข้าเป็นจำนวนเต็ม`;
                             }
 
                             if (qty > 0 && !Number.isInteger(qty)) {
-                                lineStatus = "Qty issue";
-                                lineMessage = "Serial-controlled items must be received in whole numbers.";
+                                lineStatus = "จำนวนไม่ถูกต้อง";
+                                lineMessage = "สินค้าคุม serial ต้องรับเข้าเป็นจำนวนเต็ม";
                                 lineTone = "warning";
                             }
 
                             if (qty > 0 && count !== qty && !reason) {
-                                reason = `Cannot post: ${lineLabel} requires ${qty} serial numbers, currently ${count}.`;
+                                reason = `ยังโพสต์ไม่ได้: ${lineLabel} ต้องมี serial ${qty} รายการ แต่ตอนนี้มี ${count}`;
                             }
 
                             if (qty > 0 && count !== qty && Number.isInteger(qty)) {
-                                lineStatus = "Needs serials";
-                                lineMessage = `Enter ${qty} serial numbers. Current count is ${count}.`;
+                                lineStatus = "Serial ไม่ครบ";
+                                lineMessage = `กรอก serial ให้ครบ ${qty} รายการ ตอนนี้มี ${count}`;
                                 lineTone = "warning";
                             }
 
@@ -461,7 +460,7 @@
                     });
 
                     if (totalQty <= 0) {
-                        reason = "Cannot post: enter Qty Receive for at least one item.";
+                        reason = "ยังโพสต์ไม่ได้: กรุณากรอกจำนวนรับเข้าอย่างน้อย 1 รายการ";
                     }
                 }
 
@@ -472,7 +471,7 @@
                 if (topPostButton) {
                     topPostButton.disabled = Boolean(reason);
                 }
-                postReason.textContent = reason || "Ready to post. Posting immediately updates stock and creates serial records where required.";
+                postReason.textContent = reason || "พร้อมโพสต์ การโพสต์จะอัปเดตสต๊อกและสร้าง serial record ทันทีในรายการที่ต้องใช้";
             };
 
             const renderLines = poId => {
@@ -518,55 +517,55 @@
                             <div class="receiving-line-header">
                                 <div>
                                     <div class="receiving-line-title">${escapeHtml(line.ItemCode)} - ${escapeHtml(line.ItemName)}</div>
-                                    <div class="table-meta">PO Line ${line.LineNumber} | Deliver to ${escapeHtml(line.AllocationBranchName || selected.BranchName || "-")}</div>
+                                    <div class="table-meta">PO Line ${line.LineNumber} | ส่งเข้าที่ ${escapeHtml(line.AllocationBranchName || selected.BranchName || "-")}</div>
                                 </div>
                                 <div class="receiving-line-status-wrap">
-                                    <span class="badge-soft">${line.IsSerialControlled ? "Serial-controlled" : "Standard receiving"}</span>
-                                    <span class="receiving-line-status is-muted js-line-status">Not receiving</span>
+                                    <span class="badge-soft">${line.IsSerialControlled ? "คุม Serial" : "รับสินค้าแบบปกติ"}</span>
+                                    <span class="receiving-line-status is-muted js-line-status">ยังไม่รับ</span>
                                 </div>
                             </div>
-                            <div class="receiving-line-hint is-muted js-line-hint">Enter Qty Receive to include this item in the receiving.</div>
+                            <div class="receiving-line-hint is-muted js-line-hint">กรอกจำนวนรับเข้าเพื่อรวมรายการนี้ในเอกสารรับสินค้า</div>
                             <div class="receiving-line-metrics">
-                                <div class="receiving-line-metric"><span>Ordered</span><strong>${money(line.OrderedQty)}</strong></div>
-                                <div class="receiving-line-metric"><span>Received</span><strong>${money(line.ReceivedQty)}</strong></div>
-                                <div class="receiving-line-metric"><span>Remaining</span><strong>${money(line.RemainingQty)}</strong></div>
-                                <div class="receiving-line-metric"><span>Unit Price</span><strong>${money(line.UnitPrice)}</strong></div>
-                                <div class="receiving-line-metric"><span>Line Total</span><strong>${money(line.LineTotal)}</strong></div>
+                                <div class="receiving-line-metric"><span>สั่งซื้อ</span><strong>${money(line.OrderedQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>รับแล้ว</span><strong>${money(line.ReceivedQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>คงเหลือ</span><strong>${money(line.RemainingQty)}</strong></div>
+                                <div class="receiving-line-metric"><span>ราคาต่อหน่วย</span><strong>${money(line.UnitPrice)}</strong></div>
+                                <div class="receiving-line-metric"><span>รวมเงิน</span><strong>${money(line.LineTotal)}</strong></div>
                             </div>
                             <div class="receiving-line-entry-grid">
                                 <div class="receiving-entry-block">
-                                    <label class="detail-label">Qty Receive</label>
+                                    <label class="detail-label">จำนวนรับเข้า</label>
                                     <input type="number" step="1" min="0" data-qty-min="0" max="${line.RemainingQty}" name="Details[${index}].QtyReceivedInput" value="0" class="form-control js-receive-qty js-integer-qty" />
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].QtyReceivedInput" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="receiving-entry-block">
-                                    <div class="detail-label">Supplier Warranty</div>
+                                    <div class="detail-label">ประกันผู้จำหน่าย</div>
                                     ${line.IsSerialControlled
                                         ? `<div class="row g-2">
                                                 <div class="col-6">
-                                                    <input type="date" name="Details[${index}].SupplierWarrantyStartDate" class="form-control" title="Supplier warranty start" />
+                                                    <input type="date" name="Details[${index}].SupplierWarrantyStartDate" class="form-control" title="วันเริ่มต้นประกันผู้จำหน่าย" />
                                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyStartDate" data-valmsg-replace="true"></span>
                                                 </div>
                                                 <div class="col-6">
-                                                    <input type="date" name="Details[${index}].SupplierWarrantyEndDate" class="form-control" title="Supplier warranty end" />
+                                                    <input type="date" name="Details[${index}].SupplierWarrantyEndDate" class="form-control" title="วันสิ้นสุดประกันผู้จำหน่าย" />
                                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SupplierWarrantyEndDate" data-valmsg-replace="true"></span>
                                                 </div>
                                            </div>`
-                                        : '<span class="table-meta">Not required</span>'}
+                                        : '<span class="table-meta">ไม่จำเป็น</span>'}
                                 </div>
                                 <div class="receiving-entry-block receiving-entry-wide">
-                                    <label class="detail-label">Remark</label>
-                                    <input type="text" name="Details[${index}].Remark" class="form-control mb-2" placeholder="Remark" />
+                                    <label class="detail-label">หมายเหตุ</label>
+                                    <input type="text" name="Details[${index}].Remark" class="form-control mb-2" placeholder="หมายเหตุ" />
                                     ${line.IsSerialControlled
-                                        ? `<div class="detail-label mt-2">Serial Numbers</div>
+                                        ? `<div class="detail-label mt-2">หมายเลข Serial</div>
                                            <input type="hidden" name="Details[${index}].SerialEntryText" value="" />
                                            <div class="serial-stack js-serial-stack" data-line-index="${index}">
                                                ${buildSerialInput(index, 0)}
                                            </div>
-                                           <div class="table-meta text-danger js-serial-count">Serial count must equal Qty Receive.</div>
+                                           <div class="table-meta text-danger js-serial-count">จำนวน serial ต้องเท่ากับจำนวนรับเข้า</div>
                                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].SerialEntryText" data-valmsg-replace="true"></span>
                                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].Serials" data-valmsg-replace="true"></span>`
-                                        : '<span class="table-meta">No serial input needed.</span>'}
+                                        : '<span class="table-meta">ไม่ต้องระบุ serial</span>'}
                                 </div>
                             </div>`;
                     lineBody.appendChild(card);

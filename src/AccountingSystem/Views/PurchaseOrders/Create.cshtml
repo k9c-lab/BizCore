@@ -1,16 +1,18 @@
-﻿@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
+@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
 
 @{
-    ViewData["Title"] = "Create Purchase Order";
+    ViewData["Title"] = "สร้างใบสั่งซื้อ";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Create Purchase Order</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">สร้างใบสั่งซื้อ</h1>
+        <p class="page-subtitle">บันทึกใบสั่งซื้อเป็นฉบับร่างก่อน แล้วค่อยไปส่งอนุมัติ อนุมัติ รับสินค้า และพิมพ์จากหน้ารายละเอียดเอกสาร</p>
+    </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to POs</a>
+        <button type="submit" form="purchaseOrderForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบสั่งซื้อ</a>
     </div>
 </div>
 
@@ -21,13 +23,13 @@
 
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" id="purchaseOrderForm">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">AP is intentionally not implemented yet.</span>
+                <span class="table-meta">เมื่อบันทึกแล้ว ระบบจะเก็บเอกสารเป็นสถานะ Draft และให้ไปดำเนินการต่อจากหน้ารายละเอียดใบสั่งซื้อ</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบสั่งซื้อ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
                 </div>
             </div>
         </form>
@@ -38,4 +40,3 @@
     <partial name="_ValidationScriptsPartial" />
     <partial name="_FormScripts" />
 }
-

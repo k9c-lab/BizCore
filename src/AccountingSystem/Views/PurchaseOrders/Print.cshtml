@@ -114,12 +114,8 @@
             vertical-align: top;
             color: #111827;
         }
-        .document-meta td:first-child {
-            white-space: nowrap;
-        }
-        .meta-value-nowrap {
-            white-space: nowrap;
-        }
+        .document-meta td:first-child { white-space: nowrap; }
+        .meta-value-nowrap { white-space: nowrap; }
         .print-section { margin-top: 16px; }
         .party-section {
             padding: 0 0 10px;
@@ -195,9 +191,7 @@
         .summary-table td {
             padding: 4px 0 4px 18px;
         }
-        .summary-table td:first-child {
-            text-align: left;
-        }
+        .summary-table td:first-child { text-align: left; }
         .summary-table td:last-child {
             text-align: right;
             min-width: 120px;
@@ -346,6 +340,7 @@
             @if (hasRemark)
             {
                 <section class="print-section">
+                    <div class="section-label">หมายเหตุ / Remark</div>
                     <div class="remark-box">@Model.Remark</div>
                 </section>
             }
@@ -373,4 +368,3 @@
     </script>
 </body>
 </html>
-

@@ -1,10 +1,12 @@
-using BizCore.Data;
+﻿using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BizCore.Controllers;
 
@@ -13,10 +15,12 @@ public class SupplierPaymentsController : CrudControllerBase
 {
     private const string PaymentNumberPrefix = "SPAY";
     private readonly AccountingDbContext _context;
+    private readonly CompanyProfileSettings _companyProfile;
 
-    public SupplierPaymentsController(AccountingDbContext context)
+    public SupplierPaymentsController(AccountingDbContext context, IOptions<CompanyProfileSettings> companyProfileOptions)
     {
         _context = context;
+        _companyProfile = companyProfileOptions.Value;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -103,7 +107,7 @@ public class SupplierPaymentsController : CrudControllerBase
             var balance = GetOrderBalance(order);
             if (balance <= 0m)
             {
-                TempData["PurchaseOrderNotice"] = "This purchase order has already been fully paid.";
+                TempData["PurchaseOrderNotice"] = "เนเธเธชเธฑเนเธเธเธทเนเธญเธเธตเนเธเธณเธฃเธฐเธเธฃเธเนเธฅเนเธง";
                 return RedirectToAction("Details", "PurchaseOrders", new { id = purchaseOrderId.Value });
             }
 
@@ -163,14 +167,14 @@ public class SupplierPaymentsController : CrudControllerBase
 
         _context.SupplierPaymentHeaders.Add(payment);
 
-        if (!await TrySaveAsync("Supplier payment number must be unique."))
+        if (!await TrySaveAsync("เลขที่เอกสารชำระเงินนี้มีอยู่ในระบบแล้ว"))
         {
             ApplyOrderSummary(model, order);
             await PopulateLookupsAsync(model);
             return View(model);
         }
 
-        TempData["SupplierPaymentNotice"] = "Supplier payment was posted successfully.";
+        TempData["SupplierPaymentNotice"] = "เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธณเธฃเธฐเน€เธเธดเธเนเธซเนเธเธนเนเธเธณเธซเธเนเธฒเธขเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
         return RedirectToAction(nameof(Details), new { id = payment.SupplierPaymentId });
     }
 
@@ -187,6 +191,7 @@ public class SupplierPaymentsController : CrudControllerBase
         }
 
         var payment = await _context.SupplierPaymentHeaders
+            .AsNoTracking()
             .Include(x => x.Supplier)
             .Include(x => x.Branch)
             .Include(x => x.CreatedByUser)
@@ -198,10 +203,78 @@ public class SupplierPaymentsController : CrudControllerBase
             .Include(x => x.PurchaseOrderHeader!)
                 .ThenInclude(x => x.Branch)
             .Include(x => x.PurchaseOrderHeader!)
-                .ThenInclude(x => x.SupplierPayments)
+                .ThenInclude(x => x.PurchaseOrderDetails)
+                    .ThenInclude(x => x.PurchaseOrderAllocations)
             .FirstOrDefaultAsync(x => x.SupplierPaymentId == id.Value);
 
-        return payment is null || !CanAccessSupplierPayment(payment) ? NotFound() : View(payment);
+        if (payment is null || !CanAccessSupplierPayment(payment))
+        {
+            return NotFound();
+        }
+
+        await PopulateOrderPaymentHistoryAsync(payment);
+        return View(payment);
+    }
+
+    public async Task<IActionResult> Print(int? id)
+    {
+        if (!CurrentUserHasPermission("SupplierPayment.View"))
+        {
+            return Forbid();
+        }
+
+        if (id is null)
+        {
+            return NotFound();
+        }
+
+        var payment = await _context.SupplierPaymentHeaders
+            .AsNoTracking()
+            .Include(x => x.Supplier)
+            .Include(x => x.Branch)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.PostedByUser)
+            .Include(x => x.CancelledByUser)
+            .Include(x => x.PurchaseOrderHeader!)
+                .ThenInclude(x => x.Supplier)
+            .Include(x => x.PurchaseOrderHeader!)
+                .ThenInclude(x => x.Branch)
+            .Include(x => x.PurchaseOrderHeader!)
+                .ThenInclude(x => x.PurchaseOrderDetails)
+                    .ThenInclude(x => x.PurchaseOrderAllocations)
+            .FirstOrDefaultAsync(x => x.SupplierPaymentId == id.Value);
+
+        if (payment is null || !CanAccessSupplierPayment(payment))
+        {
+            return NotFound();
+        }
+
+        if (payment.Status != "Posted")
+        {
+            TempData["SupplierPaymentNotice"] = "เธเธดเธกเธเนเนเธ”เนเธซเธฅเธฑเธเธเธฒเธเธเธฑเธเธ—เธถเธเธฃเธฒเธขเธเธฒเธฃเธเธณเธฃเธฐเน€เธเธดเธเนเธฅเนเธง";
+            return RedirectToAction(nameof(Details), new { id = payment.SupplierPaymentId });
+        }
+
+        await PopulateOrderPaymentHistoryAsync(payment);
+        PopulatePrintCompanyViewData(_companyProfile);
+        return View(payment);
+    }
+
+    private async Task PopulateOrderPaymentHistoryAsync(SupplierPaymentHeader payment)
+    {
+        var order = payment.PurchaseOrderHeader;
+        if (order is null)
+        {
+            return;
+        }
+
+        order.SupplierPayments = await _context.SupplierPaymentHeaders
+            .AsNoTracking()
+            .Where(x => x.PurchaseOrderId == order.PurchaseOrderId)
+            .OrderBy(x => x.PaymentDate)
+            .ThenBy(x => x.SupplierPaymentId)
+            .ToListAsync();
     }
 
     [HttpPost]
@@ -226,7 +299,13 @@ public class SupplierPaymentsController : CrudControllerBase
 
         if (payment.Status != "Posted")
         {
-            TempData["SupplierPaymentNotice"] = "Only posted supplier payments can be cancelled.";
+            TempData["SupplierPaymentNotice"] = "เธขเธเน€เธฅเธดเธเนเธ”เนเน€เธเธเธฒเธฐเธฃเธฒเธขเธเธฒเธฃเธเธณเธฃเธฐเน€เธเธดเธเธ—เธตเนเธเธฑเธเธ—เธถเธเนเธฅเนเธงเน€เธ—เนเธฒเธเธฑเนเธ";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            TempData["SupplierPaymentNotice"] = "เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเน€เธซเธ•เธธเธเธฅเธ—เธตเนเธขเธเน€เธฅเธดเธ";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -236,11 +315,11 @@ public class SupplierPaymentsController : CrudControllerBase
         payment.UpdatedByUserId = CurrentUserId();
         payment.CancelledDate = now;
         payment.CancelledByUserId = CurrentUserId();
-        payment.CancelReason = string.IsNullOrWhiteSpace(cancelReason) ? null : cancelReason.Trim();
+        payment.CancelReason = cancelReason.Trim();
 
         await _context.SaveChangesAsync();
 
-        TempData["SupplierPaymentNotice"] = "Supplier payment was cancelled successfully.";
+        TempData["SupplierPaymentNotice"] = "เธขเธเน€เธฅเธดเธเธฃเธฒเธขเธเธฒเธฃเธเธณเธฃเธฐเน€เธเธดเธเนเธซเนเธเธนเนเธเธณเธซเธเนเธฒเธขเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -314,31 +393,31 @@ public class SupplierPaymentsController : CrudControllerBase
     {
         if (!model.PurchaseOrderId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Please select a purchase order.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเนเธเธชเธฑเนเธเธเธทเนเธญ");
             return null;
         }
 
         var order = await FindAccessiblePurchaseOrderAsync(model.PurchaseOrderId.Value);
         if (order is null)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Selected purchase order was not found or you do not have access.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เนเธกเนเธเธเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเน€เธฅเธทเธญเธ เธซเธฃเธทเธญเธเธธเธ“เนเธกเนเธกเธตเธชเธดเธ—เธเธดเนเน€เธเนเธฒเธ–เธถเธ");
             return null;
         }
 
         if (order.Status is not ("Approved" or "PartiallyReceived" or "FullyReceived"))
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), $"Supplier payment can only be recorded for Approved or received purchase orders. Current status is {order.Status}.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), $"เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธณเธฃเธฐเน€เธเธดเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเธญเธเธธเธกเธฑเธ•เธดเนเธฅเนเธงเธซเธฃเธทเธญเธกเธตเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธฅเนเธงเน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {order.Status}");
         }
 
         var balance = GetOrderBalance(order);
         if (balance <= 0m)
         {
-            ModelState.AddModelError(nameof(model.PurchaseOrderId), "Selected purchase order has already been fully paid.");
+            ModelState.AddModelError(nameof(model.PurchaseOrderId), "เนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเน€เธฅเธทเธญเธเธเธณเธฃเธฐเธเธฃเธเนเธฅเนเธง");
         }
 
         if (model.Amount > balance)
         {
-            ModelState.AddModelError(nameof(model.Amount), "Payment amount cannot exceed the remaining payable balance.");
+            ModelState.AddModelError(nameof(model.Amount), "เธเธณเธเธงเธเน€เธเธดเธเธ—เธตเนเธเธณเธฃเธฐเธ•เนเธญเธเนเธกเนเน€เธเธดเธเธขเธญเธ”เธเนเธฒเธเธเนเธฒเธข");
         }
 
         ApplyOrderSummary(model, order);
@@ -437,3 +516,4 @@ public class SupplierPaymentsController : CrudControllerBase
         return FormatPeriodPrefixedCode(numberPrefix, date, nextSequence);
     }
 }
+

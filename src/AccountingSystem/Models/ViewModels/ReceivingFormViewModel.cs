@@ -8,30 +8,30 @@ public class ReceivingFormViewModel
     public int? ReceivingId { get; set; }
 
     [Required]
-    [Display(Name = "Receiving No.")]
+    [Display(Name = "เลขที่ใบรับสินค้า")]
     [StringLength(30)]
     public string ReceivingNo { get; set; } = string.Empty;
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Receive Date")]
+    [Display(Name = "วันที่รับสินค้า")]
     public DateTime ReceiveDate { get; set; } = DateTime.Today;
 
     [Required]
-    [Display(Name = "Purchase Order")]
+    [Display(Name = "ใบสั่งซื้อ")]
     public int? PurchaseOrderId { get; set; }
 
     [Required]
-    [Display(Name = "Supplier")]
+    [Display(Name = "ผู้จำหน่าย")]
     public int? SupplierId { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;
 
     [StringLength(50)]
-    [Display(Name = "Delivery Note No.")]
+    [Display(Name = "เลขที่ใบส่งของ")]
     public string? DeliveryNoteNo { get; set; }
 
     [StringLength(500)]

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BizCore.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class SettingsController : CrudControllerBase
 {
     private readonly ISystemSettingService _systemSettingService;

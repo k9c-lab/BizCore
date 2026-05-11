@@ -16,10 +16,11 @@
     var canUseSales = CanUseMenu("Sales.Menu");
     var canUseQuotations = CanUseMenu("Sales.Quotations.Menu");
     var canUseInvoices = CanUseMenu("Sales.Invoices.Menu");
+    var canUseCashSales = CanUseMenu("Sales.CashSales.Menu");
     var canUseBillingNotes = CanUseMenu("Sales.BillingNotes.Menu");
     var canUsePayments = CanUseMenu("Sales.Payments.Menu");
     var canUseReceipts = CanUseMenu("Sales.Receipts.Menu");
-    var showSalesSection = canUseSales || canUseQuotations || canUseInvoices || canUseBillingNotes || canUsePayments || canUseReceipts;
+    var showSalesSection = canUseSales || canUseQuotations || canUseInvoices || canUseCashSales || canUseBillingNotes || canUsePayments || canUseReceipts;
 
     var canUsePurchasing = CanUseMenu("Purchasing.Menu");
     var canUsePurchaseRequests = CanUseMenu("Purchasing.PR.Menu");
@@ -52,8 +53,8 @@
     var canUseItems = CanUseMenu("MasterData.Items.Menu");
     var canUseUsers = CanUseMenu("MasterData.Users.Menu");
     var canUseRolePermissions = CanUseMenu("MasterData.RolePermissions.Menu");
-    var canUsePriceLevels = User.IsInRole("Admin");
-    var canUseSettings = User.IsInRole("Admin");
+    var canUsePriceLevels = CanUseMenu("MasterData.PriceLevels.Menu");
+    var canUseSettings = CanUseMenu("MasterData.Settings.Menu");
     var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
@@ -107,7 +108,7 @@
 
                 @if (showSalesSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "BillingNotes", "Payments", "Receipts"))">
+                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "CashSales", "BillingNotes", "Payments", "Receipts"))">
                         <div class="sidebar-section-title">งานขาย</div>
                         @if (canUseQuotations)
                         {
@@ -116,6 +117,10 @@
                         @if (canUseInvoices)
                         {
                             <a class="sidebar-link@(ActiveLink("Invoices"))" asp-controller="Invoices" asp-action="Index" aria-current="@AriaCurrent("Invoices")">ใบแจ้งหนี้</a>
+                        }
+                        @if (canUseCashSales)
+                        {
+                            <a class="sidebar-link@(ActiveLink("CashSales"))" asp-controller="CashSales" asp-action="Index" aria-current="@AriaCurrent("CashSales")">เอกสารขายสด</a>
                         }
                         @if (canUseBillingNotes)
                         {
@@ -227,7 +232,7 @@
                         }
                         @if (canUseReferringDoctors)
                         {
-                            <a class="sidebar-link@(ActiveLink("ReferringDoctors"))" asp-controller="ReferringDoctors" asp-action="Index" aria-current="@AriaCurrent("ReferringDoctors")">แพทย์ส่ง</a>
+                            <a class="sidebar-link@(ActiveLink("ReferringDoctors"))" asp-controller="ReferringDoctors" asp-action="Index" aria-current="@AriaCurrent("ReferringDoctors")">แพทย์</a>
                         }
                         @if (canUseItems)
                         {

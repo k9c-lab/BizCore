@@ -20,6 +20,7 @@ public abstract class CrudControllerBase : Controller
         ["Announcements"] = "Announcements.Menu",
         ["Quotations"] = "Sales.Quotations.Menu",
         ["Invoices"] = "Sales.Invoices.Menu",
+        ["CashSales"] = "Sales.CashSales.Menu",
         ["BillingNotes"] = "Sales.BillingNotes.Menu",
         ["Payments"] = "Sales.Payments.Menu",
         ["Receipts"] = "Sales.Receipts.Menu",
@@ -43,7 +44,9 @@ public abstract class CrudControllerBase : Controller
         ["ReferringDoctors"] = "MasterData.ReferringDoctors.Menu",
         ["Items"] = "MasterData.Items.Menu",
         ["Users"] = "MasterData.Users.Menu",
-        ["RolePermissions"] = "MasterData.RolePermissions.Menu"
+        ["RolePermissions"] = "MasterData.RolePermissions.Menu",
+        ["PriceLevels"] = "MasterData.PriceLevels.Menu",
+        ["Settings"] = "MasterData.Settings.Menu"
     };
 
     public override void OnActionExecuting(ActionExecutingContext context)

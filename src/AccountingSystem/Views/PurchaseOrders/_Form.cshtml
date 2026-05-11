@@ -14,52 +14,52 @@
 
 <div class="form-shell">
     <div class="form-section">
-        <div class="form-section-title">PO Header</div>
+        <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
         <div class="row g-3">
             @if (!string.IsNullOrWhiteSpace(Model.PurchaseRequestNo))
             {
                 <div class="col-12">
                     <div class="workflow-info">
-                        Creating PO from Purchase Request source(s) <strong>@Model.PurchaseRequestNo</strong>. Delivery allocation and source PR quantities were copied from the selected PR lines.
+                        กำลังสร้างใบสั่งซื้อจากใบขอซื้อ <strong>@Model.PurchaseRequestNo</strong> โดยระบบได้คัดลอกข้อมูลการกระจายสาขาและ source PR ของแต่ละรายการมาให้แล้ว
                     </div>
                 </div>
             }
             <div class="col-md-3">
-                <label asp-for="PONo" class="form-label"></label>
+                <label asp-for="PONo" class="form-label">เลขที่ใบสั่งซื้อ</label>
                 <input asp-for="PONo" class="form-control" readonly />
-                <div class="form-text">Auto-generated monthly PO number.</div>
+                <div class="form-text">ระบบสร้างเลขที่เอกสารให้อัตโนมัติ</div>
             </div>
             <div class="col-md-3">
-                <label asp-for="PODate" class="form-label"></label>
+                <label asp-for="PODate" class="form-label">วันที่ใบสั่งซื้อ</label>
                 <input asp-for="PODate" class="form-control" />
                 <span asp-validation-for="PODate" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="ExpectedReceiveDate" class="form-label"></label>
+                <label asp-for="ExpectedReceiveDate" class="form-label">กำหนดรับสินค้า</label>
                 <input asp-for="ExpectedReceiveDate" class="form-control" />
                 <span asp-validation-for="ExpectedReceiveDate" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="ReferenceNo" class="form-label"></label>
+                <label asp-for="ReferenceNo" class="form-label">เลขที่อ้างอิง</label>
                 <input asp-for="ReferenceNo" class="form-control" />
                 <span asp-validation-for="ReferenceNo" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="VatType" class="form-label"></label>
+                <label asp-for="VatType" class="form-label">ประเภทภาษี</label>
                 <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="poVatType"></select>
                 <span asp-validation-for="VatType" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="DiscountAmount" class="form-label">Header Discount</label>
+                <label asp-for="DiscountAmount" class="form-label">ส่วนลดท้ายเอกสาร</label>
                 <input asp-for="DiscountAmount" class="form-control" id="poHeaderDiscount" min="0" step="0.01" />
                 <span asp-validation-for="DiscountAmount" class="text-danger"></span>
             </div>
             <div class="col-md-3">
-                <label asp-for="BranchId" class="form-label"></label>
+                <label asp-for="BranchId" class="form-label">สาขา</label>
                 @if (Model.CanAccessAllBranches)
                 {
                     <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
-                        <option value="">Select branch</option>
+                        <option value="">เลือกสาขา</option>
                     </select>
                 }
                 else
@@ -71,7 +71,7 @@
                 <span asp-validation-for="PurchaseRequestId" class="text-danger"></span>
             </div>
             <div class="col-12">
-                <label asp-for="Remark" class="form-label"></label>
+                <label asp-for="Remark" class="form-label">หมายเหตุ</label>
                 <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
                 <span asp-validation-for="Remark" class="text-danger"></span>
             </div>
@@ -81,15 +81,15 @@
     <div class="quotation-party-grid">
         <div class="quotation-party-column">
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Supplier Information</div>
-                <label asp-for="SupplierId" class="form-label"></label>
+                <div class="quotation-info-card-title">ข้อมูลผู้จำหน่าย</div>
+                <label asp-for="SupplierId" class="form-label">ผู้จำหน่าย</label>
                 <input asp-for="SupplierId" type="hidden" id="SupplierId" />
                 <div class="search-dropdown">
                     <input type="text"
                            id="poSupplierSearch"
                            class="form-control"
                            value="@(selectedSupplier is null ? string.Empty : $"{selectedSupplier.SupplierCode} - {selectedSupplier.SupplierName}")"
-                           placeholder="Search supplier code, name, or tax ID"
+                           placeholder="ค้นหารหัส, ชื่อผู้จำหน่าย หรือเลขผู้เสียภาษี"
                            autocomplete="off" />
                     <div id="poSupplierResults" class="search-dropdown-menu" style="display:none;"></div>
                 </div>
@@ -97,26 +97,26 @@
 
                 <div class="quotation-info-grid mt-3">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Supplier Name</span>
+                        <span class="quotation-info-label">ชื่อผู้จำหน่าย</span>
                         <span class="quotation-info-value" id="poSupplierName">@(selectedSupplier?.SupplierName ?? "-")</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Tax ID</span>
+                        <span class="quotation-info-label">เลขผู้เสียภาษี</span>
                         <span class="quotation-info-value" id="poSupplierTaxId">@(string.IsNullOrWhiteSpace(selectedSupplier?.TaxId) ? "-" : selectedSupplier.TaxId)</span>
                     </div>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value" id="poSupplierPhone">@(string.IsNullOrWhiteSpace(selectedSupplier?.Phone) ? "-" : selectedSupplier.Phone)</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value" id="poSupplierEmail">@(string.IsNullOrWhiteSpace(selectedSupplier?.Email) ? "-" : selectedSupplier.Email)</span>
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-label">ที่อยู่</span>
                     <span class="quotation-info-value" id="poSupplierAddress">@(string.IsNullOrWhiteSpace(selectedSupplier?.Address) ? "-" : selectedSupplier.Address)</span>
                 </div>
             </div>
@@ -127,15 +127,15 @@
                 <div class="quotation-info-card-title">Workflow</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Current Status</span>
+                        <span class="quotation-info-label">สถานะปัจจุบัน</span>
                         <span class="quotation-info-value">@await Html.PartialAsync("_StatusPill", Model.Status)</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Save Action</span>
-                        <span class="quotation-info-value">Save Draft</span>
+                        <span class="quotation-info-label">การบันทึกครั้งนี้</span>
+                        <span class="quotation-info-value">บันทึกฉบับร่าง</span>
                     </div>
                 </div>
-                <div class="table-meta">Submit, approval, rejection, cancellation, and receiving are handled from the PO details screen.</div>
+                <div class="table-meta">การส่งอนุมัติ อนุมัติ ตีกลับ ยกเลิก รับสินค้า และพิมพ์ ให้ไปดำเนินการต่อที่หน้ารายละเอียดใบสั่งซื้อ</div>
             </div>
         </div>
     </div>
@@ -143,23 +143,23 @@
     <div class="form-section">
         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
             <div>
-                <div class="form-section-title mb-1">PO Lines</div>
-                <div class="table-meta">Supplier order lines using existing item master data.</div>
+                <div class="form-section-title mb-1">รายการสินค้า</div>
+                <div class="table-meta">กำหนดสินค้า จำนวน ราคา และการกระจายสาขาสำหรับใบสั่งซื้อนี้</div>
             </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="addPOLine">Add Line</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addPOLine">เพิ่มรายการ</button>
         </div>
         <div class="table-responsive po-lines-editor-wrap">
             <table class="table entity-table quote-editor-table" id="poLinesTable">
                 <thead>
                     <tr>
-                        <th style="width: 26%;">Item</th>
-                        <th style="width: 8%;">Qty</th>
-                        <th style="width: 7%;">Received</th>
-                        <th style="width: 10%;">Unit Price</th>
-                        <th style="width: 12%;">Line Total</th>
-                        <th style="width: 23%;">Delivery Allocation</th>
-                        <th style="width: 9%;">Remark</th>
-                        <th style="width: 6%;" class="text-end">Action</th>
+                        <th style="width: 26%;">สินค้า</th>
+                        <th style="width: 8%;">จำนวน</th>
+                        <th style="width: 7%;">รับแล้ว</th>
+                        <th style="width: 10%;">ราคาต่อหน่วย</th>
+                        <th style="width: 12%;">รวมเงิน</th>
+                        <th style="width: 23%;">กระจายสาขา</th>
+                        <th style="width: 9%;">หมายเหตุ</th>
+                        <th style="width: 6%;" class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody id="poLineBody">
@@ -175,12 +175,12 @@
                                 <input type="text"
                                        class="form-control js-item-search"
                                        value="@(selectedItem is null ? string.Empty : $"{selectedItem.ItemCode} - {selectedItem.ItemName}")"
-                                       placeholder="Search item code, name, or part no."
+                                       placeholder="ค้นหารหัส, ชื่อสินค้า หรือ Part No."
                                        autocomplete="off" />
                                 <div id="poItemResults_@i" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                             </div>
                             <div class="table-meta js-item-meta">@(selectedItem is null
-                                ? "Select item from master data."
+                                ? "เลือกสินค้าจาก master data"
                                 : $"{selectedItem.ItemCode} - {selectedItem.ItemName} | Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)} | Serial: {(selectedItem.IsSerialControlled ? "Yes" : "No")}")</div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
                         </td>
@@ -193,7 +193,7 @@
                         </td>
                         <td>
                             <input type="number" step="0.01" min="0" name="Details[@i].UnitPrice" id="Details_@(i)__UnitPrice" value="@Model.Details[i].UnitPrice.ToString("0.##")" class="form-control js-line-price" />
-                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].UnitPrice" data-valmsg-replace="true"></span>
+                            <span asp-validation-for="Details[@i].UnitPrice" class="text-danger"></span>
                         </td>
                         <td>
                             <input type="hidden" name="Details[@i].DiscountAmount" id="Details_@(i)__DiscountAmount" value="0" class="js-line-discount" />
@@ -223,14 +223,14 @@
                                             <input type="hidden" name="Details[@i].Allocations[@j].Sources[@s].SourceQty" value="@allocations[j].Sources[s].SourceQty.ToString("0.##")" />
                                         }
                                         <select name="Details[@i].Allocations[@j].BranchId" class="form-select form-select-sm js-allocation-branch">
-                                            <option value="">Branch</option>
+                                            <option value="">สาขา</option>
                                             @foreach (var branch in branchOptions)
                                             {
                                                 <option value="@branch.Value" selected="@(branch.Value == allocations[j].BranchId?.ToString())">@branch.Text</option>
                                             }
                                         </select>
                                         <input type="number" step="1" min="0" data-qty-min="0" name="Details[@i].Allocations[@j].AllocatedQty" value="@allocations[j].AllocatedQty.ToString("0.##")" class="form-control form-control-sm js-allocation-qty js-integer-qty" />
-                                        <button type="button" class="btn btn-sm btn-outline-secondary js-remove-allocation" title="Remove branch allocation">-</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary js-remove-allocation" title="ลบการกระจายสาขา">-</button>
                                     </div>
                                     @if (allocations[j].Sources.Any())
                                     {
@@ -241,14 +241,14 @@
                                     }
                                 }
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1 js-add-allocation">Add Branch</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1 js-add-allocation">เพิ่มสาขา</button>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Allocations" data-valmsg-replace="true"></span>
                         </td>
                         <td>
                             <input type="text" name="Details[@i].Remark" id="Details_@(i)__Remark" value="@Model.Details[i].Remark" class="form-control" />
                         </td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">ลบ</button>
                         </td>
                     </tr>
                 }
@@ -261,11 +261,11 @@
     <div class="quotation-summary-wrap">
         <div class="quotation-summary-stack">
             <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Subtotal</span>
+                <span class="quotation-summary-name">ยอดก่อนภาษี</span>
                 <span class="quotation-summary-amount" id="poSubtotal">@Model.Subtotal.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
-                <span class="quotation-summary-name">Discount</span>
+                <span class="quotation-summary-name">ส่วนลด</span>
                 <span class="quotation-summary-amount" id="poDiscount">@Model.DiscountAmount.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
@@ -274,7 +274,7 @@
                 <input asp-for="VatAmount" type="hidden" id="poVatAmount" />
             </div>
             <div class="quotation-summary-row total">
-                <span class="quotation-summary-name">Total</span>
+                <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                 <span class="quotation-summary-amount" id="poTotal">@Model.TotalAmount.ToString("N2")</span>
             </div>
         </div>

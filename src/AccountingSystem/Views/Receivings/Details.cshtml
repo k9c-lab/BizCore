@@ -2,103 +2,70 @@
 @model BizCore.Models.Entities.ReceivingHeader
 
 @{
-    ViewData["Title"] = "Receiving Details";
+    ViewData["Title"] = "รายละเอียดใบรับสินค้า";
+
     var isDraft = Model.Status == "Draft";
     var isPosted = Model.Status == "Posted";
     var isCancelled = Model.Status == "Cancelled";
+
     var canEditPermission = PermissionService.HasPermission(User, "Receiving.Edit");
     var canPostPermission = PermissionService.HasPermission(User, "Receiving.Post");
     var canCancelPermission = PermissionService.HasPermission(User, "Receiving.Cancel");
+
     var canEdit = canEditPermission && isDraft;
     var editBlockedReason = canEdit
         ? string.Empty
         : !canEditPermission
-            ? "You do not have permission to edit receiving documents."
-            : $"Edit Receiving is available only for Draft documents. Current status is {Model.Status}.";
+            ? "คุณไม่มีสิทธิ์แก้ไขใบรับสินค้า"
+            : $"แก้ไขได้เฉพาะใบรับสินค้าสถานะ Draft เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
     var canPost = canPostPermission && isDraft;
     var postBlockedReason = canPost
         ? string.Empty
         : !canPostPermission
-            ? "You do not have permission to post receiving documents."
-            : $"Post Receiving is available only for Draft documents. Current status is {Model.Status}.";
+            ? "คุณไม่มีสิทธิ์โพสต์ใบรับสินค้า"
+            : $"โพสต์ได้เฉพาะใบรับสินค้าสถานะ Draft เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
     var canCancel = canCancelPermission && (isDraft || isPosted);
     var cancelBlockedReason = !canCancelPermission
-        ? "You do not have permission to cancel receiving documents."
+        ? "คุณไม่มีสิทธิ์ยกเลิกใบรับสินค้า"
         : isCancelled
-        ? "Cancelled receiving documents are read-only."
-        : $"Cancel Receiving is available only for Draft or Posted receiving documents. Current status is {Model.Status}.";
+            ? "ใบรับสินค้าที่ถูกยกเลิกแล้วไม่สามารถแก้ไขต่อได้"
+            : $"ยกเลิกได้เฉพาะใบรับสินค้าสถานะ Draft หรือ Posted เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
+    var detailCount = Model.ReceivingDetails.Count;
+    var totalQtyReceived = Model.ReceivingDetails.Sum(x => x.QtyReceived);
+    var serialCount = Model.ReceivingDetails.SelectMany(x => x.ReceivingSerials).Count();
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Receiving Details</h1>
-        <p class="page-subtitle">@(isDraft ? "Draft receiving document. Stock and PO received quantities have not been updated yet." : isCancelled ? "Cancelled receiving document kept for history." : "Posted goods receipt that already updated stock and created serials where required.")</p>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">รายละเอียดใบรับสินค้า</h1>
+        <p class="page-subtitle">ใช้หน้านี้ตรวจสอบรายการสินค้าที่รับเข้า serial ที่บันทึกไว้ และรายละเอียดการรับเข้าของแต่ละรายการ</p>
     </div>
-    <div class="page-actions">
-        @if (isDraft)
+    <div class="page-actions justify-content-end">
+        @if (canEdit)
         {
-            @if (canEdit)
-            {
-                <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-primary">Edit Draft</a>
-            }
-            else
-            {
-                <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit Draft</button>
-            }
-            @if (canPost)
-            {
-                <form asp-action="Post" asp-route-id="@Model.ReceivingId" method="post" class="d-inline confirm-popover-form">
-                    @Html.AntiForgeryToken()
-                    <div class="confirm-popover-shell">
-                        <button type="button"
-                                class="btn btn-success js-confirm-popover-toggle"
-                                data-confirm-target="postReceivingConfirm"
-                                aria-expanded="false">
-                            Post Receiving
-                        </button>
-                        <div class="confirm-popover" id="postReceivingConfirm" hidden>
-                            <div class="confirm-popover-title">Post this receiving?</div>
-                            <div class="confirm-popover-text">This will update stock, purchase order received quantities, and create serial records where required.</div>
-                            <div class="confirm-popover-actions">
-                                <button type="submit" class="btn btn-sm btn-success">Confirm</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            }
-            else
-            {
-                <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">Post Receiving</button>
-            }
-            <button type="button" class="btn btn-outline-secondary" disabled title="Print is available after receiving is posted.">Print</button>
+            <a asp-action="Edit" asp-route-id="@Model.ReceivingId" class="btn btn-outline-primary">แก้ไขฉบับร่าง</a>
         }
-        else if (isPosted)
+        else
         {
-            <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceivingId })', '_blank', 'noopener');">Print</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">แก้ไขฉบับร่าง</button>
         }
-        @if (canCancel)
+
+        @if (canPost)
         {
-            <form asp-action="Cancel" asp-route-id="@Model.ReceivingId" method="post" class="d-inline confirm-popover-form">
+            <form asp-action="Post" asp-route-id="@Model.ReceivingId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button"
-                            class="btn btn-outline-danger js-confirm-popover-toggle"
-                            data-confirm-target="cancelReceivingConfirm"
-                            aria-expanded="false">
-                        Cancel Receiving
-                    </button>
-                    <div class="confirm-popover" id="cancelReceivingConfirm" hidden>
-                        <div class="confirm-popover-title">Cancel this receiving?</div>
-                        <div class="confirm-popover-text">Optional reason helps explain why this receiving document was cancelled.</div>
-                        <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="cancelReceivingReason">Cancel Reason</label>
-                            <textarea id="cancelReceivingReason" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
-                        </div>
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="postReceivingConfirm" aria-expanded="false">โพสต์ใบรับสินค้า</button>
+                    <div class="confirm-popover" id="postReceivingConfirm" hidden>
+                        <div class="confirm-popover-title">โพสต์ใบรับสินค้านี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่อยืนยันแล้ว ระบบจะอัปเดตสต๊อก ปรับยอดรับของ PO และสร้าง serial record ตามรายการที่ต้องใช้</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -106,9 +73,45 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Receiving</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">โพสต์ใบรับสินค้า</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+
+        @if (isPosted)
+        {
+            <a asp-action="Print" asp-route-id="@Model.ReceivingId" class="btn btn-outline-secondary" target="_blank">พิมพ์</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="พิมพ์ได้หลังจากโพสต์ใบรับสินค้าแล้ว">พิมพ์</button>
+        }
+
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.ReceivingId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelReceivingConfirm" aria-expanded="false">ยกเลิกใบรับสินค้า</button>
+                    <div class="confirm-popover" id="cancelReceivingConfirm" hidden>
+                        <div class="confirm-popover-title">ยกเลิกใบรับสินค้านี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">การยกเลิกจะปิดเอกสารนี้ และต้องระบุเหตุผลเพื่อใช้อ้างอิงย้อนหลัง</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="cancelReceivingReason">เหตุผลที่ยกเลิก</label>
+                            <textarea id="cancelReceivingReason" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ยกเลิก" required></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกใบรับสินค้า</button>
+        }
+
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบรับสินค้า</a>
     </div>
 </div>
 
@@ -121,30 +124,30 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Receiving Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Receiving No.</div>
+                        <div class="detail-label">เลขที่ใบรับสินค้า</div>
                         <div class="form-control readonly-detail">@Model.ReceivingNo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Receive Date</div>
-                        <div class="form-control readonly-detail">@Model.ReceiveDate.ToString("dd MMM yyyy")</div>
+                        <div class="detail-label">วันที่รับสินค้า</div>
+                        <div class="form-control readonly-detail">@Model.ReceiveDate.ToString("dd/MM/yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">PO No.</div>
+                        <div class="detail-label">เลขที่ใบสั่งซื้อ</div>
                         <div class="form-control readonly-detail">@Model.PurchaseOrderHeader?.PONo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Delivery Note</div>
+                        <div class="detail-label">เลขที่ใบส่งของ</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.DeliveryNoteNo) ? "-" : Model.DeliveryNoteNo)</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">VAT Type</div>
+                        <div class="detail-label">ประเภทภาษี</div>
                         <div class="form-control readonly-detail">@Model.PurchaseOrderHeader?.VatType</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Subtotal</div>
+                        <div class="detail-label">ยอดก่อนภาษี</div>
                         <div class="form-control readonly-detail">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</div>
                     </div>
                     <div class="col-md-3">
@@ -152,15 +155,15 @@
                         <div class="form-control readonly-detail">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Status</div>
+                        <div class="detail-label">สถานะ</div>
                         <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Branch</div>
+                        <div class="detail-label">สาขา</div>
                         <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-12">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                 </div>
@@ -169,56 +172,55 @@
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Supplier Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลผู้จำหน่าย</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Supplier Name</span>
-                                <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
+                                <span class="quotation-info-label">ชื่อผู้จำหน่าย</span>
+                                <span class="quotation-info-value">@(Model.Supplier?.SupplierName ?? "-")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-label">เลขผู้เสียภาษี</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.TaxId) ? "-" : Model.Supplier!.TaxId)</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-label">อีเมล</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="quotation-party-column">
-                    <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">PO Financial Summary</div>
-                        <div class="quotation-summary-stack">
-                            <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">Subtotal</span>
-                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.Subtotal ?? 0m).ToString("N2"))</span>
-                            </div>
-                            <div class="quotation-summary-row">
-                                <span class="quotation-summary-name">VAT</span>
-                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.VatAmount ?? 0m).ToString("N2"))</span>
-                            </div>
-                            <div class="quotation-summary-row total">
-                                <span class="quotation-summary-name">Total</span>
-                                <span class="quotation-summary-amount">@((Model.PurchaseOrderHeader?.TotalAmount ?? 0m).ToString("N2"))</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <div class="quote-summary-grid mb-3">
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">จำนวนรายการ</span>
+                    <p class="quote-summary-value">@detailCount</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">จำนวนรับเข้ารวม</span>
+                    <p class="quote-summary-value">@totalQtyReceived.ToString("N2")</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">จำนวน Serial</span>
+                    <p class="quote-summary-value">@serialCount</p>
+                </div>
+                <div class="quote-summary-card">
+                    <span class="quote-summary-label">ยอดตาม PO</span>
+                    <p class="quote-summary-value">@((Model.PurchaseOrderHeader?.TotalAmount ?? 0m).ToString("N2"))</p>
+                </div>
+            </div>
+
             <div class="form-section">
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                     <div>
-                        <div class="form-section-title mb-1">Receiving Lines</div>
-                        <div class="table-meta">@(isDraft ? $"{Model.ReceivingDetails.Count} draft line(s). Posting will update stock and create serial records." : isCancelled ? $"{Model.ReceivingDetails.Count} cancelled line(s). This document is read-only." : $"{Model.ReceivingDetails.Count} line(s). Stock increments and serial creation happened when this document was posted.")</div>
+                        <div class="form-section-title mb-1">รายการสินค้าที่รับเข้า</div>
+                        <div class="table-meta">แสดงรายการสินค้าที่รับจริง พร้อมสาขาปลายทาง serial ประกันผู้จำหน่าย และหมายเหตุรายบรรทัด</div>
                     </div>
                 </div>
 
@@ -226,32 +228,47 @@
                     <table class="table entity-table quote-editor-table align-middle">
                         <thead>
                             <tr>
-                                <th style="width: 6%;">#</th>
-                                <th>Item</th>
-                                <th style="width: 9%;">Ordered</th>
-                                <th style="width: 9%;">Received</th>
-                                <th style="width: 9%;">Remaining</th>
-                                <th style="width: 10%;">Unit Price</th>
-                                <th style="width: 10%;">Line Total</th>
-                                <th style="width: 18%;">Serials</th>
+                                <th style="width: 5%;">#</th>
+                                <th>สินค้า</th>
+                                <th style="width: 9%;">รับเข้า</th>
+                                <th style="width: 10%;">หน่วย</th>
+                                <th style="width: 14%;">สาขาที่รับ</th>
+                                <th style="width: 12%;">อ้างอิง PO</th>
+                                <th style="width: 18%;">ประกันผู้จำหน่าย</th>
+                                <th style="width: 20%;">Serial / หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody>
                         @foreach (var line in Model.ReceivingDetails.OrderBy(x => x.LineNumber))
                         {
                             var poLine = line.PurchaseOrderDetail;
-                            var remaining = poLine is null ? 0m : poLine.Qty - poLine.ReceivedQty;
+                            var item = line.Item;
+                            var warrantyText = line.SupplierWarrantyStartDate.HasValue || line.SupplierWarrantyEndDate.HasValue
+                                ? $"{line.SupplierWarrantyStartDate?.ToString("dd/MM/yyyy") ?? "-"} - {line.SupplierWarrantyEndDate?.ToString("dd/MM/yyyy") ?? "-"}"
+                                : "-";
                             <tr>
                                 <td>@line.LineNumber</td>
                                 <td>
-                                    <div class="fw-semibold">@line.Item?.ItemCode - @line.Item?.ItemName</div>
-                                    <div class="table-meta">@(string.IsNullOrWhiteSpace(line.Remark) ? "No remark" : line.Remark)</div>
+                                    <div class="fw-semibold">@((item?.ItemCode ?? "-") + " - " + (item?.ItemName ?? "-"))</div>
+                                    <div class="table-meta">Part No.: @(string.IsNullOrWhiteSpace(item?.PartNumber) ? "-" : item!.PartNumber)</div>
                                 </td>
-                                <td>@((poLine?.Qty ?? 0m).ToString("N2"))</td>
                                 <td>@line.QtyReceived.ToString("N2")</td>
-                                <td>@remaining.ToString("N2")</td>
-                                <td>@((poLine?.UnitPrice ?? 0m).ToString("N2"))</td>
-                                <td>@((poLine?.LineTotal ?? 0m).ToString("N2"))</td>
+                                <td>@(string.IsNullOrWhiteSpace(item?.Unit) ? "-" : item!.Unit)</td>
+                                <td>
+                                    <div>@(line.PurchaseOrderAllocation?.Branch?.BranchName ?? Model.Branch?.BranchName ?? "-")</div>
+                                    @if (line.PurchaseOrderAllocation is not null)
+                                    {
+                                        <div class="table-meta">Allocation: @line.PurchaseOrderAllocation.AllocatedQty.ToString("N2")</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div>PO Line @line.LineNumber</div>
+                                    @if (poLine is not null)
+                                    {
+                                        <div class="table-meta">สั่งซื้อ @poLine.Qty.ToString("N2") | ราคา @poLine.UnitPrice.ToString("N2")</div>
+                                    }
+                                </td>
+                                <td>@warrantyText</td>
                                 <td>
                                     @if (line.ReceivingSerials.Any())
                                     {
@@ -264,9 +281,16 @@
                                     }
                                     else
                                     {
-                                        <span>-</span>
+                                        <div>-</div>
                                     }
+                                    <div class="table-meta mt-1">หมายเหตุ: @(string.IsNullOrWhiteSpace(line.Remark) ? "-" : line.Remark)</div>
                                 </td>
+                            </tr>
+                        }
+                        @if (!Model.ReceivingDetails.Any())
+                        {
+                            <tr>
+                                <td colspan="8" class="table-empty">ยังไม่มีรายการรับสินค้า</td>
                             </tr>
                         }
                         </tbody>
@@ -275,33 +299,33 @@
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Posted</span>
+                        <span class="document-history-label">โพสต์โดย</span>
                         <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.PostedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-label">ยกเลิกโดย</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                 </div>
                 @if (isCancelled)
                 {
                     <div class="document-history-reason">
-                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-label">เหตุผลที่ยกเลิก</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
                     </div>
                 }

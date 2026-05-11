@@ -8,17 +8,17 @@ public class SupplierPaymentFormViewModel
     public int? SupplierPaymentId { get; set; }
 
     [Required]
-    [Display(Name = "Payment No.")]
+    [Display(Name = "เลขที่เอกสารชำระเงิน")]
     [StringLength(30)]
     public string PaymentNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Payment Date")]
+    [Display(Name = "วันที่ชำระเงิน")]
     [DataType(DataType.Date)]
     public DateTime PaymentDate { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Please select a purchase order.")]
-    [Display(Name = "Purchase Order")]
+    [Required(ErrorMessage = "กรุณาเลือกใบสั่งซื้อ")]
+    [Display(Name = "ใบสั่งซื้อ")]
     public int? PurchaseOrderId { get; set; }
 
     public int? SupplierId { get; set; }
@@ -28,15 +28,15 @@ public class SupplierPaymentFormViewModel
     public string PurchaseOrderNo { get; set; } = string.Empty;
 
     [Required]
-    [Display(Name = "Payment Method")]
+    [Display(Name = "วิธีการชำระเงิน")]
     [StringLength(20)]
     public string PaymentMethod { get; set; } = "Transfer";
 
-    [Display(Name = "Reference No.")]
+    [Display(Name = "เลขที่อ้างอิง")]
     [StringLength(100)]
     public string? ReferenceNo { get; set; }
 
-    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "Amount must be greater than zero.")]
+    [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "จำนวนเงินต้องมากกว่า 0")]
     public decimal Amount { get; set; }
 
     [StringLength(500)]

@@ -39,6 +39,9 @@ public class AccountingDbContext : DbContext
     public DbSet<InvoiceHeader> InvoiceHeaders => Set<InvoiceHeader>();
     public DbSet<InvoiceDetail> InvoiceDetails => Set<InvoiceDetail>();
     public DbSet<InvoiceSerial> InvoiceSerials => Set<InvoiceSerial>();
+    public DbSet<CashSaleHeader> CashSaleHeaders => Set<CashSaleHeader>();
+    public DbSet<CashSaleDetail> CashSaleDetails => Set<CashSaleDetail>();
+    public DbSet<CashSaleSerial> CashSaleSerials => Set<CashSaleSerial>();
     public DbSet<BillingNoteHeader> BillingNoteHeaders => Set<BillingNoteHeader>();
     public DbSet<BillingNoteInvoice> BillingNoteInvoices => Set<BillingNoteInvoice>();
     public DbSet<BillingNoteLine> BillingNoteLines => Set<BillingNoteLine>();
@@ -640,6 +643,96 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.InvoiceDetail)
                 .WithMany(x => x.InvoiceSerials)
                 .HasForeignKey(x => x.InvoiceDetailId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SerialNumber)
+                .WithMany()
+                .HasForeignKey(x => x.SerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashSaleHeader>(entity =>
+        {
+            entity.HasKey(x => x.CashSaleId);
+            entity.Property(x => x.ReferenceNo).HasMaxLength(50);
+            entity.Property(x => x.PatientFullName).HasMaxLength(200);
+            entity.Property(x => x.PatientGender).HasMaxLength(20);
+            entity.Property(x => x.PatientHn).HasMaxLength(50);
+            entity.Property(x => x.PatientWard).HasMaxLength(100);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.Property(x => x.Subtotal).HasPrecision(18, 2);
+            entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(x => x.VatType).HasMaxLength(10);
+            entity.Property(x => x.VatAmount).HasPrecision(18, 2);
+            entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            entity.HasIndex(x => x.CashSaleNo).IsUnique();
+            entity.HasOne(x => x.Customer)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Salesperson)
+                .WithMany()
+                .HasForeignKey(x => x.SalespersonId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.PriceLevel)
+                .WithMany()
+                .HasForeignKey(x => x.PriceLevelId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.TreatmentRight)
+                .WithMany()
+                .HasForeignKey(x => x.TreatmentRightId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReferringDoctor)
+                .WithMany()
+                .HasForeignKey(x => x.ReferringDoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.IssuedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.IssuedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CancelledByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CancelledByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashSaleDetail>(entity =>
+        {
+            entity.HasKey(x => x.CashSaleDetailId);
+            entity.Property(x => x.Qty).HasPrecision(18, 2);
+            entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(x => x.LineTotal).HasPrecision(18, 2);
+            entity.HasOne(x => x.CashSaleHeader)
+                .WithMany(x => x.CashSaleDetails)
+                .HasForeignKey(x => x.CashSaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CashSaleSerial>(entity =>
+        {
+            entity.HasKey(x => x.CashSaleSerialId);
+            entity.HasIndex(x => new { x.CashSaleDetailId, x.SerialId }).IsUnique();
+            entity.HasIndex(x => x.SerialId).IsUnique();
+            entity.HasOne(x => x.CashSaleDetail)
+                .WithMany(x => x.CashSaleSerials)
+                .HasForeignKey(x => x.CashSaleDetailId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.SerialNumber)
                 .WithMany()

@@ -2,12 +2,14 @@
 @model BizCore.Models.Entities.PurchaseOrderHeader
 
 @{
-    ViewData["Title"] = "Purchase Order Details";
+    ViewData["Title"] = "รายละเอียดใบสั่งซื้อ";
     var canAccessAllBranches = !User.IsInRole("BranchAdmin") &&
         (User.IsInRole("Admin") || string.Equals(User.FindFirst("CanAccessAllBranches")?.Value, "true", StringComparison.OrdinalIgnoreCase));
     var currentBranchId = int.TryParse(User.FindFirst("BranchId")?.Value, out var parsedBranchId) ? parsedBranchId : (int?)null;
+
     var hasReceiving = Model.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0);
     var hasOpenLines = Model.PurchaseOrderDetails.Any(x => x.Qty > x.ReceivedQty);
+
     var canEditPermission = PermissionService.HasPermission(User, "PO.Edit");
     var canSubmitPermission = PermissionService.HasPermission(User, "PO.Submit");
     var canApprovePermission = PermissionService.HasPermission(User, "PO.Approve");
@@ -15,6 +17,7 @@
     var canCancelPermission = PermissionService.HasPermission(User, "PO.Cancel");
     var canReceivePermission = PermissionService.HasPermission(User, "Receiving.Create") || PermissionService.HasPermission(User, "PO.Receive");
     var canSupplierPaymentPermission = PermissionService.HasPermission(User, "SupplierPayment.Create");
+
     var openReceivingBranches = Model.PurchaseOrderDetails
         .SelectMany(x => x.PurchaseOrderAllocations)
         .Where(x => x.AllocatedQty > x.ReceivedQty && (canAccessAllBranches || x.BranchId == currentBranchId))
@@ -22,30 +25,33 @@
         .Select(x => new
         {
             BranchId = x.Key,
-            BranchName = x.First().Branch?.BranchName ?? "Branch",
+            BranchName = x.First().Branch?.BranchName ?? "สาขา",
             RemainingQty = x.Sum(a => a.AllocatedQty - a.ReceivedQty)
         })
         .OrderBy(x => x.BranchName)
         .ToList();
+
     if (!openReceivingBranches.Any() && hasOpenLines && Model.BranchId.HasValue && (canAccessAllBranches || Model.BranchId == currentBranchId))
     {
         openReceivingBranches.Add(new
         {
             BranchId = Model.BranchId.Value,
-            BranchName = Model.Branch?.BranchName ?? "Branch",
+            BranchName = Model.Branch?.BranchName ?? "สาขา",
             RemainingQty = Model.PurchaseOrderDetails.Sum(x => Math.Max(0m, x.Qty - x.ReceivedQty))
         });
     }
+
     var canEdit = canEditPermission && (Model.Status is "Draft" or "Rejected") && !hasReceiving;
     var editBlockedReason = canEdit
         ? string.Empty
         : !canEditPermission
-            ? "You do not have permission to edit purchase orders."
+            ? "คุณไม่มีสิทธิ์แก้ไขใบสั่งซื้อ"
             : Model.Status == "Cancelled"
-            ? "Cancelled purchase orders are read-only."
-            : hasReceiving
-                ? "Edit PO is blocked because receiving already exists."
-                : $"Edit PO is available only for Draft or Rejected purchase orders. Current status is {Model.Status}.";
+                ? "ใบสั่งซื้อที่ยกเลิกแล้วไม่สามารถแก้ไขต่อได้"
+                : hasReceiving
+                    ? "ยังแก้ไขใบสั่งซื้อไม่ได้ เพราะมีการรับสินค้าแล้ว"
+                    : $"แก้ไขได้เฉพาะใบสั่งซื้อสถานะ Draft หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
     var canSubmit = canSubmitPermission &&
         (Model.Status is "Draft" or "Rejected") &&
         Model.SupplierId > 0 &&
@@ -54,66 +60,70 @@
     var submitBlockedReason = canSubmit
         ? string.Empty
         : !canSubmitPermission
-            ? "You do not have permission to submit purchase orders."
+            ? "คุณไม่มีสิทธิ์ส่งอนุมัติใบสั่งซื้อ"
             : Model.Status is not ("Draft" or "Rejected")
-                ? $"Submit is available only for Draft or Rejected purchase orders. Current status is {Model.Status}."
+                ? $"ส่งอนุมัติได้เฉพาะใบสั่งซื้อสถานะ Draft หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {Model.Status}"
                 : !Model.PurchaseOrderDetails.Any()
-                    ? "Submit is blocked because no PO lines exist."
-                    : "Submit is blocked because supplier or PO lines are incomplete.";
+                    ? "ยังส่งอนุมัติไม่ได้ เพราะยังไม่มีรายการสินค้า"
+                    : "ยังส่งอนุมัติไม่ได้ เพราะข้อมูลผู้จำหน่ายหรือรายการสินค้าไม่ครบถ้วน";
+
     var canApprove = canApprovePermission && Model.Status == "Submitted";
     var approveBlockedReason = canApprove
         ? string.Empty
         : !canApprovePermission
-            ? "You do not have permission to approve purchase orders."
-            : Model.Status != "Submitted"
-                ? $"Approve is available only for Submitted purchase orders. Current status is {Model.Status}."
-                : "Approve is blocked.";
+            ? "คุณไม่มีสิทธิ์อนุมัติใบสั่งซื้อ"
+            : $"อนุมัติได้เฉพาะใบสั่งซื้อสถานะ Submitted เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
     var canReject = canRejectPermission && Model.Status == "Submitted";
     var rejectBlockedReason = canReject
         ? string.Empty
         : !canRejectPermission
-            ? "You do not have permission to reject purchase orders."
-            : Model.Status != "Submitted"
-                ? $"Reject is available only for Submitted purchase orders. Current status is {Model.Status}."
-                : "Reject is blocked.";
+            ? "คุณไม่มีสิทธิ์ตีกลับใบสั่งซื้อ"
+            : $"ตีกลับได้เฉพาะใบสั่งซื้อสถานะ Submitted เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
     var canReceive = canReceivePermission && (Model.Status == "Approved" || Model.Status == "PartiallyReceived") && openReceivingBranches.Any();
     var receiveBlockedReason = canReceive
         ? string.Empty
         : !canReceivePermission
-            ? "You do not have permission to receive goods."
+            ? "คุณไม่มีสิทธิ์รับสินค้า"
             : Model.Status == "Cancelled"
-            ? "Receive Goods is blocked because the PO is cancelled."
-            : Model.Status == "FullyReceived" || !hasOpenLines
-                ? "Receive Goods is blocked because the PO is already fully received."
-                : !openReceivingBranches.Any() && hasOpenLines
-                    ? "Receive Goods is blocked because this PO has no open allocation for your branch."
-                    : "Receive Goods is available only after PO approval.";
+                ? "ยังรับสินค้าไม่ได้ เพราะใบสั่งซื้อนี้ถูกยกเลิกแล้ว"
+                : Model.Status == "FullyReceived" || !hasOpenLines
+                    ? "ยังรับสินค้าไม่ได้ เพราะรับสินค้าครบแล้ว"
+                    : !openReceivingBranches.Any() && hasOpenLines
+                        ? "ยังรับสินค้าไม่ได้ เพราะไม่มี allocation คงเหลือสำหรับสาขาที่คุณใช้งานอยู่"
+                        : "รับสินค้าได้หลังจากใบสั่งซื้อได้รับการอนุมัติแล้วเท่านั้น";
+
     var canCancel = canCancelPermission && (Model.Status == "Draft" || Model.Status == "Submitted" || Model.Status == "Approved" || Model.Status == "Rejected") && !hasReceiving;
     var cancelBlockedReason = canCancel
         ? string.Empty
         : !canCancelPermission
-            ? "You do not have permission to cancel purchase orders."
+            ? "คุณไม่มีสิทธิ์ยกเลิกใบสั่งซื้อ"
             : Model.Status == "Cancelled"
-            ? "Cancelled purchase orders are read-only."
-            : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
-                ? "Cancel PO is blocked because receiving already exists."
-                : $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {Model.Status}.";
-    var postedSupplierPayments = Model.SupplierPayments.Where(x => x.Status == "Posted").OrderByDescending(x => x.PaymentDate).ThenByDescending(x => x.SupplierPaymentId).ToList();
+                ? "ใบสั่งซื้อที่ยกเลิกแล้วไม่สามารถแก้ไขต่อได้"
+                : hasReceiving || Model.Status is "PartiallyReceived" or "FullyReceived"
+                    ? "ยังยกเลิกใบสั่งซื้อไม่ได้ เพราะมีการรับสินค้าแล้ว"
+                    : $"ยกเลิกได้เฉพาะใบสั่งซื้อสถานะ Draft, Submitted, Approved หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+
+    var postedSupplierPayments = Model.SupplierPayments
+        .Where(x => x.Status == "Posted")
+        .OrderByDescending(x => x.PaymentDate)
+        .ThenByDescending(x => x.SupplierPaymentId)
+        .ToList();
     var poPaidAmount = postedSupplierPayments.Sum(x => x.Amount);
     var poBalanceAmount = Math.Max(Model.TotalAmount - poPaidAmount, 0m);
-    var paymentStatus = poPaidAmount <= 0m
-        ? "Unpaid"
-        : poBalanceAmount <= 0m
-            ? "Paid"
-            : "Partially Paid";
-    var canRecordPayment = canSupplierPaymentPermission && Model.Status is "Approved" or "PartiallyReceived" or "FullyReceived" && poBalanceAmount > 0m;
+    var paymentStatus = poPaidAmount <= 0m ? "Unpaid" : poBalanceAmount <= 0m ? "Paid" : "Partially Paid";
+
+    var canRecordPayment = canSupplierPaymentPermission &&
+        Model.Status is "Approved" or "PartiallyReceived" or "FullyReceived" &&
+        poBalanceAmount > 0m;
     var supplierPaymentBlockedReason = canRecordPayment
         ? string.Empty
         : !canSupplierPaymentPermission
-            ? "You do not have permission to record supplier payments."
+            ? "คุณไม่มีสิทธิ์บันทึกการชำระเงินให้ผู้จำหน่าย"
             : Model.Status is not ("Approved" or "PartiallyReceived" or "FullyReceived")
-                ? $"Supplier payment is available only for Approved or received purchase orders. Current status is {Model.Status}."
-                : "This purchase order has already been fully paid.";
+                ? $"บันทึกการชำระเงินได้เฉพาะใบสั่งซื้อที่อนุมัติแล้วหรือมีการรับสินค้าแล้วเท่านั้น สถานะปัจจุบันคือ {Model.Status}"
+                : "ใบสั่งซื้อนี้ชำระครบแล้ว";
 }
 
 @if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -123,36 +133,32 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Purchase Order Details</h1>
-        <p class="page-subtitle">Review PO header, supplier, and line quantities before receiving.</p>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">รายละเอียดใบสั่งซื้อ</h1>
+        <p class="page-subtitle">ใช้หน้านี้เป็นจุดหลักสำหรับตรวจสอบ แก้ไข ส่งอนุมัติ อนุมัติ ตีกลับ รับสินค้า บันทึกการชำระเงิน และพิมพ์เอกสาร</p>
     </div>
-    <div class="page-actions">
+    <div class="page-actions justify-content-end">
         @if (canEdit)
         {
-            <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-primary">Edit PO</a>
+            <a asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-primary">แก้ไขฉบับร่าง</a>
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit PO</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">แก้ไขฉบับร่าง</button>
         }
+
         @if (canSubmit)
         {
             <form asp-action="Submit" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button"
-                            class="btn btn-primary js-confirm-popover-toggle"
-                            data-confirm-target="submitPoDetailsConfirm_@Model.PurchaseOrderId"
-                            aria-expanded="false">
-                        Submit
-                    </button>
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="submitPoDetailsConfirm_@Model.PurchaseOrderId" aria-expanded="false">ส่งอนุมัติ</button>
                     <div class="confirm-popover" id="submitPoDetailsConfirm_@Model.PurchaseOrderId" hidden>
-                        <div class="confirm-popover-title">Submit this PO?</div>
-                        <div class="confirm-popover-text">This will send the purchase order into the approval workflow.</div>
+                        <div class="confirm-popover-title">ส่งใบสั่งซื้อนี้เข้าอนุมัติใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่อยืนยันแล้ว เอกสารจะเข้าสู่ขั้นตอนอนุมัติ และควรกลับมาแก้ไขเฉพาะกรณีที่ถูกตีกลับ</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -160,25 +166,21 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@submitBlockedReason">ส่งอนุมัติ</button>
         }
+
         @if (canApprove)
         {
             <form asp-action="Approve" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button"
-                            class="btn btn-primary js-confirm-popover-toggle"
-                            data-confirm-target="approvePoDetailsConfirm_@Model.PurchaseOrderId"
-                            aria-expanded="false">
-                        Approve
-                    </button>
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="approvePoDetailsConfirm_@Model.PurchaseOrderId" aria-expanded="false">อนุมัติ</button>
                     <div class="confirm-popover" id="approvePoDetailsConfirm_@Model.PurchaseOrderId" hidden>
-                        <div class="confirm-popover-title">Approve this PO?</div>
-                        <div class="confirm-popover-text">This will approve the purchase order and allow downstream receiving.</div>
+                        <div class="confirm-popover-title">อนุมัติใบสั่งซื้อนี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่ออนุมัติแล้ว จะสามารถนำใบสั่งซื้อนี้ไปใช้ในขั้นตอนรับสินค้าได้</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -186,29 +188,25 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@approveBlockedReason">อนุมัติ</button>
         }
+
         @if (canReject)
         {
             <form asp-action="Reject" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button"
-                            class="btn btn-outline-danger js-confirm-popover-toggle"
-                            data-confirm-target="rejectPoDetailsConfirm_@Model.PurchaseOrderId"
-                            aria-expanded="false">
-                        Reject
-                    </button>
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="rejectPoDetailsConfirm_@Model.PurchaseOrderId" aria-expanded="false">ตีกลับ</button>
                     <div class="confirm-popover" id="rejectPoDetailsConfirm_@Model.PurchaseOrderId" hidden>
-                        <div class="confirm-popover-title">Reject this PO?</div>
-                        <div class="confirm-popover-text">A reject reason is required before this purchase order is returned for correction.</div>
+                        <div class="confirm-popover-title">ตีกลับใบสั่งซื้อนี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">กรุณาระบุเหตุผล เพื่อให้ผู้จัดทำกลับไปแก้ไขได้ถูกต้อง</div>
                         <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="rejectPoDetailsReason_@Model.PurchaseOrderId">Reject Reason</label>
-                            <textarea id="rejectPoDetailsReason_@Model.PurchaseOrderId" name="rejectReason" class="form-control" rows="3" placeholder="Required reason" required></textarea>
+                            <label class="confirm-popover-label" for="rejectPoDetailsReason_@Model.PurchaseOrderId">เหตุผลที่ตีกลับ</label>
+                            <textarea id="rejectPoDetailsReason_@Model.PurchaseOrderId" name="rejectReason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ตีกลับ" required></textarea>
                         </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -216,130 +214,96 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@rejectBlockedReason">ตีกลับ</button>
         }
-        @if (canCancel)
-        {
-            <form asp-action="Cancel" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
-                @Html.AntiForgeryToken()
-                <div class="confirm-popover-shell">
-                    <button type="button"
-                            class="btn btn-outline-danger js-confirm-popover-toggle"
-                            data-confirm-target="cancelPoDetailsConfirm_@Model.PurchaseOrderId"
-                            aria-expanded="false">
-                        Cancel PO
-                    </button>
-                    <div class="confirm-popover" id="cancelPoDetailsConfirm_@Model.PurchaseOrderId" hidden>
-                        <div class="confirm-popover-title">Cancel this PO?</div>
-                        <div class="confirm-popover-text">Optional reason helps explain why this purchase order was cancelled.</div>
-                        <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="cancelPoDetailsReason_@Model.PurchaseOrderId">Cancel Reason</label>
-                            <textarea id="cancelPoDetailsReason_@Model.PurchaseOrderId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
-                        </div>
-                        <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        }
-        else
-        {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel PO</button>
-        }
+
         @if (canReceive)
         {
             @foreach (var branch in openReceivingBranches)
             {
                 <a asp-controller="Receivings" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" asp-route-branchId="@branch.BranchId" class="btn btn-success">
-                    @(openReceivingBranches.Count == 1 ? "Receive Goods" : $"Receive {branch.BranchName}")
+                    @(openReceivingBranches.Count == 1 ? "รับสินค้า" : $"รับสินค้า {branch.BranchName}")
                 </a>
             }
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">Receive Goods</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">รับสินค้า</button>
         }
+
         @if (canRecordPayment)
         {
-            <a asp-controller="SupplierPayments" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" class="btn btn-outline-primary">Record Payment</a>
+            <a asp-controller="SupplierPayments" asp-action="Create" asp-route-purchaseOrderId="@Model.PurchaseOrderId" class="btn btn-outline-primary">บันทึกการชำระเงิน</a>
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@supplierPaymentBlockedReason">Record Payment</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@supplierPaymentBlockedReason">บันทึกการชำระเงิน</button>
         }
-        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.PurchaseOrderId })', '_blank', 'noopener');">Print</button>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+
+        <a asp-action="Print" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary" target="_blank">พิมพ์</a>
+
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.PurchaseOrderId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelPoDetailsConfirm_@Model.PurchaseOrderId" aria-expanded="false">ยกเลิกใบสั่งซื้อ</button>
+                    <div class="confirm-popover" id="cancelPoDetailsConfirm_@Model.PurchaseOrderId" hidden>
+                        <div class="confirm-popover-title">ยกเลิกใบสั่งซื้อนี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">การยกเลิกจะปิดเอกสารนี้ และต้องระบุเหตุผลไว้เพื่อใช้อ้างอิงย้อนหลัง</div>
+                        <div class="confirm-popover-field">
+                            <label class="confirm-popover-label" for="cancelPoDetailsReason_@Model.PurchaseOrderId">เหตุผลที่ยกเลิก</label>
+                            <textarea id="cancelPoDetailsReason_@Model.PurchaseOrderId" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ยกเลิก" required></textarea>
+                        </div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกใบสั่งซื้อ</button>
+        }
+
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบสั่งซื้อ</a>
     </div>
 </div>
-
-@if (!canEdit || !canSubmit || !canApprove || !canReject || !canCancel || !canReceive || !canRecordPayment)
-{
-    <div class="workflow-info mb-3">
-        @if (!canEdit)
-        {
-            <div>@editBlockedReason</div>
-        }
-        @if (!canApprove)
-        {
-            <div>@approveBlockedReason</div>
-        }
-        @if (!canSubmit)
-        {
-            <div>@submitBlockedReason</div>
-        }
-        @if (!canReject)
-        {
-            <div>@rejectBlockedReason</div>
-        }
-        @if (!canCancel)
-        {
-            <div>@cancelBlockedReason</div>
-        }
-        @if (!canReceive)
-        {
-            <div>@receiveBlockedReason</div>
-        }
-        @if (!canRecordPayment)
-        {
-            <div>@supplierPaymentBlockedReason</div>
-        }
-    </div>
-}
 
 <div class="card content-card">
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">PO Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">PO No.</div>
+                        <div class="detail-label">เลขที่ใบสั่งซื้อ</div>
                         <div class="form-control readonly-detail">@Model.PONo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">PO Date</div>
-                        <div class="form-control readonly-detail">@Model.PODate.ToString("dd MMM yyyy")</div>
+                        <div class="detail-label">วันที่ใบสั่งซื้อ</div>
+                        <div class="form-control readonly-detail">@Model.PODate.ToString("dd/MM/yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Expected Receive</div>
-                        <div class="form-control readonly-detail">@(Model.ExpectedReceiveDate?.ToString("dd MMM yyyy") ?? "-")</div>
+                        <div class="detail-label">กำหนดรับสินค้า</div>
+                        <div class="form-control readonly-detail">@(Model.ExpectedReceiveDate?.ToString("dd/MM/yyyy") ?? "-")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Reference No.</div>
+                        <div class="detail-label">เลขที่อ้างอิง</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">VAT Type</div>
+                        <div class="detail-label">ประเภทภาษี</div>
                         <div class="form-control readonly-detail">@Model.VatType</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Branch</div>
+                        <div class="detail-label">สาขา</div>
                         <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Purchase Request</div>
+                        <div class="detail-label">ใบขอซื้อที่เชื่อมโยง</div>
                         <div class="form-control readonly-detail">
                             @if (Model.PurchaseRequestHeader is null)
                             {
@@ -352,19 +316,19 @@
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Received Lines</div>
+                        <div class="detail-label">สถานะ</div>
+                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="detail-label">รายการที่รับแล้ว</div>
                         <div class="form-control readonly-detail">@Model.PurchaseOrderDetails.Count(x => x.ReceivedQty > 0)</div>
                     </div>
                     <div class="col-md-3">
-                        <div class="detail-label">Open Lines</div>
+                        <div class="detail-label">รายการคงเหลือ</div>
                         <div class="form-control readonly-detail">@Model.PurchaseOrderDetails.Count(x => x.Qty > x.ReceivedQty)</div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="detail-label">Status</div>
-                        <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
-                    </div>
                     <div class="col-12">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                 </div>
@@ -373,29 +337,29 @@
             <div class="quotation-party-grid">
                 <div class="quotation-party-column">
                     <div class="quotation-info-card">
-                        <div class="quotation-info-card-title">Supplier Information</div>
+                        <div class="quotation-info-card-title">ข้อมูลผู้จำหน่าย</div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Supplier Name</span>
-                                <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
+                                <span class="quotation-info-label">ชื่อผู้จำหน่าย</span>
+                                <span class="quotation-info-value">@(Model.Supplier?.SupplierName ?? "-")</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Tax ID</span>
+                                <span class="quotation-info-label">เลขผู้เสียภาษี</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.TaxId) ? "-" : Model.Supplier!.TaxId)</span>
                             </div>
                         </div>
                         <div class="quotation-info-grid">
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Phone</span>
+                                <span class="quotation-info-label">โทรศัพท์</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
                             </div>
                             <div class="quotation-info-field">
-                                <span class="quotation-info-label">Email</span>
+                                <span class="quotation-info-label">อีเมล</span>
                                 <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Address</span>
+                            <span class="quotation-info-label">ที่อยู่</span>
                             <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Address) ? "-" : Model.Supplier!.Address)</span>
                         </div>
                     </div>
@@ -404,19 +368,19 @@
 
             <div class="quote-summary-grid mb-3">
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">PO Total</span>
+                    <span class="quote-summary-label">ยอดใบสั่งซื้อ</span>
                     <p class="quote-summary-value">@Model.TotalAmount.ToString("N2")</p>
                 </div>
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">Paid to Supplier</span>
+                    <span class="quote-summary-label">ชำระแล้ว</span>
                     <p class="quote-summary-value">@poPaidAmount.ToString("N2")</p>
                 </div>
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">Outstanding AP</span>
+                    <span class="quote-summary-label">ค้างชำระ</span>
                     <p class="quote-summary-value">@poBalanceAmount.ToString("N2")</p>
                 </div>
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">Payment Status</span>
+                    <span class="quote-summary-label">สถานะการชำระ</span>
                     <p class="quote-summary-value">@await Html.PartialAsync("_StatusPill", paymentStatus)</p>
                 </div>
             </div>
@@ -424,8 +388,8 @@
             <div class="form-section">
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                     <div>
-                        <div class="form-section-title mb-1">PO Lines</div>
-                        <div class="table-meta">@Model.PurchaseOrderDetails.Count line(s). Received quantity is tracked on each purchase line.</div>
+                        <div class="form-section-title mb-1">รายการสินค้า</div>
+                        <div class="table-meta">@Model.PurchaseOrderDetails.Count รายการ และติดตามจำนวนที่รับสินค้าแล้วในแต่ละรายการ</div>
                     </div>
                 </div>
 
@@ -434,12 +398,12 @@
                         <thead>
                             <tr>
                                 <th style="width: 6%;">#</th>
-                                <th>Item</th>
-                                <th style="width: 10%;">Qty</th>
-                                <th style="width: 10%;">Received</th>
-                                <th style="width: 10%;">Remaining</th>
-                                <th style="width: 12%;">Unit Price</th>
-                                <th style="width: 12%;">Line Total</th>
+                                <th>สินค้า</th>
+                                <th style="width: 10%;">จำนวน</th>
+                                <th style="width: 10%;">รับแล้ว</th>
+                                <th style="width: 10%;">คงเหลือ</th>
+                                <th style="width: 12%;">ราคาต่อหน่วย</th>
+                                <th style="width: 12%;">รวมเงิน</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -462,14 +426,14 @@
                                 <tr>
                                     <td></td>
                                     <td colspan="6">
-                                        <div class="table-meta mb-1">Delivery Allocation</div>
+                                        <div class="table-meta mb-1">การกระจายรับสินค้าตามสาขา</div>
                                         <div class="d-flex flex-wrap gap-2">
                                             @foreach (var allocation in line.PurchaseOrderAllocations.OrderBy(x => x.Branch?.BranchCode))
                                             {
                                                 <span class="badge-soft">
                                                     @(allocation.Branch?.BranchName ?? "-"):
                                                     @allocation.AllocatedQty.ToString("N2")
-                                                    received @allocation.ReceivedQty.ToString("N2")
+                                                    รับแล้ว @allocation.ReceivedQty.ToString("N2")
                                                 </span>
                                                 @if (allocation.PurchaseOrderAllocationSources.Any())
                                                 {
@@ -493,11 +457,11 @@
                 <div class="quotation-summary-wrap">
                     <div class="quotation-summary-stack">
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Subtotal</span>
+                            <span class="quotation-summary-name">ยอดก่อนภาษี</span>
                             <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
-                            <span class="quotation-summary-name">Discount</span>
+                            <span class="quotation-summary-name">ส่วนลด</span>
                             <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
@@ -505,7 +469,7 @@
                             <span class="quotation-summary-amount">@Model.VatAmount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row total">
-                            <span class="quotation-summary-name">Total</span>
+                            <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
                             <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
                         </div>
                     </div>
@@ -513,45 +477,45 @@
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Approved</span>
+                        <span class="document-history-label">อนุมัติโดย</span>
                         <span class="document-history-value">@(Model.ApprovedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.ApprovedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Rejected</span>
+                        <span class="document-history-label">ตีกลับโดย</span>
                         <span class="document-history-value">@(Model.RejectedByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.RejectedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.RejectedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-label">ยกเลิกโดย</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
-                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
                     </div>
                 </div>
                 @if (Model.Status == "Cancelled")
                 {
                     <div class="document-history-reason">
-                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-label">เหตุผลที่ยกเลิก</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
                     </div>
                 }
                 @if (Model.Status == "Rejected")
                 {
                     <div class="document-history-reason">
-                        <span class="document-history-label">Reject Reason</span>
+                        <span class="document-history-label">เหตุผลที่ตีกลับ</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.RejectReason) ? "-" : Model.RejectReason)</span>
                     </div>
                 }
@@ -560,23 +524,23 @@
             <div class="form-section">
                 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                     <div>
-                        <div class="form-section-title mb-1">Supplier Payments</div>
-                        <div class="table-meta">Lightweight payment tracking for this purchase order.</div>
+                        <div class="form-section-title mb-1">การชำระเงินให้ผู้จำหน่าย</div>
+                        <div class="table-meta">ติดตามการชำระเงินที่ผูกกับใบสั่งซื้อนี้</div>
                     </div>
-                    <div class="table-meta">@postedSupplierPayments.Count posted payment(s)</div>
+                    <div class="table-meta">@postedSupplierPayments.Count รายการที่โพสต์แล้ว</div>
                 </div>
 
                 <div class="table-responsive">
                     <table class="table entity-table align-middle">
                         <thead>
                             <tr>
-                                <th>Payment No.</th>
-                                <th>Date</th>
-                                <th>Method</th>
-                                <th>Reference</th>
-                                <th class="text-end">Amount</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
+                                <th>เลขที่เอกสาร</th>
+                                <th>วันที่</th>
+                                <th>วิธีชำระ</th>
+                                <th>เลขอ้างอิง</th>
+                                <th class="text-end">จำนวนเงิน</th>
+                                <th>สถานะ</th>
+                                <th class="text-end">การทำงาน</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -584,19 +548,19 @@
                         {
                             <tr>
                                 <td><span class="code-chip">@payment.PaymentNo</span></td>
-                                <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                                <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
                                 <td>@payment.PaymentMethod</td>
                                 <td>@(string.IsNullOrWhiteSpace(payment.ReferenceNo) ? "-" : payment.ReferenceNo)</td>
                                 <td class="text-end">@payment.Amount.ToString("N2")</td>
                                 <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
                                 <td class="text-end">
-                                    <a asp-controller="SupplierPayments" asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <a asp-controller="SupplierPayments" asp-action="Details" asp-route-id="@payment.SupplierPaymentId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
                                 </td>
                             </tr>
                         }
                         @if (!Model.SupplierPayments.Any())
                         {
-                            <tr><td colspan="7" class="table-empty">No supplier payments recorded yet.</td></tr>
+                            <tr><td colspan="7" class="table-empty">ยังไม่มีรายการชำระเงินให้ผู้จำหน่าย</td></tr>
                         }
                         </tbody>
                     </table>

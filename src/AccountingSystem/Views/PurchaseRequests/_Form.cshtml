@@ -1,16 +1,17 @@
 @model BizCore.Models.ViewModels.PurchaseRequestFormViewModel
 
 <div asp-validation-summary="All" class="form-alert"></div>
+<input asp-for="PurchaseRequestId" type="hidden" />
 <input asp-for="Status" type="hidden" />
 
 <div class="form-shell">
     <div class="form-section">
-        <div class="form-section-title">PR Header</div>
+        <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
         <div class="row g-3">
             <div class="col-md-3">
                 <label asp-for="PRNo" class="form-label"></label>
                 <input asp-for="PRNo" class="form-control" readonly />
-                <div class="form-text">Auto-generated monthly PR number.</div>
+                <div class="form-text">ระบบสร้างเลขที่ใบขอซื้อให้อัตโนมัติตามเดือน</div>
             </div>
             <div class="col-md-3">
                 <label asp-for="RequestDate" class="form-label"></label>
@@ -27,7 +28,7 @@
                 @if (Model.CanAccessAllBranches)
                 {
                     <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select">
-                        <option value="">Select branch</option>
+                        <option value="">เลือกสาขา</option>
                     </select>
                 }
                 else
@@ -38,13 +39,13 @@
                 <span asp-validation-for="BranchId" class="text-danger"></span>
             </div>
             <div class="col-12">
-                <label asp-for="Purpose" class="form-label"></label>
-                <textarea asp-for="Purpose" class="form-control" rows="3" placeholder="Why does this branch need these items?"></textarea>
+                <label asp-for="Purpose" class="form-label">วัตถุประสงค์</label>
+                <textarea asp-for="Purpose" class="form-control" rows="3" placeholder="ระบุวัตถุประสงค์หรือเหตุผลที่ต้องการขอซื้อ"></textarea>
                 <span asp-validation-for="Purpose" class="text-danger"></span>
             </div>
             <div class="col-12">
-                <label asp-for="Remark" class="form-label"></label>
-                <textarea asp-for="Remark" class="form-control" rows="2"></textarea>
+                <label asp-for="Remark" class="form-label">หมายเหตุ</label>
+                <textarea asp-for="Remark" class="form-control" rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
                 <span asp-validation-for="Remark" class="text-danger"></span>
             </div>
         </div>
@@ -53,18 +54,18 @@
     <div class="quotation-party-grid">
         <div class="quotation-party-column">
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Workflow</div>
+                <div class="quotation-info-card-title">สถานะการทำงาน</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Current Status</span>
+                        <span class="quotation-info-label">สถานะปัจจุบัน</span>
                         <span class="quotation-info-value">@await Html.PartialAsync("_StatusPill", Model.Status)</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Next Step</span>
-                        <span class="quotation-info-value">Submit from details</span>
+                        <span class="quotation-info-label">ขั้นตอนถัดไป</span>
+                        <span class="quotation-info-value">ส่งอนุมัติจากหน้ารายละเอียด</span>
                     </div>
                 </div>
-                <div class="table-meta">Central admin approves submitted PRs and creates supplier POs.</div>
+                <div class="table-meta">หลังบันทึกฉบับร่างแล้ว ให้เปิดหน้ารายละเอียดเอกสารเพื่อส่งอนุมัติ</div>
             </div>
         </div>
     </div>
@@ -72,20 +73,20 @@
     <div class="form-section">
         <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
             <div>
-                <div class="form-section-title mb-1">Requested Items</div>
-                <div class="table-meta">Select item master records and requested quantities for this branch.</div>
+                <div class="form-section-title mb-1">รายการสินค้าที่ขอซื้อ</div>
+                <div class="table-meta">เลือกสินค้าจาก master data และระบุจำนวนที่ต้องการ</div>
             </div>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="addPRLine">Add Line</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addPRLine">เพิ่มรายการ</button>
         </div>
         <div class="table-responsive po-lines-editor-wrap">
             <table class="table entity-table quote-editor-table" id="prLinesTable">
                 <thead>
                     <tr>
-                        <th style="width: 42%;">Item</th>
-                        <th style="width: 12%;">Is Serial</th>
-                        <th style="width: 16%;">Requested Qty</th>
-                        <th>Remark</th>
-                        <th style="width: 8%;" class="text-end">Action</th>
+                        <th style="width: 42%;">สินค้า</th>
+                        <th style="width: 12%;">Serial</th>
+                        <th style="width: 16%;">จำนวนที่ขอซื้อ</th>
+                        <th>หมายเหตุ</th>
+                        <th style="width: 8%;" class="text-end">ลบ</th>
                     </tr>
                 </thead>
                 <tbody id="prLineBody">
@@ -101,23 +102,23 @@
                                 <input type="text"
                                        class="form-control js-item-search"
                                        value="@(selectedItem is null ? string.Empty : $"{selectedItem.ItemCode} - {selectedItem.ItemName}")"
-                                       placeholder="Search item code, name, or part no."
+                                       placeholder="ค้นหารหัสสินค้า ชื่อสินค้า หรือ Part No."
                                        autocomplete="off" />
                                 <div id="prItemResults_@i" class="search-dropdown-menu search-dropdown-menu-wide js-item-results" style="display:none;"></div>
                             </div>
-                            <div class="table-meta js-item-meta">@(selectedItem is null ? "Select item from master data." : $"Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)}")</div>
+                            <div class="table-meta js-item-meta">@(selectedItem is null ? "กรุณาเลือกสินค้าจาก master data" : $"Part No.: {(string.IsNullOrWhiteSpace(selectedItem.PartNumber) ? "-" : selectedItem.PartNumber)}")</div>
                             <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].ItemId" data-valmsg-replace="true"></span>
                         </td>
-                        <td><span class="js-serial-flag badge-soft">@(selectedItem?.IsSerialControlled == true ? "Yes" : "No")</span></td>
+                        <td><span class="js-serial-flag badge-soft">@(selectedItem?.IsSerialControlled == true ? "มี" : "ไม่มี")</span></td>
                         <td>
                             <input type="number" step="1" min="1" data-qty-min="1" name="Details[@i].RequestedQty" id="Details_@(i)__RequestedQty" value="@Model.Details[i].RequestedQty.ToString("0.##")" class="form-control js-integer-qty" />
-                            <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].RequestedQty" data-valmsg-replace="true"></span>
+                            <span asp-validation-for="Details[@i].RequestedQty" class="text-danger"></span>
                         </td>
                         <td>
                             <input type="text" name="Details[@i].Remark" id="Details_@(i)__Remark" value="@Model.Details[i].Remark" class="form-control" />
                         </td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">Remove</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger js-remove-line">ลบ</button>
                         </td>
                     </tr>
                 }

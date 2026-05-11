@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BizCore.Controllers;
 
@@ -15,11 +16,16 @@ public class PurchaseRequestsController : CrudControllerBase
     private const string NumberPrefix = "PR";
     private readonly AccountingDbContext _context;
     private readonly PurchaseWorkflowEmailService _purchaseWorkflowEmailService;
+    private readonly CompanyProfileSettings _companyProfile;
 
-    public PurchaseRequestsController(AccountingDbContext context, PurchaseWorkflowEmailService purchaseWorkflowEmailService)
+    public PurchaseRequestsController(
+        AccountingDbContext context,
+        PurchaseWorkflowEmailService purchaseWorkflowEmailService,
+        IOptions<CompanyProfileSettings> companyProfileOptions)
     {
         _context = context;
         _purchaseWorkflowEmailService = purchaseWorkflowEmailService;
+        _companyProfile = companyProfileOptions.Value;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -145,7 +151,7 @@ public class PurchaseRequestsController : CrudControllerBase
         };
 
         _context.PurchaseRequestHeaders.Add(header);
-        if (!await TrySaveAsync("PR number must be unique."))
+        if (!await TrySaveAsync("เลขที่ใบขอซื้อต้องไม่ซ้ำ"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -178,7 +184,7 @@ public class PurchaseRequestsController : CrudControllerBase
 
         if (!CanEditRequest(header))
         {
-            TempData["PurchaseRequestNotice"] = $"Only Draft or Rejected purchase requests can be edited. Current status is {header.Status}.";
+            TempData["PurchaseRequestNotice"] = $"แก้ไขได้เฉพาะใบขอซื้อสถานะ Draft หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {header.Status}";
             return RedirectToAction(nameof(Details), new { id = header.PurchaseRequestId });
         }
 
@@ -239,7 +245,7 @@ public class PurchaseRequestsController : CrudControllerBase
 
         if (!CanEditRequest(existingHeader))
         {
-            TempData["PurchaseRequestNotice"] = $"Only Draft or Rejected purchase requests can be edited. Current status is {existingHeader.Status}.";
+            TempData["PurchaseRequestNotice"] = $"แก้ไขได้เฉพาะใบขอซื้อสถานะ Draft หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {existingHeader.Status}";
             return RedirectToAction(nameof(Details), new { id = existingHeader.PurchaseRequestId });
         }
 
@@ -264,7 +270,7 @@ public class PurchaseRequestsController : CrudControllerBase
         _context.PurchaseRequestDetails.RemoveRange(existingHeader.PurchaseRequestDetails);
         existingHeader.PurchaseRequestDetails = model.Details.Select(MapDetailEntity).ToList();
 
-        if (!await TrySaveAsync("PR number must be unique."))
+        if (!await TrySaveAsync("เลขที่ใบขอซื้อต้องไม่ซ้ำ"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -309,6 +315,42 @@ public class PurchaseRequestsController : CrudControllerBase
         return request is null || !CanAccessBranch(request.BranchId) ? NotFound() : View(request);
     }
 
+    public async Task<IActionResult> Print(int? id)
+    {
+        if (!CurrentUserHasPermission("PR.View"))
+        {
+            return Forbid();
+        }
+
+        if (id is null)
+        {
+            return NotFound();
+        }
+
+        var request = await _context.PurchaseRequestHeaders
+            .AsNoTracking()
+            .Include(x => x.Branch)
+            .Include(x => x.CreatedByUser)
+            .Include(x => x.UpdatedByUser)
+            .Include(x => x.SubmittedByUser)
+            .Include(x => x.ApprovedByUser)
+            .Include(x => x.RejectedByUser)
+            .Include(x => x.CancelledByUser)
+            .Include(x => x.PurchaseRequestDetails)
+                .ThenInclude(x => x.Item)
+            .Include(x => x.PurchaseOrderHeaders)
+                .ThenInclude(x => x.Supplier)
+            .FirstOrDefaultAsync(x => x.PurchaseRequestId == id.Value);
+
+        if (request is null || !CanAccessBranch(request.BranchId))
+        {
+            return NotFound();
+        }
+
+        PopulatePrintCompanyViewData(_companyProfile);
+        return View(request);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(int id)
@@ -345,7 +387,7 @@ public class PurchaseRequestsController : CrudControllerBase
         await _context.SaveChangesAsync();
         await _purchaseWorkflowEmailService.NotifyPrSubmittedAsync(request.PurchaseRequestId);
 
-        TempData["PurchaseRequestNotice"] = "Purchase request submitted successfully.";
+        TempData["PurchaseRequestNotice"] = "ส่งใบขอซื้อเข้ากระบวนการอนุมัติเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -384,7 +426,7 @@ public class PurchaseRequestsController : CrudControllerBase
         request.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
-        TempData["PurchaseRequestNotice"] = "Purchase request approved successfully.";
+        TempData["PurchaseRequestNotice"] = "อนุมัติใบขอซื้อเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -424,7 +466,7 @@ public class PurchaseRequestsController : CrudControllerBase
         await _context.SaveChangesAsync();
         await _purchaseWorkflowEmailService.NotifyPrRejectedAsync(request.PurchaseRequestId);
 
-        TempData["PurchaseRequestNotice"] = "Purchase request rejected and returned for correction.";
+        TempData["PurchaseRequestNotice"] = "ตีกลับใบขอซื้อเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -446,7 +488,7 @@ public class PurchaseRequestsController : CrudControllerBase
             return NotFound();
         }
 
-        var blockReason = GetCancelBlockedReason(request);
+        var blockReason = GetCancelBlockedReason(request, cancelReason);
         if (!string.IsNullOrWhiteSpace(blockReason))
         {
             TempData["PurchaseRequestNotice"] = blockReason;
@@ -461,7 +503,7 @@ public class PurchaseRequestsController : CrudControllerBase
         request.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
-        TempData["PurchaseRequestNotice"] = "Purchase request cancelled successfully.";
+        TempData["PurchaseRequestNotice"] = "ยกเลิกใบขอซื้อเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -511,20 +553,20 @@ public class PurchaseRequestsController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one PR line.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มรายการอย่างน้อย 1 รายการ");
         }
 
         if (!model.BranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "กรุณาเลือกสาขา");
         }
         else if (!CanAccessBranch(model.BranchId))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit purchase requests for this branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "คุณไม่มีสิทธิ์สร้างหรือแก้ไขใบขอซื้อของสาขานี้");
         }
         else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
+            ModelState.AddModelError(nameof(model.BranchId), "ไม่พบสาขาที่เลือก หรือสาขาถูกปิดใช้งาน");
         }
 
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
@@ -540,7 +582,7 @@ public class PurchaseRequestsController : CrudControllerBase
 
             if (!detail.ItemId.HasValue || !itemMap.ContainsKey(detail.ItemId.Value))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกรายการสินค้าให้ถูกต้อง");
             }
         }
 
@@ -598,17 +640,17 @@ public class PurchaseRequestsController : CrudControllerBase
     {
         if (request.Status is not ("Draft" or "Rejected"))
         {
-            return $"Submit is available only for Draft or Rejected purchase requests. Current status is {request.Status}.";
+            return $"ส่งอนุมัติได้เฉพาะใบขอซื้อสถานะ Draft หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {request.Status}";
         }
 
         if (!request.PurchaseRequestDetails.Any())
         {
-            return "Submit is blocked because no PR lines exist.";
+            return "ยังส่งอนุมัติไม่ได้ เพราะยังไม่มีรายการสินค้า";
         }
 
         if (request.PurchaseRequestDetails.Any(x => x.ItemId <= 0 || x.RequestedQty <= 0))
         {
-            return "Submit is blocked because one or more PR lines are incomplete.";
+            return "ยังส่งอนุมัติไม่ได้ เพราะมีบางรายการยังกรอกข้อมูลไม่ครบ";
         }
 
         return string.Empty;
@@ -618,32 +660,37 @@ public class PurchaseRequestsController : CrudControllerBase
     {
         if (request.Status != "Submitted")
         {
-            return $"Approve is available only for Submitted purchase requests. Current status is {request.Status}.";
+            return $"อนุมัติได้เฉพาะใบขอซื้อสถานะ Submitted เท่านั้น สถานะปัจจุบันคือ {request.Status}";
         }
 
         if (!request.PurchaseRequestDetails.Any())
         {
-            return "Approve is blocked because no PR lines exist.";
+            return "ยังอนุมัติไม่ได้ เพราะยังไม่มีรายการสินค้า";
         }
 
         return string.Empty;
     }
 
-    private static string GetCancelBlockedReason(PurchaseRequestHeader request)
+    private static string GetCancelBlockedReason(PurchaseRequestHeader request, string? cancelReason)
     {
         if (request.Status == "ConvertedToPO" || request.PurchaseOrderHeaders.Any())
         {
-            return "Cancel PR is blocked because a purchase order has already been created.";
+            return "ยังยกเลิกไม่ได้ เพราะมีการสร้างใบสั่งซื้อจากใบขอซื้อนี้แล้ว";
         }
 
         if (request.Status == "Cancelled")
         {
-            return "Cancelled purchase requests are read-only.";
+            return "ใบขอซื้อที่ยกเลิกแล้วไม่สามารถแก้ไขต่อได้";
         }
 
         if (request.Status is not ("Draft" or "Submitted" or "Approved" or "Rejected"))
         {
-            return $"Cancel PR is available only for Draft, Submitted, Approved, or Rejected purchase requests. Current status is {request.Status}.";
+            return $"ยกเลิกได้เฉพาะใบขอซื้อสถานะ Draft, Submitted, Approved หรือ Rejected เท่านั้น สถานะปัจจุบันคือ {request.Status}";
+        }
+
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            return "กรุณาระบุเหตุผลที่ยกเลิก";
         }
 
         return string.Empty;
@@ -658,12 +705,12 @@ public class PurchaseRequestsController : CrudControllerBase
     {
         if (request.Status != "Submitted")
         {
-            return $"Reject is available only for Submitted purchase requests. Current status is {request.Status}.";
+            return $"ตีกลับได้เฉพาะใบขอซื้อสถานะ Submitted เท่านั้น สถานะปัจจุบันคือ {request.Status}";
         }
 
         if (string.IsNullOrWhiteSpace(rejectReason))
         {
-            return "Reject reason is required.";
+            return "กรุณาระบุเหตุผลที่ตีกลับ";
         }
 
         return string.Empty;

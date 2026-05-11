@@ -1,0 +1,106 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.CashSaleHeader>
+
+@{
+    ViewData["Title"] = "เอกสารขายสด";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
+}
+
+@if (TempData["CashSaleNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">เอกสารขายสด</h1>
+        <p class="page-subtitle">ขายนอกระบบ AR ปกติ แต่ยังควบคุมรายการสินค้า ราคา สต๊อก และการพิมพ์เอกสารจากหน้าจอนี้ได้</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">สร้างเอกสารขายสด</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">รายการขายสด</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่เอกสาร, เลขอ้างอิง, ลูกค้า หรือพนักงานขาย" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">สถานะ</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="Draft" selected="@(status == "Draft")">ฉบับร่าง</option>
+                    <option value="Issued" selected="@(status == "Issued")">ออกเอกสารแล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิกแล้ว</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">จากวันที่</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>เลขที่เอกสาร</th>
+                        <th>วันที่ขายสด</th>
+                        <th>ลูกค้า</th>
+                        <th>สาขา</th>
+                        <th>ยอดรวม</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var cashSale in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@cashSale.CashSaleNo</span></td>
+                            <td>@cashSale.CashSaleDate.ToString("dd/MM/yyyy")</td>
+                            <td class="fw-semibold">@cashSale.Customer?.CustomerName</td>
+                            <td>@(cashSale.Branch?.BranchName ?? "-")</td>
+                            <td>@cashSale.TotalAmount.ToString("N2")</td>
+                            <td>@await Html.PartialAsync("_StatusPill", cashSale.Status)</td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@cashSale.CashSaleId" class="btn btn-sm btn-outline-secondary">Details</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="table-empty">ยังไม่มีเอกสารขายสด เริ่มจากสร้างเอกสารใหม่เพื่อบันทึกการขายนอกระบบและพิมพ์จากเอกสารนี้ได้เลย</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

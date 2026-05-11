@@ -2,13 +2,18 @@
 @model BizCore.Models.Entities.SupplierPaymentHeader
 
 @{
-    ViewData["Title"] = "Supplier Payment Details";
+    ViewData["Title"] = "รายละเอียดการชำระเงินให้ผู้จำหน่าย";
     var order = Model.PurchaseOrderHeader;
     var postedPayments = order?.SupplierPayments.Where(x => x.Status == "Posted").OrderBy(x => x.PaymentDate).ThenBy(x => x.SupplierPaymentId).ToList()
         ?? new List<BizCore.Models.Entities.SupplierPaymentHeader>();
     var paidToDate = postedPayments.Sum(x => x.Amount);
     var remaining = order is null ? 0m : Math.Max(order.TotalAmount - paidToDate, 0m);
     var canCancel = PermissionService.HasPermission(User, "SupplierPayment.Cancel") && Model.Status == "Posted";
+    var cancelBlockedReason = canCancel
+        ? string.Empty
+        : Model.Status != "Posted"
+            ? $"ยกเลิกได้เฉพาะรายการชำระเงินสถานะ Posted เท่านั้น สถานะปัจจุบันคือ {Model.Status}"
+            : "คุณไม่มีสิทธิ์ยกเลิกรายการชำระเงินให้ผู้จำหน่าย";
 }
 
 @if (TempData["SupplierPaymentNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -18,11 +23,19 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Supplier Payment Details</h1>
-        <p class="page-subtitle">Review posted supplier payment information and the linked purchase order balance.</p>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">รายละเอียดการชำระเงินให้ผู้จำหน่าย</h1>
+        <p class="page-subtitle">ตรวจสอบรายการชำระเงิน ยอดค้างจ่ายของใบสั่งซื้อ และใช้หน้านี้เป็นจุดหลักสำหรับพิมพ์หรือยกเลิกเอกสาร</p>
     </div>
-    <div class="page-actions">
+    <div class="page-actions justify-content-end">
+        @if (Model.Status == "Posted")
+        {
+            <a asp-action="Print" asp-route-id="@Model.SupplierPaymentId" class="btn btn-outline-secondary" target="_blank">พิมพ์</a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled title="พิมพ์ได้หลังจากบันทึกรายการชำระเงินแล้ว">พิมพ์</button>
+        }
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.SupplierPaymentId" method="post" class="d-inline confirm-popover-form">
@@ -32,18 +45,18 @@
                             class="btn btn-outline-danger js-confirm-popover-toggle"
                             data-confirm-target="cancelSupplierPaymentDetailsConfirm_@Model.SupplierPaymentId"
                             aria-expanded="false">
-                        Cancel Payment
+                        ยกเลิกรายการชำระเงิน
                     </button>
                     <div class="confirm-popover" id="cancelSupplierPaymentDetailsConfirm_@Model.SupplierPaymentId" hidden>
-                        <div class="confirm-popover-title">Cancel this supplier payment?</div>
-                        <div class="confirm-popover-text">Optional reason helps explain why this supplier payment was cancelled.</div>
+                        <div class="confirm-popover-title">ยกเลิกรายการชำระเงินนี้ใช่หรือไม่?</div>
+                        <div class="confirm-popover-text">การยกเลิกจะยกเลิกผลของรายการชำระเงินนี้ และต้องระบุเหตุผลเพื่อใช้อ้างอิงย้อนหลัง</div>
                         <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId">Cancel Reason</label>
-                            <textarea id="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                            <label class="confirm-popover-label" for="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId">เหตุผลที่ยกเลิก</label>
+                            <textarea id="cancelSupplierPaymentDetailsReason_@Model.SupplierPaymentId" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ยกเลิก" required></textarea>
                         </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
                 </div>
@@ -51,13 +64,13 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled>Cancel Payment</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกรายการชำระเงิน</button>
         }
         @if (order is not null)
         {
-            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@order.PurchaseOrderId" class="btn btn-outline-secondary">View PO</a>
+            <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@order.PurchaseOrderId" class="btn btn-outline-secondary">ดูใบสั่งซื้อ</a>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการชำระเงิน</a>
     </div>
 </div>
 
@@ -65,26 +78,26 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Payment Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment No.</div>
+                        <div class="detail-label">เลขที่ชำระเงิน</div>
                         <div class="form-control readonly-detail">@Model.PaymentNo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment Date</div>
-                        <div class="form-control readonly-detail">@Model.PaymentDate.ToString("dd MMM yyyy")</div>
+                        <div class="detail-label">วันที่ชำระเงิน</div>
+                        <div class="form-control readonly-detail">@Model.PaymentDate.ToString("dd/MM/yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Payment Method</div>
+                        <div class="detail-label">วิธีชำระเงิน</div>
                         <div class="form-control readonly-detail">@Model.PaymentMethod</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Status</div>
+                        <div class="detail-label">สถานะ</div>
                         <div class="readonly-detail-status">@await Html.PartialAsync("_StatusPill", Model.Status)</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Purchase Order</div>
+                        <div class="detail-label">ใบสั่งซื้อ</div>
                         <div class="form-control readonly-detail">
                             @if (order is not null)
                             {
@@ -97,33 +110,33 @@
                         </div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Supplier</div>
+                        <div class="detail-label">ผู้จำหน่าย</div>
                         <div class="form-control readonly-detail">@(Model.Supplier?.SupplierName ?? "-")</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Branch</div>
+                        <div class="detail-label">สาขา</div>
                         <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Reference No.</div>
+                        <div class="detail-label">เลขอ้างอิง</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">Payment Amount</div>
+                        <div class="detail-label">จำนวนเงินที่ชำระ</div>
                         <div class="form-control readonly-detail">@Model.Amount.ToString("N2")</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
-                        <div class="detail-label">PO Remaining</div>
+                        <div class="detail-label">ยอดค้างจ่ายคงเหลือ</div>
                         <div class="form-control readonly-detail">@remaining.ToString("N2")</div>
                     </div>
                     <div class="col-12">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                     @if (!string.IsNullOrWhiteSpace(Model.CancelReason))
                     {
                         <div class="col-12">
-                            <div class="detail-label">Cancel Reason</div>
+                            <div class="detail-label">เหตุผลที่ยกเลิก</div>
                             <div class="form-control readonly-detail readonly-detail-multiline">@Model.CancelReason</div>
                         </div>
                     }
@@ -132,15 +145,15 @@
 
             <div class="quote-summary-grid">
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">PO Total</span>
+                    <span class="quote-summary-label">ยอดใบสั่งซื้อ</span>
                     <p class="quote-summary-value">@(order?.TotalAmount.ToString("N2") ?? "-")</p>
                 </div>
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">Paid to Date</span>
+                    <span class="quote-summary-label">ชำระแล้ว</span>
                     <p class="quote-summary-value">@paidToDate.ToString("N2")</p>
                 </div>
                 <div class="quote-summary-card">
-                    <span class="quote-summary-label">Outstanding AP</span>
+                    <span class="quote-summary-label">ค้างจ่าย</span>
                     <p class="quote-summary-value">@remaining.ToString("N2")</p>
                 </div>
             </div>
@@ -148,16 +161,16 @@
             @if (postedPayments.Any())
             {
                 <div class="form-section">
-                    <div class="form-section-title">Payment History for This PO</div>
+                    <div class="form-section-title">ประวัติการชำระเงินของใบสั่งซื้อนี้</div>
                     <div class="table-responsive">
                         <table class="table entity-table align-middle">
                             <thead>
                                 <tr>
-                                    <th>Payment No.</th>
-                                    <th>Date</th>
-                                    <th>Method</th>
-                                    <th class="text-end">Amount</th>
-                                    <th>Status</th>
+                                    <th>เลขที่ชำระเงิน</th>
+                                    <th>วันที่</th>
+                                    <th>วิธีชำระ</th>
+                                    <th class="text-end">จำนวนเงิน</th>
+                                    <th>สถานะ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -174,7 +187,7 @@
                                             <a asp-action="Details" asp-route-id="@payment.SupplierPaymentId">@payment.PaymentNo</a>
                                         }
                                     </td>
-                                    <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                                    <td>@payment.PaymentDate.ToString("dd/MM/yyyy")</td>
                                     <td>@payment.PaymentMethod</td>
                                     <td class="text-end">@payment.Amount.ToString("N2")</td>
                                     <td>@await Html.PartialAsync("_StatusPill", payment.Status)</td>
@@ -185,6 +198,32 @@
                     </div>
                 </div>
             }
+
+            <div class="form-section document-history-section">
+                <div class="form-section-title">ประวัติเอกสาร</div>
+                <div class="document-history-list">
+                    <div class="document-history-row">
+                        <span class="document-history-label">สร้างโดย</span>
+                        <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
+                        <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">บันทึกโดย</span>
+                        <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.PostedDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
+                    </div>
+                    <div class="document-history-row">
+                        <span class="document-history-label">ยกเลิกโดย</span>
+                        <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
+                        <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

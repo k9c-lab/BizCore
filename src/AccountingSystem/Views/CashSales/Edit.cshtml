@@ -1,0 +1,44 @@
+@model BizCore.Models.ViewModels.InvoiceFormViewModel
+
+@{
+    ViewData["Title"] = "แก้ไขเอกสารขายสด";
+}
+
+@if (TempData["CashSaleNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">แก้ไขเอกสารขายสด</h1>
+        <p class="page-subtitle">เอกสารขายสดสถานะร่างยังแก้ไขได้ และจะตัดสต๊อกเมื่อออกเอกสาร</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="cashSaleForm" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+        <button type="submit" form="cashSaleForm" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกเอกสารขายสด</button>
+        <a asp-action="Details" asp-route-id="@Model.InvoiceId" class="btn btn-outline-secondary">กลับไปรายละเอียด</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.InvoiceId" method="post" id="cashSaleForm">
+            <partial name="~/Views/Invoices/_Form.cshtml" model="Model" />
+
+            <div class="form-actions mt-3">
+                <span class="table-meta">ใช้การบันทึกฉบับร่างถ้ายังไม่พร้อมตัดสต๊อก หรือออกเอกสารถ้าต้องการปิดขายสดทันที</span>
+                <div class="page-actions">
+                    <button type="submit" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+                    <button type="submit" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกเอกสารขายสด</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="~/Views/Invoices/_InvoiceEditorScripts.cshtml" />
+}

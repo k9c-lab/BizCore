@@ -8,20 +8,20 @@ public class PurchaseRequestFormViewModel
     public int? PurchaseRequestId { get; set; }
 
     [Required]
-    [Display(Name = "PR No.")]
+    [Display(Name = "เลขที่ใบขอซื้อ")]
     [StringLength(30)]
     public string PRNo { get; set; } = string.Empty;
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Request Date")]
+    [Display(Name = "วันที่ขอซื้อ")]
     public DateTime RequestDate { get; set; } = DateTime.Today;
 
     [DataType(DataType.Date)]
-    [Display(Name = "Required Date")]
+    [Display(Name = "วันที่ต้องการใช้")]
     public DateTime? RequiredDate { get; set; }
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;

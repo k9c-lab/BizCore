@@ -1,33 +1,31 @@
-﻿@inject IUserPermissionService PermissionService
+@inject IUserPermissionService PermissionService
 @model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PurchaseRequestHeader>
 
 @{
-    ViewData["Title"] = "Purchase Requests";
+    ViewData["Title"] = "ใบขอซื้อ";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
     var dateTo = ViewData["DateTo"] as string;
     var canCreatePR = PermissionService.HasPermission(User, "PR.Create");
-    var canSubmitPR = PermissionService.HasPermission(User, "PR.Submit");
-    var canApprovePR = PermissionService.HasPermission(User, "PR.Approve");
-    var canRejectPR = PermissionService.HasPermission(User, "PR.Reject");
     var canCreatePOPermission = PermissionService.HasPermission(User, "PO.Create");
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Purchase Requests</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">ใบขอซื้อ</h1>
+        <p class="page-subtitle">ติดตามคำขอซื้อของแต่ละสาขา โดยใช้หน้ารายละเอียดเป็นจุดหลักสำหรับส่งอนุมัติ อนุมัติ ตีกลับ และยกเลิกเอกสาร</p>
+    </div>
     <div class="page-actions">
         @if (canCreatePOPermission)
         {
             <form asp-controller="PurchaseOrders" asp-action="Create" method="get" id="createPOFromPRsForm" class="d-inline"></form>
-            <button type="submit" form="createPOFromPRsForm" class="btn btn-outline-success">Create PO from Selected PRs</button>
+            <button type="submit" form="createPOFromPRsForm" class="btn btn-outline-success">สร้างใบสั่งซื้อจากรายการที่เลือก</button>
         }
         @if (canCreatePR)
         {
-            <a asp-action="Create" class="btn btn-primary px-4">New PR</a>
+            <a asp-action="Create" class="btn btn-primary px-4">สร้างใบขอซื้อ</a>
         }
     </div>
 </div>
@@ -40,20 +38,20 @@
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">PR Register</h2>
-            </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+            <h2 class="section-title">รายการใบขอซื้อ</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="PR no., branch, item, purpose, or remark" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ใบขอซื้อ สาขา สินค้า วัตถุประสงค์ หรือหมายเหตุ" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
+                    <option value="">ทั้งหมด</option>
                     <option value="Draft" selected="@(status == "Draft")">Draft</option>
                     <option value="Submitted" selected="@(status == "Submitted")">Submitted</option>
                     <option value="Approved" selected="@(status == "Approved")">Approved</option>
@@ -63,16 +61,16 @@
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">จากวันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างตัวกรอง</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
 
@@ -82,15 +80,15 @@
                     <tr>
                         @if (canCreatePOPermission)
                         {
-                            <th style="width: 42px;">Select</th>
+                            <th style="width: 42px;">เลือก</th>
                         }
-                        <th>PR No.</th>
-                        <th>Date</th>
-                        <th>Branch</th>
-                        <th>Lines</th>
-                        <th>Qty</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>เลขที่ใบขอซื้อ</th>
+                        <th>วันที่</th>
+                        <th>สาขา</th>
+                        <th>จำนวนรายการ</th>
+                        <th>จำนวนรวม</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,136 +96,36 @@
                 {
                     @foreach (var pr in Model)
                     {
-                        var canSubmit = canSubmitPR && (pr.Status is "Draft" or "Rejected") && pr.PurchaseRequestDetails.Any();
-                        var submitBlockedReason = pr.Status is "Draft" or "Rejected"
-                            ? "Submit is blocked because no PR lines exist."
-                            : $"Submit is available only for Draft or Rejected purchase requests. Current status is {pr.Status}.";
-                        var canApprove = canApprovePR && pr.Status == "Submitted";
-                        var approveBlockedReason = !canApprovePR
-                            ? "You do not have permission to approve purchase requests."
-                            : pr.Status == "Submitted"
-                                ? "Approve is blocked."
-                            : $"Approve is available only for Submitted purchase requests. Current status is {pr.Status}.";
-                        var canReject = canRejectPR && pr.Status == "Submitted";
-                        var rejectBlockedReason = !canRejectPR
-                            ? "You do not have permission to reject purchase requests."
-                            : pr.Status == "Submitted"
-                                ? "Reject is blocked."
-                                : $"Reject is available only for Submitted purchase requests. Current status is {pr.Status}.";
                         var hasPO = pr.PurchaseOrderHeaders.Any() ||
                             pr.PurchaseRequestDetails.Any(d => d.PurchaseOrderAllocationSources.Any());
                         var canCreatePO = canCreatePOPermission && pr.Status == "Approved" && !hasPO;
                         var createPOBlockedReason = hasPO
-                            ? "Create PO is blocked because this PR already has a PO."
+                            ? "สร้างใบสั่งซื้อไม่ได้ เพราะใบขอซื้อนี้ถูกนำไปสร้างใบสั่งซื้อแล้ว"
                             : pr.Status == "Approved"
-                                ? "You do not have permission to create a PO from this PR."
-                                : "Create PO is available only after PR approval.";
+                                ? "คุณไม่มีสิทธิ์สร้างใบสั่งซื้อจากใบขอซื้อนี้"
+                                : "จะสร้างใบสั่งซื้อได้หลังจากใบขอซื้อได้รับการอนุมัติแล้ว";
                         <tr>
                             @if (canCreatePOPermission)
                             {
                                 <td>
-                                    <input type="checkbox" class="form-check-input" form="createPOFromPRsForm" name="purchaseRequestIds" value="@pr.PurchaseRequestId" disabled="@(!canCreatePO)" title="@(canCreatePO ? "Include this PR in PO creation." : createPOBlockedReason)" />
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           form="createPOFromPRsForm"
+                                           name="purchaseRequestIds"
+                                           value="@pr.PurchaseRequestId"
+                                           disabled="@(!canCreatePO)"
+                                           title="@(canCreatePO ? "เลือกใบขอซื้อนี้เพื่อนำไปสร้างใบสั่งซื้อ" : createPOBlockedReason)" />
                                 </td>
                             }
                             <td><span class="code-chip">@pr.PRNo</span></td>
-                            <td>@pr.RequestDate.ToString("dd MMM yyyy")</td>
+                            <td>@pr.RequestDate.ToString("dd/MM/yyyy")</td>
                             <td>@(pr.Branch?.BranchName ?? "-")</td>
                             <td>@pr.PurchaseRequestDetails.Count</td>
                             <td>@pr.PurchaseRequestDetails.Sum(x => x.RequestedQty).ToString("N2")</td>
                             <td>@await Html.PartialAsync("_StatusPill", pr.Status)</td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-secondary">View</a>
-                                    @if (canSubmit)
-                                    {
-                                        <form asp-action="Submit" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="submitPrConfirm_@pr.PurchaseRequestId"
-                                                        aria-expanded="false">
-                                                    Submit
-                                                </button>
-                                                <div class="confirm-popover" id="submitPrConfirm_@pr.PurchaseRequestId" hidden>
-                                                    <div class="confirm-popover-title">Submit this PR?</div>
-                                                    <div class="confirm-popover-text">This will send the purchase request into the approval workflow.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@submitBlockedReason">Submit</button>
-                                    }
-                                    @if (canApprove)
-                                    {
-                                        <form asp-action="Approve" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="approvePrConfirm_@pr.PurchaseRequestId"
-                                                        aria-expanded="false">
-                                                    Approve
-                                                </button>
-                                                <div class="confirm-popover" id="approvePrConfirm_@pr.PurchaseRequestId" hidden>
-                                                    <div class="confirm-popover-title">Approve this PR?</div>
-                                                    <div class="confirm-popover-text">This will mark the purchase request as approved and ready for PO creation.</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@approveBlockedReason">Approve</button>
-                                    }
-                                    @if (canReject)
-                                    {
-                                        <form asp-action="Reject" asp-route-id="@pr.PurchaseRequestId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-danger js-confirm-popover-toggle"
-                                                        data-confirm-target="rejectPrConfirm_@pr.PurchaseRequestId"
-                                                        aria-expanded="false">
-                                                    Reject
-                                                </button>
-                                                <div class="confirm-popover" id="rejectPrConfirm_@pr.PurchaseRequestId" hidden>
-                                                    <div class="confirm-popover-title">Reject this PR?</div>
-                                                    <div class="confirm-popover-text">A reject reason is required before this purchase request is returned for correction.</div>
-                                                    <div class="confirm-popover-field">
-                                                        <label class="confirm-popover-label" for="rejectPrReason_@pr.PurchaseRequestId">Reject Reason</label>
-                                                        <textarea id="rejectPrReason_@pr.PurchaseRequestId" name="rejectReason" class="form-control" rows="3" placeholder="Required reason" required></textarea>
-                                                    </div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@rejectBlockedReason">Reject</button>
-                                    }
-                                    @if (canCreatePO)
-                                    {
-                                        <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-purchaseRequestId="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-success">Create PO</a>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@createPOBlockedReason">Create PO</button>
-                                    }
+                                    <a asp-action="Details" asp-route-id="@pr.PurchaseRequestId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
                                 </div>
                             </td>
                         </tr>
@@ -235,7 +133,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="@(canCreatePOPermission ? 8 : 7)" class="table-empty">No purchase requests yet. Start with a branch request.</td></tr>
+                    <tr><td colspan="@(canCreatePOPermission ? 8 : 7)" class="table-empty">ยังไม่มีรายการใบขอซื้อ</td></tr>
                 }
                 </tbody>
             </table>
@@ -243,4 +141,3 @@
         <partial name="_Pager" model="Model.Pagination" />
     </div>
 </div>
-

@@ -112,7 +112,7 @@ public class UserPermissionService : IUserPermissionService
             "Dashboard.Menu" => user.IsInRole("Viewer"),
             "Reports.Menu" or "FinancialOverview.Menu" or "InventoryOverview.Menu" =>
                 user.IsInRole("CentralAdmin") || user.IsInRole("BranchAdmin") || user.IsInRole("Sales") || user.IsInRole("Warehouse"),
-            "Sales.Menu" or "Sales.Quotations.Menu" or "Sales.Invoices.Menu" or "Sales.BillingNotes.Menu" or "Sales.Payments.Menu" or "Sales.Receipts.Menu" =>
+            "Sales.Menu" or "Sales.Quotations.Menu" or "Sales.Invoices.Menu" or "Sales.CashSales.Menu" or "Sales.BillingNotes.Menu" or "Sales.Payments.Menu" or "Sales.Receipts.Menu" =>
                 user.IsInRole("Sales"),
             "Purchasing.Menu" or "Purchasing.PR.Menu" or "Purchasing.PO.Menu" or "Purchasing.Receiving.Menu" =>
                 user.IsInRole("CentralAdmin") || user.IsInRole("BranchAdmin") || user.IsInRole("Warehouse"),

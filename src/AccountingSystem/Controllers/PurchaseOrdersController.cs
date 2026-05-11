@@ -1,4 +1,4 @@
-using BizCore.Data;
+﻿using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
@@ -134,7 +134,7 @@ public class PurchaseOrdersController : CrudControllerBase
 
             if (requests.Any(x => x.Status != "Approved" || x.PurchaseRequestDetails.Any(d => d.PurchaseOrderAllocationSources.Any())))
             {
-                TempData["PurchaseOrderNotice"] = "Create PO from PR is available only for Approved purchase requests that have not been converted to PO.";
+                TempData["PurchaseOrderNotice"] = "เธชเธฃเนเธฒเธเนเธเธชเธฑเนเธเธเธทเนเธญเธเธฒเธเนเธเธเธญเธเธทเนเธญเนเธ”เนเน€เธเธเธฒเธฐเนเธเธเธญเธเธทเนเธญเธ—เธตเนเธญเธเธธเธกเธฑเธ•เธดเนเธฅเนเธงเนเธฅเธฐเธขเธฑเธเนเธกเนเธ–เธนเธเธเธณเนเธเธชเธฃเนเธฒเธ PO เน€เธ—เนเธฒเธเธฑเนเธ";
                 return RedirectToAction("Index", "PurchaseRequests");
             }
 
@@ -195,7 +195,7 @@ public class PurchaseOrdersController : CrudControllerBase
             linkedRequest.UpdatedDate = DateTime.UtcNow;
         }
 
-        if (!await TrySaveAsync("PO number must be unique."))
+        if (!await TrySaveAsync("เน€เธฅเธเธ—เธตเนเนเธเธชเธฑเนเธเธเธทเนเธญเธเธตเนเธกเธตเธญเธขเธนเนเนเธเธฃเธฐเธเธเนเธฅเนเธง"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -233,7 +233,7 @@ public class PurchaseOrdersController : CrudControllerBase
 
         if (!CanEditOrder(header))
         {
-            TempData["PurchaseOrderNotice"] = $"Only Draft or Rejected purchase orders can be edited. Current status is {header.Status}.";
+            TempData["PurchaseOrderNotice"] = $"เนเธเนเนเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธชเธ–เธฒเธเธฐ Draft เธซเธฃเธทเธญ Rejected เน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {header.Status}";
             return RedirectToAction(nameof(Details), new { id = header.PurchaseOrderId });
         }
 
@@ -329,13 +329,13 @@ public class PurchaseOrdersController : CrudControllerBase
 
         if (!CanEditOrder(existingHeader))
         {
-            TempData["PurchaseOrderNotice"] = $"Only Draft or Rejected purchase orders can be edited. Current status is {existingHeader.Status}.";
+            TempData["PurchaseOrderNotice"] = $"เนเธเนเนเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธชเธ–เธฒเธเธฐ Draft เธซเธฃเธทเธญ Rejected เน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {existingHeader.Status}";
             return RedirectToAction(nameof(Details), new { id = existingHeader.PurchaseOrderId });
         }
 
         if (existingHeader.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0))
         {
-            ModelState.AddModelError(string.Empty, "PO lines cannot be edited after receiving has been posted. Create a new PO or continue with receiving only.");
+            ModelState.AddModelError(string.Empty, "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒเนเธ”เนเธซเธฅเธฑเธเธกเธตเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธฅเนเธง เธเธฃเธธเธ“เธฒเธชเธฃเนเธฒเธ PO เนเธซเธกเนเธซเธฃเธทเธญเธ”เธณเน€เธเธดเธเธเธฒเธฃเธ•เนเธญเนเธเธเธฑเนเธเธ•เธญเธเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธ—เธ");
             await PopulateLookupsAsync(model);
             return View(model);
         }
@@ -376,7 +376,7 @@ public class PurchaseOrdersController : CrudControllerBase
         _context.PurchaseOrderDetails.RemoveRange(existingHeader.PurchaseOrderDetails);
         existingHeader.PurchaseOrderDetails = model.Details.Select(MapDetailEntity).ToList();
 
-        if (!await TrySaveAsync("PO number must be unique."))
+        if (!await TrySaveAsync("เน€เธฅเธเธ—เธตเนเนเธเธชเธฑเนเธเธเธทเนเธญเธเธตเนเธกเธตเธญเธขเธนเนเนเธเธฃเธฐเธเธเนเธฅเนเธง"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -503,7 +503,7 @@ public class PurchaseOrdersController : CrudControllerBase
         order.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
-        TempData["PurchaseOrderNotice"] = "Purchase order approved successfully.";
+        TempData["PurchaseOrderNotice"] = "เธญเธเธธเธกเธฑเธ•เธดเนเธเธชเธฑเนเธเธเธทเนเธญเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -542,7 +542,7 @@ public class PurchaseOrdersController : CrudControllerBase
         await _context.SaveChangesAsync();
         await _purchaseWorkflowEmailService.NotifyPoSubmittedAsync(order.PurchaseOrderId);
 
-        TempData["PurchaseOrderNotice"] = "Purchase order submitted for approval.";
+        TempData["PurchaseOrderNotice"] = "เธชเนเธเนเธเธชเธฑเนเธเธเธทเนเธญเน€เธเนเธฒเธญเธเธธเธกเธฑเธ•เธดเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -583,7 +583,7 @@ public class PurchaseOrdersController : CrudControllerBase
         await _context.SaveChangesAsync();
         await _purchaseWorkflowEmailService.NotifyPoRejectedAsync(order.PurchaseOrderId);
 
-        TempData["PurchaseOrderNotice"] = "Purchase order rejected and returned for correction.";
+        TempData["PurchaseOrderNotice"] = "เธ•เธตเธเธฅเธฑเธเนเธเธชเธฑเนเธเธเธทเนเธญเน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง เนเธฅเธฐเธชเนเธเธเธฅเธฑเธเนเธเนเธเนเนเธเนเธ”เน";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -606,7 +606,7 @@ public class PurchaseOrdersController : CrudControllerBase
             return NotFound();
         }
 
-        var blockReason = GetCancelBlockedReason(order);
+        var blockReason = GetCancelBlockedReason(order, cancelReason);
         if (!string.IsNullOrWhiteSpace(blockReason))
         {
             TempData["PurchaseOrderNotice"] = blockReason;
@@ -618,10 +618,11 @@ public class PurchaseOrdersController : CrudControllerBase
         order.CancelledByUserId = CurrentUserId();
         order.CancelledDate = now;
         order.CancelReason = NormalizeCancelReason(cancelReason);
+        order.UpdatedByUserId = CurrentUserId();
         order.UpdatedDate = now;
         await _context.SaveChangesAsync();
 
-        TempData["PurchaseOrderNotice"] = "Purchase order cancelled successfully.";
+        TempData["PurchaseOrderNotice"] = "ยกเลิกใบสั่งซื้อเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -788,7 +789,7 @@ public class PurchaseOrdersController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one PO line.");
+            ModelState.AddModelError(nameof(model.Details), "เธเธฃเธธเธ“เธฒเน€เธเธดเนเธกเธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒเธญเธขเนเธฒเธเธเนเธญเธข 1 เธฃเธฒเธขเธเธฒเธฃ");
         }
 
         if (!ModelState.IsValid)
@@ -804,20 +805,20 @@ public class PurchaseOrdersController : CrudControllerBase
         var supplierExists = await _context.Suppliers.AnyAsync(x => x.SupplierId == model.SupplierId);
         if (!supplierExists)
         {
-            ModelState.AddModelError(nameof(model.SupplierId), "Selected supplier was not found.");
+            ModelState.AddModelError(nameof(model.SupplierId), "เนเธกเนเธเธเธเธนเนเธเธณเธซเธเนเธฒเธขเธ—เธตเนเน€เธฅเธทเธญเธ");
         }
 
         if (!model.BranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธชเธฒเธเธฒ");
         }
         else if (!CanAccessBranch(model.BranchId))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit purchase orders for this branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "เธเธธเธ“เนเธกเนเธกเธตเธชเธดเธ—เธเธดเนเธชเธฃเนเธฒเธเธซเธฃเธทเธญเนเธเนเนเธเนเธเธชเธฑเนเธเธเธทเนเธญเธเธญเธเธชเธฒเธเธฒเธเธตเน");
         }
         else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
+            ModelState.AddModelError(nameof(model.BranchId), "เนเธกเนเธเธเธชเธฒเธเธฒเธ—เธตเนเน€เธฅเธทเธญเธ เธซเธฃเธทเธญเธชเธฒเธเธฒเธ–เธนเธเธเธดเธ”เธเธฒเธฃเนเธเนเธเธฒเธ");
         }
 
         model.PurchaseRequestIds = model.Details
@@ -837,24 +838,24 @@ public class PurchaseOrdersController : CrudControllerBase
 
             if (request is null)
             {
-                ModelState.AddModelError(nameof(model.PurchaseRequestId), "Selected purchase request was not found.");
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "เนเธกเนเธเธเนเธเธเธญเธเธทเนเธญเธ—เธตเนเน€เธฅเธทเธญเธ");
             }
             else if (!CanAccessBranch(request.BranchId))
             {
-                ModelState.AddModelError(nameof(model.PurchaseRequestId), "You cannot create a PO from this purchase request branch.");
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "เธเธธเธ“เนเธกเนเธกเธตเธชเธดเธ—เธเธดเนเธชเธฃเนเธฒเธ PO เธเธฒเธเนเธเธเธญเธเธทเนเธญเธเธญเธเธชเธฒเธเธฒเธเธตเน");
             }
             else if (existingHeader is null && request.Status != "Approved")
             {
-                ModelState.AddModelError(nameof(model.PurchaseRequestId), "PO can be created from Approved purchase requests only.");
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "เธชเธฃเนเธฒเธ PO เนเธ”เนเธเธฒเธเนเธเธเธญเธเธทเนเธญเธ—เธตเนเธญเธเธธเธกเธฑเธ•เธดเนเธฅเนเธงเน€เธ—เนเธฒเธเธฑเนเธ");
             }
             else if (existingHeader is null && request.PurchaseOrderHeaders.Any())
             {
-                ModelState.AddModelError(nameof(model.PurchaseRequestId), "This purchase request already has a purchase order.");
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "เนเธเธเธญเธเธทเนเธญเธเธตเนเธ–เธนเธเธเธณเนเธเธชเธฃเนเธฒเธเนเธเธชเธฑเนเธเธเธทเนเธญเนเธฅเนเธง");
             }
             else if (existingHeader is not null &&
                 request.PurchaseOrderHeaders.Any(x => x.PurchaseOrderId != existingHeader.PurchaseOrderId))
             {
-                ModelState.AddModelError(nameof(model.PurchaseRequestId), "This purchase request is linked to another purchase order.");
+                ModelState.AddModelError(nameof(model.PurchaseRequestId), "เนเธเธเธญเธเธทเนเธญเธเธตเนเน€เธเธทเนเธญเธกเธเธฑเธเนเธเธชเธฑเนเธเธเธทเนเธญเธเธเธฑเธเธญเธทเนเธเธญเธขเธนเนเนเธฅเนเธง");
             }
         }
 
@@ -907,7 +908,7 @@ public class PurchaseOrdersController : CrudControllerBase
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out _))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธชเธดเธเธเนเธฒเธ—เธตเนเธ–เธนเธเธ•เนเธญเธ");
                 continue;
             }
 
@@ -915,7 +916,7 @@ public class PurchaseOrdersController : CrudControllerBase
                 existingReceivedQty.TryGetValue(detail.PurchaseOrderDetailId.Value, out var receivedQty) &&
                 detail.Qty < receivedQty)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Quantity cannot be less than already received quantity.");
+                ModelState.AddModelError($"Details[{i}].Qty", "เธเธณเธเธงเธเธชเธฑเนเธเธเธทเนเธญเธซเนเธฒเธกเธเนเธญเธขเธเธงเนเธฒเธเธณเธเธงเธเธ—เธตเนเธฃเธฑเธเน€เธเนเธฒเนเธฅเนเธง");
             }
 
             detail.ReceivedQty = detail.PurchaseOrderDetailId.HasValue &&
@@ -935,20 +936,20 @@ public class PurchaseOrdersController : CrudControllerBase
                 var allocation = detail.Allocations[j];
                 if (!allocation.BranchId.HasValue || !branchIdSet.Contains(allocation.BranchId.Value))
                 {
-                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "Please select a valid delivery branch.");
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธชเธฒเธเธฒเธเธฅเธฒเธขเธ—เธฒเธเธ—เธตเนเธ–เธนเธเธ•เนเธญเธ");
                     continue;
                 }
 
                 if (!allocationBranches.Add(allocation.BranchId.Value))
                 {
-                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "Duplicate delivery branches are not allowed for the same PO line.");
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].BranchId", "เธซเนเธฒเธกเน€เธฅเธทเธญเธเธชเธฒเธเธฒเธเธฅเธฒเธขเธ—เธฒเธเธเนเธณเนเธเธฃเธฒเธขเธเธฒเธฃเน€เธ”เธตเธขเธงเธเธฑเธ");
                 }
 
                 if (allocation.PurchaseOrderAllocationId.HasValue &&
                     existingAllocationReceivedQty.TryGetValue(allocation.PurchaseOrderAllocationId.Value, out var allocationReceivedQty) &&
                     allocation.AllocatedQty < allocationReceivedQty)
                 {
-                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].AllocatedQty", "Allocated quantity cannot be less than already received quantity for this branch.");
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].AllocatedQty", "เธเธณเธเธงเธเธเธฃเธฐเธเธฒเธขเธชเธฒเธเธฒเธซเนเธฒเธกเธเนเธญเธขเธเธงเนเธฒเธเธณเธเธงเธเธ—เธตเนเธฃเธฑเธเน€เธเนเธฒเนเธฅเนเธงเธเธญเธเธชเธฒเธเธฒเธเธตเน");
                 }
 
                 allocationTotal += allocation.AllocatedQty;
@@ -964,29 +965,29 @@ public class PurchaseOrdersController : CrudControllerBase
 
                     if (!sourceDetailMap.TryGetValue(source.PurchaseRequestDetailId.Value, out var sourceDetail))
                     {
-                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "Selected PR source was not found.");
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "เนเธกเนเธเธ Source PR เธ—เธตเนเน€เธฅเธทเธญเธ");
                         continue;
                     }
 
                     if (sourceDetail.PurchaseRequestHeader?.Status != "Approved" &&
                         sourceDetail.PurchaseRequestHeader?.Status != "ConvertedToPO")
                     {
-                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source must be approved.");
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "Source PR เธ•เนเธญเธเธญเธขเธนเนเนเธเธชเธ–เธฒเธเธฐเธ—เธตเนเธญเธเธธเธกเธฑเธ•เธดเนเธฅเนเธง");
                     }
 
                     if (sourceDetail.ItemId != detail.ItemId)
                     {
-                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source item must match the PO line item.");
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "เธชเธดเธเธเนเธฒเนเธ Source PR เธ•เนเธญเธเธ•เธฃเธเธเธฑเธเธชเธดเธเธเนเธฒเนเธเธฃเธฒเธขเธเธฒเธฃ PO");
                     }
 
                     if (sourceDetail.PurchaseRequestHeader?.BranchId != allocation.BranchId)
                     {
-                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "PR source branch must match the delivery branch.");
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "เธชเธฒเธเธฒเธเธญเธ Source PR เธ•เนเธญเธเธ•เธฃเธเธเธฑเธเธชเธฒเธเธฒเธเธฅเธฒเธขเธ—เธฒเธ");
                     }
 
                     if (sourceDetail.PurchaseOrderAllocationSources.Any(x => !existingSourceDetailIds.Contains(x.PurchaseRequestDetailId)))
                     {
-                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "One or more PR sources already have a PO.");
+                        ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources[{k}].PurchaseRequestDetailId", "เธกเธต Source PR เธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธ–เธนเธเธเธณเนเธเธชเธฃเนเธฒเธ PO เนเธฅเนเธง");
                     }
 
                     source.PurchaseRequestId = sourceDetail.PurchaseRequestId;
@@ -996,18 +997,18 @@ public class PurchaseOrdersController : CrudControllerBase
 
                 if (allocation.Sources.Count > 0 && sourceTotal != allocation.AllocatedQty)
                 {
-                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources", "PR source quantity must equal delivery allocation quantity.");
+                    ModelState.AddModelError($"Details[{i}].Allocations[{j}].Sources", "เธเธณเธเธงเธเธเธญเธ Source PR เธ•เนเธญเธเน€เธ—เนเธฒเธเธฑเธเธเธณเธเธงเธเธ—เธตเนเธเธฃเธฐเธเธฒเธขเนเธซเนเธชเธฒเธเธฒเธเธตเน");
                 }
             }
 
             if (detail.Allocations.Count == 0)
             {
-                ModelState.AddModelError($"Details[{i}].Allocations", "Please allocate this PO line to at least one branch.");
+                ModelState.AddModelError($"Details[{i}].Allocations", "เธเธฃเธธเธ“เธฒเธเธฃเธฐเธเธฒเธขเธฃเธฒเธขเธเธฒเธฃเธเธตเนเนเธเธญเธขเนเธฒเธเธเนเธญเธข 1 เธชเธฒเธเธฒ");
             }
 
             if (allocationTotal != detail.Qty)
             {
-                ModelState.AddModelError($"Details[{i}].Allocations", "Allocated quantity must equal PO line quantity.");
+                ModelState.AddModelError($"Details[{i}].Allocations", "เธเธณเธเธงเธเธ—เธตเนเธเธฃเธฐเธเธฒเธขเธฃเธงเธกเธ•เนเธญเธเน€เธ—เนเธฒเธเธฑเธเธเธณเธเธงเธเนเธเธฃเธฒเธขเธเธฒเธฃ PO");
             }
 
             subtotal += gross;
@@ -1015,7 +1016,7 @@ public class PurchaseOrdersController : CrudControllerBase
 
         if (model.DiscountAmount > subtotal)
         {
-            ModelState.AddModelError(nameof(model.DiscountAmount), "Header discount cannot exceed the subtotal.");
+            ModelState.AddModelError(nameof(model.DiscountAmount), "เธชเนเธงเธเธฅเธ”เธ—เนเธฒเธขเน€เธญเธเธชเธฒเธฃเธ•เนเธญเธเนเธกเนเธกเธฒเธเธเธงเนเธฒเธขเธญเธ”เธเนเธญเธเธ เธฒเธฉเธต");
         }
 
         model.Subtotal = subtotal;
@@ -1034,28 +1035,28 @@ public class PurchaseOrdersController : CrudControllerBase
     {
         if (order.Status is not ("Draft" or "Rejected"))
         {
-            return $"Submit is available only for Draft or Rejected purchase orders. Current status is {order.Status}.";
+            return $"เธชเนเธเธญเธเธธเธกเธฑเธ•เธดเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธชเธ–เธฒเธเธฐ Draft เธซเธฃเธทเธญ Rejected เน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {order.Status}";
         }
 
         if (order.SupplierId <= 0)
         {
-            return "Submit is blocked because supplier is not selected.";
+            return "เธขเธฑเธเธชเนเธเธญเธเธธเธกเธฑเธ•เธดเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธขเธฑเธเนเธกเนเนเธ”เนเน€เธฅเธทเธญเธเธเธนเนเธเธณเธซเธเนเธฒเธข";
         }
 
         if (!order.PurchaseOrderDetails.Any())
         {
-            return "Submit is blocked because no PO lines exist.";
+            return "เธขเธฑเธเธชเนเธเธญเธเธธเธกเธฑเธ•เธดเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธขเธฑเธเนเธกเนเธกเธตเธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒ";
         }
 
         if (order.PurchaseOrderDetails.Any(x => x.ItemId <= 0 || x.Qty <= 0 || x.UnitPrice < 0))
         {
-            return "Submit is blocked because one or more PO lines are incomplete.";
+            return "เธขเธฑเธเธชเนเธเธญเธเธธเธกเธฑเธ•เธดเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธกเธตเธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธเธฃเธญเธเธเนเธญเธกเธนเธฅเนเธกเนเธเธฃเธเธ–เนเธงเธ";
         }
 
         if (order.PurchaseOrderDetails.Any(x => !x.PurchaseOrderAllocations.Any() ||
             x.PurchaseOrderAllocations.Sum(a => a.AllocatedQty) != x.Qty))
         {
-            return "Submit is blocked because delivery allocation must equal PO quantity for every line.";
+            return "เธขเธฑเธเธชเนเธเธญเธเธธเธกเธฑเธ•เธดเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธเธณเธเธงเธเธเธฃเธฐเธเธฒเธขเธชเธฒเธเธฒเธเธญเธเธเธฒเธเธฃเธฒเธขเธเธฒเธฃเธขเธฑเธเนเธกเนเน€เธ—เนเธฒเธเธฑเธเธเธณเธเธงเธเนเธเนเธเธชเธฑเนเธเธเธทเนเธญ";
         }
 
         return string.Empty;
@@ -1065,28 +1066,33 @@ public class PurchaseOrdersController : CrudControllerBase
     {
         if (order.Status != "Submitted")
         {
-            return $"Approve is available only for Submitted purchase orders. Current status is {order.Status}.";
+            return $"เธญเธเธธเธกเธฑเธ•เธดเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธชเธ–เธฒเธเธฐ Submitted เน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {order.Status}";
         }
 
         return string.Empty;
     }
 
-    private static string GetCancelBlockedReason(PurchaseOrderHeader order)
+    private static string GetCancelBlockedReason(PurchaseOrderHeader order, string? cancelReason)
     {
         if (order.Status == "Cancelled")
         {
-            return "Cancelled purchase orders are read-only.";
+            return "เนเธเธชเธฑเนเธเธเธทเนเธญเธ—เธตเนเธขเธเน€เธฅเธดเธเนเธฅเนเธงเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเธ•เนเธญเนเธ”เน";
         }
 
         if (order.PurchaseOrderDetails.Any(x => x.ReceivedQty > 0) ||
             order.Status is "PartiallyReceived" or "FullyReceived")
         {
-            return "Cancel PO is blocked because receiving already exists.";
+            return "เธขเธฑเธเธขเธเน€เธฅเธดเธเนเธเธชเธฑเนเธเธเธทเนเธญเนเธกเนเนเธ”เน เน€เธเธฃเธฒเธฐเธกเธตเธเธฒเธฃเธฃเธฑเธเธชเธดเธเธเนเธฒเนเธฅเนเธง";
         }
 
         if (order.Status is not ("Draft" or "Submitted" or "Approved" or "Rejected"))
         {
-            return $"Cancel PO is available only for Draft, Submitted, Approved, or Rejected purchase orders. Current status is {order.Status}.";
+            return $"เธขเธเน€เธฅเธดเธเนเธ”เนเน€เธเธเธฒเธฐเนเธเธชเธฑเนเธเธเธทเนเธญเธชเธ–เธฒเธเธฐ Draft, Submitted, Approved เธซเธฃเธทเธญ Rejected เน€เธ—เนเธฒเธเธฑเนเธ เธชเธ–เธฒเธเธฐเธเธฑเธเธเธธเธเธฑเธเธเธทเธญ {order.Status}";
+        }
+
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            return "เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเน€เธซเธ•เธธเธเธฅเธ—เธตเนเธขเธเน€เธฅเธดเธ";
         }
 
         return string.Empty;
@@ -1101,12 +1107,12 @@ public class PurchaseOrdersController : CrudControllerBase
     {
         if (order.Status != "Submitted")
         {
-            return $"Reject is available only for Submitted purchase orders. Current status is {order.Status}.";
+            return $"ตีกลับได้เฉพาะใบสั่งซื้อสถานะ Submitted เท่านั้น สถานะปัจจุบันคือ {order.Status}";
         }
 
         if (string.IsNullOrWhiteSpace(rejectReason))
         {
-            return "Reject reason is required.";
+            return "กรุณาระบุเหตุผลที่ตีกลับ";
         }
 
         return string.Empty;
@@ -1271,3 +1277,4 @@ public class PurchaseOrdersController : CrudControllerBase
         return FormatPeriodPrefixedCode(NumberPrefix, date, nextSequence);
     }
 }
+

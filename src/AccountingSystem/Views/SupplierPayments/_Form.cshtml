@@ -1,45 +1,45 @@
 @model BizCore.Models.ViewModels.SupplierPaymentFormViewModel
 
 <div class="form-section quotation-header-section">
-    <div class="form-section-title">Payment Header</div>
+    <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
     <div class="row g-3">
         <div class="col-lg-3 col-md-6">
-            <label asp-for="PaymentNo" class="form-label"></label>
+            <label asp-for="PaymentNo" class="form-label">เลขที่ชำระเงิน</label>
             <input asp-for="PaymentNo" class="form-control" readonly />
         </div>
         <div class="col-lg-3 col-md-6">
-            <label asp-for="PaymentDate" class="form-label"></label>
+            <label asp-for="PaymentDate" class="form-label">วันที่ชำระเงิน</label>
             <input asp-for="PaymentDate" class="form-control" />
             <span asp-validation-for="PaymentDate" class="text-danger"></span>
         </div>
         <div class="col-lg-6">
-            <label asp-for="PurchaseOrderId" class="form-label"></label>
+            <label asp-for="PurchaseOrderId" class="form-label">ใบสั่งซื้อ</label>
             <select asp-for="PurchaseOrderId" asp-items="Model.PurchaseOrderOptions" class="form-select" id="supplierPaymentPurchaseOrder">
-                <option value="">Select purchase order</option>
+                <option value="">เลือกใบสั่งซื้อ</option>
             </select>
             <span asp-validation-for="PurchaseOrderId" class="text-danger"></span>
         </div>
         <div class="col-lg-3 col-md-6">
-            <label asp-for="PaymentMethod" class="form-label"></label>
+            <label asp-for="PaymentMethod" class="form-label">วิธีชำระเงิน</label>
             <select asp-for="PaymentMethod" asp-items="Model.PaymentMethodOptions" class="form-select"></select>
             <span asp-validation-for="PaymentMethod" class="text-danger"></span>
         </div>
         <div class="col-lg-3 col-md-6">
-            <label asp-for="ReferenceNo" class="form-label"></label>
+            <label asp-for="ReferenceNo" class="form-label">เลขอ้างอิง</label>
             <input asp-for="ReferenceNo" class="form-control" />
             <span asp-validation-for="ReferenceNo" class="text-danger"></span>
         </div>
         <div class="col-lg-3 col-md-6">
-            <label asp-for="Amount" class="form-label"></label>
+            <label asp-for="Amount" class="form-label">จำนวนเงินที่ชำระ</label>
             <input asp-for="Amount" class="form-control" />
             <span asp-validation-for="Amount" class="text-danger"></span>
         </div>
         <div class="col-lg-3 col-md-6">
-            <label class="form-label">Outstanding Balance</label>
+            <label class="form-label">ยอดค้างจ่าย</label>
             <input class="form-control" id="supplierPaymentBalance" value="@Model.BalanceAmount.ToString("N2")" readonly />
         </div>
         <div class="col-12">
-            <label asp-for="Remark" class="form-label"></label>
+            <label asp-for="Remark" class="form-label">หมายเหตุ</label>
             <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
             <span asp-validation-for="Remark" class="text-danger"></span>
         </div>
@@ -49,34 +49,34 @@
 <div class="quotation-party-grid mb-3">
     <div class="quotation-party-column">
         <div class="quotation-info-card">
-            <div class="quotation-info-card-title">Purchase Order Summary</div>
+            <div class="quotation-info-card-title">สรุปใบสั่งซื้อ</div>
             <div class="quotation-info-grid">
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">PO No.</span>
+                    <span class="quotation-info-label">เลขที่ใบสั่งซื้อ</span>
                     <span class="quotation-info-value" id="supplierPaymentPoNo">@(string.IsNullOrWhiteSpace(Model.PurchaseOrderNo) ? "-" : Model.PurchaseOrderNo)</span>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Supplier</span>
+                    <span class="quotation-info-label">ผู้จำหน่าย</span>
                     <span class="quotation-info-value" id="supplierPaymentSupplier">@(string.IsNullOrWhiteSpace(Model.SupplierName) ? "-" : Model.SupplierName)</span>
                 </div>
             </div>
             <div class="quotation-info-grid">
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Branch</span>
+                    <span class="quotation-info-label">สาขา</span>
                     <span class="quotation-info-value" id="supplierPaymentBranch">@(string.IsNullOrWhiteSpace(Model.BranchName) ? "-" : Model.BranchName)</span>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">PO Total</span>
+                    <span class="quotation-info-label">ยอดใบสั่งซื้อ</span>
                     <span class="quotation-info-value" id="supplierPaymentTotal">@Model.PurchaseOrderTotal.ToString("N2")</span>
                 </div>
             </div>
             <div class="quotation-info-grid">
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Paid to Date</span>
+                    <span class="quotation-info-label">ชำระแล้ว</span>
                     <span class="quotation-info-value" id="supplierPaymentPaid">@Model.PaidAmount.ToString("N2")</span>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Open Balance</span>
+                    <span class="quotation-info-label">ค้างจ่าย</span>
                     <span class="quotation-info-value" id="supplierPaymentOpenBalance">@Model.BalanceAmount.ToString("N2")</span>
                 </div>
             </div>

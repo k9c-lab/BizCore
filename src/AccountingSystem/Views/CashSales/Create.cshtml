@@ -1,0 +1,47 @@
+@model BizCore.Models.ViewModels.InvoiceFormViewModel
+
+@{
+    ViewData["Title"] = "สร้างเอกสารขายสด";
+}
+
+@if (TempData["CashSaleNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานขาย</div>
+        <h1 class="page-title">สร้างเอกสารขายสด</h1>
+        <p class="page-subtitle">เอกสารนี้ใช้สำหรับขายนอกระบบ AR ปกติ และจะตัดสต๊อกเมื่อกดออกเอกสาร</p>
+    </div>
+    <div class="page-actions">
+        <button type="submit" form="cashSaleForm" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+        <button type="submit" form="cashSaleForm" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกเอกสารขายสด</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการขายสด</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="workflow-info workflow-info-info mb-3">
+            เอกสารขายสดไม่สร้างยอดค้างรับและไม่วิ่งเข้าใบวางบิลหรือการรับชำระตาม flow ปกติ
+        </div>
+        <form asp-action="Create" method="post" id="cashSaleForm">
+            <partial name="~/Views/Invoices/_Form.cshtml" model="Model" />
+
+            <div class="form-actions mt-3">
+                <span class="table-meta">บันทึกฉบับร่างเพื่อกลับมาแก้ไขภายหลังได้ หรือออกเอกสารเพื่อตัดสต๊อกและปิดการขายสดในเอกสารเดียว</span>
+                <div class="page-actions">
+                    <button type="submit" name="submitAction" value="Draft" class="btn btn-outline-primary px-4">บันทึกฉบับร่าง</button>
+                    <button type="submit" name="submitAction" value="Issue" class="btn btn-primary px-4">ออกเอกสารขายสด</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="~/Views/Invoices/_InvoiceEditorScripts.cshtml" />
+}

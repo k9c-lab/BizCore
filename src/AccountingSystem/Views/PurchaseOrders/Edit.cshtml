@@ -1,29 +1,36 @@
-﻿@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
+@model BizCore.Models.ViewModels.PurchaseOrderFormViewModel
 
 @{
-    ViewData["Title"] = "Edit Purchase Order";
+    ViewData["Title"] = "แก้ไขใบสั่งซื้อ";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Purchasing Module</div>
-        <h1 class="page-title">Edit Purchase Order</h1>
-        </div>
+        <div class="page-eyebrow">งานจัดซื้อ</div>
+        <h1 class="page-title">แก้ไขใบสั่งซื้อ</h1>
+        <p class="page-subtitle">แก้ไขได้เฉพาะใบสั่งซื้อสถานะ Draft หรือ Rejected และเฉพาะเอกสารที่ยังไม่มีการรับสินค้า</p>
+    </div>
     <div class="page-actions">
-        <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">View PO</a>
+        <button type="submit" form="purchaseOrderForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
+        <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">กลับไปรายละเอียดใบสั่งซื้อ</a>
     </div>
 </div>
 
+@if (TempData["PurchaseOrderNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+{
+    @await Html.PartialAsync("_Notice", notice)
+}
+
 <div class="card content-card">
     <div class="card-body">
-        <form asp-action="Edit" method="post">
+        <form asp-action="Edit" asp-route-id="@Model.PurchaseOrderId" method="post" id="purchaseOrderForm">
             <input type="hidden" asp-for="PurchaseOrderId" />
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">If receiving already exists, editing PO lines will be blocked.</span>
+                <span class="table-meta">หลังบันทึกแล้ว ให้กลับไปส่งอนุมัติ อนุมัติ รับสินค้า หรือพิมพ์จากหน้ารายละเอียดเอกสาร</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
-                    <button type="submit" class="btn btn-primary px-4">Save Draft</button>
+                    <a asp-action="Details" asp-route-id="@Model.PurchaseOrderId" class="btn btn-outline-secondary">กลับไปรายละเอียดใบสั่งซื้อ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
                 </div>
             </div>
         </form>
@@ -34,4 +41,3 @@
     <partial name="_ValidationScriptsPartial" />
     <partial name="_FormScripts" />
 }
-
