@@ -271,19 +271,19 @@ public class StockLedgerController : CrudControllerBase
     {
         if (!branchId.HasValue && canAccessAllBranches)
         {
-            return "All Branches";
+            return "ทุกสาขา";
         }
 
         if (!branchId.HasValue)
         {
-            return "No Branch";
+            return "ไม่ระบุสาขา";
         }
 
         return await _context.Branches
             .AsNoTracking()
             .Where(x => x.BranchId == branchId.Value)
             .Select(x => x.BranchName)
-            .FirstOrDefaultAsync() ?? "No Branch";
+            .FirstOrDefaultAsync() ?? "ไม่ระบุสาขา";
     }
 
     private async Task<IReadOnlyList<SelectListItem>> BuildBranchOptionsAsync(int? selectedBranchId, bool canAccessAllBranches)
@@ -295,7 +295,7 @@ public class StockLedgerController : CrudControllerBase
 
         var options = new List<SelectListItem>
         {
-            new() { Value = string.Empty, Text = "All Branches", Selected = !selectedBranchId.HasValue }
+            new() { Value = string.Empty, Text = "ทุกสาขา", Selected = !selectedBranchId.HasValue }
         };
 
         options.AddRange(await _context.Branches
@@ -351,7 +351,7 @@ public class StockLedgerController : CrudControllerBase
             "SupplierRepairReturn"
         };
 
-        return BuildOptions("All Movements", movementTypes, selectedMovementType);
+        return BuildOptions("ทุกการเคลื่อนไหว", movementTypes, selectedMovementType, FormatMovementType);
     }
 
     private static IReadOnlyList<SelectListItem> BuildReferenceTypeOptions(string? selectedReferenceType)
@@ -366,10 +366,10 @@ public class StockLedgerController : CrudControllerBase
             "SupplierClaim"
         };
 
-        return BuildOptions("All References", referenceTypes, selectedReferenceType);
+        return BuildOptions("ทุกเอกสารอ้างอิง", referenceTypes, selectedReferenceType, FormatReferenceType);
     }
 
-    private static IReadOnlyList<SelectListItem> BuildOptions(string emptyText, IEnumerable<string> values, string? selectedValue)
+    private static IReadOnlyList<SelectListItem> BuildOptions(string emptyText, IEnumerable<string> values, string? selectedValue, Func<string, string>? formatter = null)
     {
         var options = new List<SelectListItem>
         {
@@ -379,10 +379,43 @@ public class StockLedgerController : CrudControllerBase
         options.AddRange(values.Select(x => new SelectListItem
         {
             Value = x,
-            Text = x,
+            Text = formatter?.Invoke(x) ?? x,
             Selected = string.Equals(x, selectedValue, StringComparison.OrdinalIgnoreCase)
         }));
 
         return options;
+    }
+
+    private static string FormatMovementType(string value)
+    {
+        return value switch
+        {
+            "Receiving" => "รับเข้า",
+            "ReceivingCancel" => "ยกเลิกรับเข้า",
+            "InvoiceIssue" => "ตัดสต็อกจากใบแจ้งหนี้",
+            "InvoiceCancel" => "คืนสต็อกจากยกเลิกใบแจ้งหนี้",
+            "Transfer" => "โอนย้าย",
+            "TransferCancel" => "ยกเลิกโอนย้าย",
+            "Issue" => "เบิกออก",
+            "IssueCancel" => "ยกเลิกเบิก",
+            "CustomerClaimReplacement" => "เปลี่ยนสินค้าเคลมลูกค้า",
+            "SupplierReplacement" => "รับของแทนจากผู้ขาย",
+            "SupplierRepairReturn" => "รับคืนจากซ่อมผู้ขาย",
+            _ => value
+        };
+    }
+
+    private static string FormatReferenceType(string value)
+    {
+        return value switch
+        {
+            "Receiving" => "รับสินค้า",
+            "Invoice" => "ใบแจ้งหนี้",
+            "StockTransfer" => "ใบโอนย้ายสต็อก",
+            "StockIssue" => "ใบเบิกสต็อก",
+            "CustomerClaim" => "เคลมลูกค้า",
+            "SupplierClaim" => "เคลมผู้ขาย",
+            _ => value
+        };
     }
 }

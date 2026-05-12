@@ -152,7 +152,7 @@ public class StockIssuesController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Issue number must be unique.");
+            ModelState.AddModelError(string.Empty, "เลขที่ใบเบิกซ้ำ กรุณาตรวจสอบอีกครั้ง");
             EnsureMinimumRows(model);
             await PopulateLookupsAsync(model);
             return View(model);
@@ -174,7 +174,7 @@ public class StockIssuesController : CrudControllerBase
 
         if (issue.Status != "Draft")
         {
-            TempData["StockIssueNotice"] = "Only Draft stock issues can be edited.";
+            TempData["StockIssueNotice"] = "แก้ไขได้เฉพาะใบเบิกสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = issue.StockIssueId });
         }
 
@@ -196,7 +196,7 @@ public class StockIssuesController : CrudControllerBase
 
         if (issue.Status != "Draft")
         {
-            TempData["StockIssueNotice"] = "Only Draft stock issues can be edited.";
+            TempData["StockIssueNotice"] = "แก้ไขได้เฉพาะใบเบิกสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = issue.StockIssueId });
         }
 
@@ -249,7 +249,7 @@ public class StockIssuesController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Issue number must be unique.");
+            ModelState.AddModelError(string.Empty, "เลขที่ใบเบิกซ้ำ กรุณาตรวจสอบอีกครั้ง");
             EnsureMinimumRows(model);
             await PopulateLookupsAsync(model);
             return View("Create", model);
@@ -338,14 +338,14 @@ public class StockIssuesController : CrudControllerBase
 
         if (issue.Status != "Draft")
         {
-            TempData["StockIssueNotice"] = "Only Draft stock issues can be posted.";
+            TempData["StockIssueNotice"] = "ลงรายการได้เฉพาะใบเบิกสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id });
         }
 
         var model = BuildFormModel(issue);
         if (!await ValidateIssueAsync(model))
         {
-            TempData["StockIssueNotice"] = GetFirstModelStateErrorMessage("Post Stock Issue is blocked because this draft is not complete.");
+            TempData["StockIssueNotice"] = GetFirstModelStateErrorMessage("ยังลงรายการใบเบิกไม่ได้ เพราะข้อมูลฉบับร่างยังไม่ครบ");
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -362,7 +362,7 @@ public class StockIssuesController : CrudControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["StockIssueNotice"] = "Stock issue posted successfully.";
+        TempData["StockIssueNotice"] = "ลงรายการใบเบิกสต็อกเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -403,7 +403,7 @@ public class StockIssuesController : CrudControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["StockIssueNotice"] = "Stock issue cancelled successfully.";
+        TempData["StockIssueNotice"] = "ยกเลิกใบเบิกสต็อกเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -450,7 +450,7 @@ public class StockIssuesController : CrudControllerBase
             .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.BranchId))
             .ToList();
 
-        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
+        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "ไม่ระบุสาขา";
         model.IssueTypeOptions = IssueTypes.Select(x => new SelectListItem(FormatIssueType(x), x, x == model.IssueType)).ToList();
 
         model.ItemLookup = await _context.Items
@@ -479,21 +479,21 @@ public class StockIssuesController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one issue line.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มอย่างน้อย 1 รายการ");
         }
 
         if (!model.BranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Please select branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "กรุณาเลือกสาขา");
         }
         else if (!CanAccessBranch(model.BranchId.Value))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "You cannot issue stock from this branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "คุณไม่มีสิทธิ์เบิกสต็อกจากสาขานี้");
         }
 
         if (!IssueTypes.Contains(model.IssueType))
         {
-            ModelState.AddModelError(nameof(model.IssueType), "Please select a valid issue type.");
+            ModelState.AddModelError(nameof(model.IssueType), "กรุณาเลือกประเภทการเบิกที่ถูกต้อง");
         }
 
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
@@ -510,39 +510,39 @@ public class StockIssuesController : CrudControllerBase
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out var item))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกรายการสินค้าที่ถูกต้อง");
                 continue;
             }
 
             if (!item.TrackStock)
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Stock issue supports stock-tracked items only.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "ใบเบิกรองรับเฉพาะสินค้าที่ติดตามสต็อก");
             }
 
             if (detail.Qty <= 0)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Qty must be greater than zero.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนต้องมากกว่า 0");
             }
 
             if (item.IsSerialControlled && detail.Qty != Math.Truncate(detail.Qty))
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Serial-controlled items must be issued in whole numbers.");
+                ModelState.AddModelError($"Details[{i}].Qty", "สินค้าที่ควบคุม Serial ต้องเบิกเป็นจำนวนเต็มเท่านั้น");
             }
 
             var lineSerials = ExtractSerialNumbers(detail);
             if (lineSerials.Count != lineSerials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same line.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "ห้ามมี Serial ซ้ำในบรรทัดเดียวกัน");
             }
 
             if (item.IsSerialControlled && lineSerials.Count != (int)detail.Qty)
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", $"Serial count must exactly match issue qty. Qty is {detail.Qty:N0}, selected serials are {lineSerials.Count:N0}.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", $"จำนวน Serial ต้องเท่ากับจำนวนเบิก โดยจำนวนคือ {detail.Qty:N0} และ Serial ที่เลือกคือ {lineSerials.Count:N0}");
             }
 
             if (!item.IsSerialControlled && lineSerials.Count > 0)
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Serial numbers can be entered only for serial-controlled items.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "กรอก Serial ได้เฉพาะสินค้าที่ควบคุม Serial เท่านั้น");
             }
 
             serialTexts.AddRange(lineSerials);
@@ -550,7 +550,7 @@ public class StockIssuesController : CrudControllerBase
 
         if (serialTexts.Count != serialTexts.Distinct(StringComparer.OrdinalIgnoreCase).Count())
         {
-            ModelState.AddModelError(string.Empty, "Duplicate serial numbers are not allowed across issue lines.");
+            ModelState.AddModelError(string.Empty, "ห้ามมี Serial ซ้ำกันข้ามบรรทัดรายการ");
         }
 
         if (model.BranchId.HasValue)
@@ -587,7 +587,7 @@ public class StockIssuesController : CrudControllerBase
             if (availableQty < row.Qty)
             {
                 var item = itemMap[row.ItemId];
-                ModelState.AddModelError(nameof(model.Details), $"Not enough stock for {item.ItemCode}. Available {availableQty:N2}, issue {row.Qty:N2}.");
+                ModelState.AddModelError(nameof(model.Details), $"สต็อกของ {item.ItemCode} ไม่พอ คงเหลือ {availableQty:N2} แต่ต้องการเบิก {row.Qty:N2}");
             }
         }
 
@@ -608,7 +608,7 @@ public class StockIssuesController : CrudControllerBase
             var availableQty = balanceMap.TryGetValue(itemId, out var qty) ? qty : 0m;
             if (runningQty > availableQty)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", $"Not enough stock in branch. Available {availableQty:N2}, requested total {runningQty:N2}.");
+                ModelState.AddModelError($"Details[{i}].Qty", $"สต็อกในสาขาไม่พอ คงเหลือ {availableQty:N2} แต่ร้องขอรวม {runningQty:N2}");
             }
         }
     }
@@ -641,23 +641,23 @@ public class StockIssuesController : CrudControllerBase
             var serial = serials.FirstOrDefault(x => string.Equals(x.SerialNo, request.SerialNo, StringComparison.OrdinalIgnoreCase));
             if (serial is null)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} was not found.");
+                ModelState.AddModelError(nameof(model.Details), $"ไม่พบ Serial {request.SerialNo}");
                 continue;
             }
 
             if (serial.ItemId != request.ItemId)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} does not belong to selected item.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่ตรงกับสินค้าที่เลือก");
             }
 
             if (serial.BranchId != model.BranchId.Value)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} is not in selected branch.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่ได้อยู่ในสาขาที่เลือก");
             }
 
             if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} is not available for issue.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่พร้อมสำหรับการเบิก");
             }
         }
     }
@@ -765,7 +765,7 @@ public class StockIssuesController : CrudControllerBase
     {
         if (issue.Status == "Cancelled")
         {
-            return "Cancelled stock issues are read-only.";
+            return "ใบเบิกที่ยกเลิกแล้วจะเป็นแบบอ่านอย่างเดียว";
         }
 
         if (issue.Status == "Draft")
@@ -775,7 +775,7 @@ public class StockIssuesController : CrudControllerBase
 
         if (issue.Status != "Posted")
         {
-            return $"Cancel Stock Issue is available only for Draft or Posted documents. Current status is {issue.Status}.";
+            return $"ยกเลิกใบเบิกได้เฉพาะสถานะฉบับร่างหรือลงรายการแล้ว สถานะปัจจุบันคือ {issue.Status}";
         }
 
         var unavailable = issue.StockIssueDetails
@@ -789,7 +789,7 @@ public class StockIssuesController : CrudControllerBase
 
         return unavailable is null
             ? null
-            : $"Cancel is blocked because serial {unavailable.SerialNo} is no longer in issued state for this document.";
+            : $"ยังยกเลิกไม่ได้ เพราะ Serial {unavailable.SerialNo} ไม่ได้อยู่ในสถานะเบิกของเอกสารนี้แล้ว";
     }
 
     private async Task AdjustStockBalanceAsync(int branchId, int itemId, decimal qtyDelta)
@@ -918,7 +918,11 @@ public class StockIssuesController : CrudControllerBase
     {
         return issueType switch
         {
-            "InternalUse" => "Internal Use",
+            "InternalUse" => "ใช้ภายใน",
+            "Damaged" => "ชำรุด",
+            "Demo" => "สาธิต",
+            "Adjustment" => "ปรับปรุง",
+            "Other" => "อื่น ๆ",
             _ => issueType
         };
     }

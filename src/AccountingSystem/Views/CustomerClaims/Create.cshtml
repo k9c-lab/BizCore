@@ -1,16 +1,16 @@
 ﻿@model BizCore.Models.ViewModels.CustomerClaimFormViewModel
 
 @{
-    ViewData["Title"] = "New Customer Claim";
+    ViewData["Title"] = "สร้างเคลมลูกค้า";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Warranty Module</div>
-        <h1 class="page-title">New Customer Claim</h1>
+        <div class="page-eyebrow">โมดูลรับประกัน</div>
+        <h1 class="page-title">สร้างเคลมลูกค้า</h1>
         </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Claims</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการเคลม</a>
     </div>
 </div>
 
@@ -28,10 +28,10 @@
             <div asp-validation-summary="All" class="form-alert"></div>
 
             <div class="form-section">
-                <div class="form-section-title">Claim Information</div>
+                <div class="form-section-title">ข้อมูลเคลม</div>
                 <div class="detail-grid">
-                    <div class="detail-item"><span class="detail-label">Claim No.</span><p class="detail-value">@Model.CustomerClaimNo</p></div>
-                    <div class="detail-item"><span class="detail-label">Current Serial Status</span><p class="detail-value">@Model.CurrentSerialStatus</p></div>
+                    <div class="detail-item"><span class="detail-label">เลขที่เคลม</span><p class="detail-value">@Model.CustomerClaimNo</p></div>
+                    <div class="detail-item"><span class="detail-label">สถานะ Serial ปัจจุบัน</span><p class="detail-value">@Model.CurrentSerialStatus</p></div>
                     <div class="detail-item">
                         <label asp-for="CustomerClaimDate" class="detail-label"></label>
                         <input asp-for="CustomerClaimDate" type="date" class="form-control" />
@@ -41,43 +41,43 @@
             </div>
 
             <div class="form-section">
-                <div class="form-section-title">Customer</div>
+                <div class="form-section-title">ลูกค้า</div>
                 <div class="quotation-info-card">
-                    <div class="quotation-info-card-title">Customer Information</div>
+                    <div class="quotation-info-card-title">ข้อมูลลูกค้า</div>
                     <div class="quotation-info-grid">
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Customer Name</span>
+                            <span class="quotation-info-label">ชื่อลูกค้า</span>
                             <span class="quotation-info-value">@Model.CustomerName</span>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Customer Code</span>
+                            <span class="quotation-info-label">รหัสลูกค้า</span>
                             <span class="quotation-info-value">@Model.CustomerCode</span>
                         </div>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Invoice No.</span>
+                        <span class="quotation-info-label">เลขที่ใบแจ้งหนี้</span>
                         <span class="quotation-info-value">@Model.InvoiceNo</span>
                     </div>
                 </div>
             </div>
 
             <div class="form-section">
-                <div class="form-section-title">Serial / Item</div>
+                <div class="form-section-title">Serial / สินค้า</div>
                 <div class="quotation-info-card">
-                    <div class="quotation-info-card-title">Serial / Item Information</div>
+                    <div class="quotation-info-card-title">ข้อมูล Serial / สินค้า</div>
                     <div class="quotation-info-grid">
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Serial No.</span>
+                            <span class="quotation-info-label">หมายเลข Serial</span>
                             <span class="quotation-info-value">@Model.SerialNo</span>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Serial Status</span>
+                            <span class="quotation-info-label">สถานะ Serial</span>
                             <span class="quotation-info-value">@Model.CurrentSerialStatus</span>
                         </div>
                     </div>
                     <div class="quotation-info-grid">
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">Item</span>
+                            <span class="quotation-info-label">สินค้า</span>
                             <span class="quotation-info-value">@Model.ItemCode - @Model.ItemName</span>
                         </div>
                         <div class="quotation-info-field">
@@ -86,14 +86,14 @@
                         </div>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Customer Warranty</span>
-                        <span class="quotation-info-value">@(Model.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(Model.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                        <span class="quotation-info-label">ประกันลูกค้า</span>
+                        <span class="quotation-info-value">@(Model.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") ถึง @(Model.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
                     </div>
                 </div>
             </div>
 
             <div class="form-section">
-                <div class="form-section-title">Problem</div>
+                <div class="form-section-title">อาการ / หมายเหตุ</div>
                 <div class="row g-3">
                     <div class="col-12">
                         <label asp-for="ProblemDescription" class="form-label"></label>
@@ -109,16 +109,16 @@
             </div>
 
             <div class="form-actions">
-                <span class="table-meta">Saving this claim changes the serial status to CustomerClaim.</span>
+                <span class="table-meta">เมื่อบันทึก ระบบจะเปลี่ยนสถานะ Serial เป็น `CustomerClaim`</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
                     @if (Model.IsClaimBlocked)
                     {
-                        <button type="submit" class="btn btn-primary px-4" disabled>Save Claim</button>
+                        <button type="submit" class="btn btn-primary px-4" disabled>บันทึกเคลม</button>
                     }
                     else
                     {
-                        <button type="submit" class="btn btn-primary px-4">Save Claim</button>
+                        <button type="submit" class="btn btn-primary px-4">บันทึกเคลม</button>
                     }
                 </div>
             </div>

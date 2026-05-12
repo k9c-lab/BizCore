@@ -2675,3 +2675,86 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
     - `0 errors`
   - transient warnings seen in some builds:
     - `NU1900` from inability to access NuGet vulnerability feed in the current environment
+- 2026-05-12
+
+- Account / Profile:
+  - added complete self-service `Profile` flow for logged-in users:
+    - update `Display Name`
+    - update `Email`
+    - change own password
+  - added new page:
+    - `Account/Profile`
+  - page shows `Username`, `Role`, `Branch`, and branch-access summary as readonly
+  - after profile update or password change, auth claims are refreshed immediately so display name updates without logout/login
+  - compacted the profile layout so summary, profile details, and password actions use space more efficiently
+  - translated profile UI / validation / notices to Thai:
+    - page title / subtitles / section titles
+    - field labels
+    - helper text
+    - success notices
+    - password / email / validation messages
+
+- Billing Note UX:
+  - `BillingNotes/Create` customer selection was upgraded to searchable input style to match other document forms
+  - applied searchable customer UX to both:
+    - document header customer field
+    - invoice filter customer field
+  - kept existing billing-note workflow and calculation logic intact
+
+- Invoice / Cash Sale / Quotation fixes and cleanup:
+  - repaired quotation-reference totals on invoices so quotation-linked invoices use correct quotation totals including header discount
+  - fixed existing bad local data snapshot such as `INV-202605-0003`
+  - removed quotation reference summary from `Invoices/Print` and aligned summary placement
+  - changed `Referring Doctor` and `Treatment Right` display on invoice create/edit/details/print to show name only without code
+  - expanded header and item `Remark` length for invoice / cash sale from `500` to `2000`
+  - added migration `062_invoice_cash_sale_remark_length_2000.sql` in:
+    - `database`
+    - `database/system-migrations`
+    - `src/AccountingSystem/DatabaseMigrations`
+
+- Thai UX / validation cleanup:
+  - restored Thai validation on `Invoices`
+  - translated remaining validation and UI messages on:
+    - `CashSales`
+    - `Quotations`
+    - `StockInquiry`
+    - `SerialInquiry`
+    - `StockLedger`
+    - `StockAudit`
+    - `StockTransfers`
+    - `StockIssues`
+    - `CustomerClaims`
+    - `SupplierClaims`
+
+- Quotation / form presentation cleanup:
+  - aligned `Quotations` pages to the shared document pattern:
+    - `Index`
+    - `Create`
+    - `Edit`
+    - `Details`
+  - cleaned helper text on `Quotations/Create`
+  - started clean-pass reduction of redundant helper text on `Invoices/Create`
+
+- Global UI polish:
+  - increased table header readability globally by slightly increasing size / weight / contrast
+  - refined sidebar:
+    - renamed `CashSales` menu to `ขายบุคคลทั่วไป`
+    - added minimal icons per side-menu item
+    - reduced menu-item font size slightly
+    - increased menu-group heading size
+
+- Data reset / seed / import scripts:
+  - added cleanup / handover scripts:
+    - `102_clear_business_data_keep_system_masters.sql`
+    - `103_keep_only_main_branch_and_admin.sql`
+    - `104_seed_branches_khanu_khlongkhlung_kaoyoi_phonsawan_tharuea.sql`
+    - `105_seed_branch_admin_and_central_admin_users.sql`
+  - repaired import scripts for:
+    - `Items`
+    - `Customers`
+    - `Suppliers`
+  - changed import behavior from fail-on-duplicate to update-or-insert
+  - corrected ambiguous-column issues in import summaries
+  - reset running codes in import data:
+    - customers start from `CUS-0001`
+    - suppliers start from `SUP-0001`

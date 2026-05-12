@@ -1,7 +1,7 @@
 ﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.SerialClaimLog>
 
 @{
-    ViewData["Title"] = "Supplier Claims";
+    ViewData["Title"] = "เคลมผู้ขาย";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -10,60 +10,60 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Supplier Claim Module</div>
-        <h1 class="page-title">Supplier Claims</h1>
+        <div class="page-eyebrow">โมดูลรับประกันผู้ขาย</div>
+        <h1 class="page-title">เคลมผู้ขาย</h1>
         </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Claim Register</h2>
+            <h2 class="section-title">รายการเคลมผู้ขาย</h2>
             </div>
-        <div class="table-meta">@Model.TotalCount record(s)</div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Serial no., item, part number, supplier, problem, or remark" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="Serial, สินค้า, Part Number, ผู้ขาย, อาการ หรือหมายเหตุ" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Claim Status</label>
+                <label class="form-label" for="status">สถานะเคลม</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Open" selected="@(status == "Open")">Open</option>
-                    <option value="Sent" selected="@(status == "Sent")">Sent</option>
-                    <option value="Returned" selected="@(status == "Returned")">Returned</option>
-                    <option value="Replaced" selected="@(status == "Replaced")">Replaced</option>
-                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
-                    <option value="Closed" selected="@(status == "Closed")">Closed</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Open" selected="@(status == "Open")">เปิดเคลม</option>
+                    <option value="Sent" selected="@(status == "Sent")">ส่งแล้ว</option>
+                    <option value="Returned" selected="@(status == "Returned")">รับของเดิมกลับแล้ว</option>
+                    <option value="Replaced" selected="@(status == "Replaced")">ได้รับของทดแทน</option>
+                    <option value="Rejected" selected="@(status == "Rejected")">ปฏิเสธเคลม</option>
+                    <option value="Closed" selected="@(status == "Closed")">ปิดเคลม</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">ตั้งแต่วันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Claim Date</th>
-                        <th>Serial No.</th>
-                        <th>Item</th>
-                        <th>Supplier</th>
-                        <th>Claim Status</th>
-                        <th>Serial Status</th>
-                        <th class="text-end">Action</th>
+                        <th>วันที่เคลม</th>
+                        <th>Serial</th>
+                        <th>สินค้า</th>
+                        <th>ผู้ขาย</th>
+                        <th>สถานะเคลม</th>
+                        <th>สถานะ Serial</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -76,17 +76,17 @@
                             <td><span class="code-chip">@claim.SerialNumber?.SerialNo</span></td>
                             <td class="fw-semibold">@claim.SerialNumber?.Item?.ItemName</td>
                             <td class="fw-semibold">@claim.Supplier?.SupplierName</td>
-                            <td><span class="status-pill active">@claim.ClaimStatus</span></td>
+                            <td><span class="status-pill active">@(claim.ClaimStatus == "Open" ? "เปิดเคลม" : claim.ClaimStatus == "Sent" ? "ส่งแล้ว" : claim.ClaimStatus == "Returned" ? "รับของเดิมกลับแล้ว" : claim.ClaimStatus == "Replaced" ? "ได้รับของทดแทน" : claim.ClaimStatus == "Rejected" ? "ปฏิเสธเคลม" : claim.ClaimStatus == "Closed" ? "ปิดเคลม" : claim.ClaimStatus)</span></td>
                             <td>@claim.SerialNumber?.Status</td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@claim.SerialClaimLogId" class="btn btn-sm btn-outline-secondary">View</a>
+                                <a asp-action="Details" asp-route-id="@claim.SerialClaimLogId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
                             </td>
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="7" class="table-empty">No supplier claims yet. Start from an eligible serial under supplier warranty.</td></tr>
+                    <tr><td colspan="7" class="table-empty">ยังไม่มีข้อมูลเคลมผู้ขาย เริ่มต้นจาก Serial ที่ยังอยู่ในประกันผู้ขาย</td></tr>
                 }
                 </tbody>
             </table>

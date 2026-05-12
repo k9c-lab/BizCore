@@ -219,6 +219,12 @@ public class InvoicesController : CrudControllerBase
             return View(model);
         }
 
+        var linkedQuotation = model.QuotationId.HasValue
+            ? await _context.QuotationHeaders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.QuotationHeaderId == model.QuotationId.Value)
+            : null;
+
         invoice.InvoiceDate = model.InvoiceDate.Date;
         invoice.CustomerId = model.CustomerId!.Value;
         invoice.SalespersonId = model.SalespersonId;
@@ -239,14 +245,7 @@ public class InvoicesController : CrudControllerBase
         invoice.VatType = model.VatType;
         invoice.VatAmount = model.VatAmount;
         invoice.TotalAmount = model.TotalAmount;
-        invoice.ReferenceLineSubtotal = CalculateReferenceSubtotal(model.Details);
-        invoice.ReferenceLineDiscountAmount = model.DiscountMode == "Header"
-            ? model.HeaderDiscountAmount
-            : CalculateReferenceLineDiscount(model.Details);
-        invoice.ReferenceLineVatAmount = model.VatType == "VAT"
-            ? Math.Round((invoice.ReferenceLineSubtotal.Value - invoice.ReferenceLineDiscountAmount.Value) * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        invoice.ReferenceLineTotalAmount = (invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m) + (invoice.ReferenceLineVatAmount ?? 0m);
+        ApplyReferenceSnapshot(invoice, model, linkedQuotation);
         invoice.PaidAmount = 0m;
         invoice.BalanceAmount = model.BalanceAmount;
         invoice.Status = issueInvoice ? "Issued" : "Draft";
@@ -376,6 +375,12 @@ public class InvoicesController : CrudControllerBase
             return View(model);
         }
 
+        var linkedQuotation = model.QuotationId.HasValue
+            ? await _context.QuotationHeaders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.QuotationHeaderId == model.QuotationId.Value)
+            : null;
+
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
@@ -418,10 +423,6 @@ public class InvoicesController : CrudControllerBase
                 TotalAmount = model.TotalAmount,
                 PaidAmount = 0m,
                 BalanceAmount = model.BalanceAmount,
-                ReferenceLineSubtotal = CalculateReferenceSubtotal(model.Details),
-                ReferenceLineDiscountAmount = model.DiscountMode == "Header"
-                    ? model.HeaderDiscountAmount
-                    : CalculateReferenceLineDiscount(model.Details),
                 Status = issueInvoice ? "Issued" : "Draft",
                 CreatedDate = DateTime.UtcNow,
                 CreatedByUserId = CurrentUserId(),
@@ -430,10 +431,7 @@ public class InvoicesController : CrudControllerBase
                 InvoiceDetails = model.Details.Select(MapDetailEntity).ToList()
             };
 
-            header.ReferenceLineVatAmount = model.VatType == "VAT"
-                ? Math.Round(((header.ReferenceLineSubtotal ?? 0m) - (header.ReferenceLineDiscountAmount ?? 0m)) * 0.07m, 2, MidpointRounding.AwayFromZero)
-                : 0m;
-            header.ReferenceLineTotalAmount = (header.ReferenceLineSubtotal ?? 0m) - (header.ReferenceLineDiscountAmount ?? 0m) + (header.ReferenceLineVatAmount ?? 0m);
+            ApplyReferenceSnapshot(header, model, linkedQuotation);
 
             _context.InvoiceHeaders.Add(header);
             await _context.SaveChangesAsync();
@@ -961,7 +959,7 @@ public class InvoicesController : CrudControllerBase
             .Select(x => new SelectListItem
             {
                 Value = x.TreatmentRightId.ToString(),
-                Text = $"{x.TreatmentRightCode} - {x.TreatmentRightName}",
+                Text = x.TreatmentRightName,
                 Selected = model.TreatmentRightId.HasValue && x.TreatmentRightId == model.TreatmentRightId.Value
             })
             .ToListAsync();
@@ -973,7 +971,7 @@ public class InvoicesController : CrudControllerBase
             .Select(x => new SelectListItem
             {
                 Value = x.ReferringDoctorId.ToString(),
-                Text = $"{x.DoctorCode} - {x.DoctorName}",
+                Text = x.DoctorName,
                 Selected = model.ReferringDoctorId.HasValue && x.ReferringDoctorId == model.ReferringDoctorId.Value
             })
             .ToListAsync();
@@ -1161,6 +1159,10 @@ public class InvoicesController : CrudControllerBase
     {
         var detailDiscountTotal = invoice.InvoiceDetails.Sum(x => x.DiscountAmount);
         var referenceDiscountTotal = invoice.ReferenceLineDiscountAmount ?? invoice.DiscountAmount;
+        var hasLinkedQuotation = invoice.QuotationId.HasValue && invoice.Quotation is not null;
+        var quotationReferenceDiscount = hasLinkedQuotation
+            ? GetQuotationAppliedDiscount(invoice.Quotation!)
+            : 0m;
         var useHeaderDiscount = invoice.QuotationId.HasValue
             ? false
             : referenceDiscountTotal > 0 && detailDiscountTotal == 0;
@@ -1194,10 +1196,10 @@ public class InvoicesController : CrudControllerBase
             DiscountAmount = invoice.QuotationId.HasValue ? 0m : (useHeaderDiscount ? 0m : invoice.DiscountAmount),
             VatAmount = invoice.VatAmount,
             TotalAmount = invoice.TotalAmount,
-            ReferenceSubtotal = invoice.ReferenceLineSubtotal ?? invoice.Subtotal,
-            ReferenceDiscountAmount = invoice.ReferenceLineDiscountAmount ?? invoice.DiscountAmount,
-            ReferenceVatAmount = invoice.ReferenceLineVatAmount ?? invoice.VatAmount,
-            ReferenceTotalAmount = invoice.ReferenceLineTotalAmount ?? invoice.TotalAmount,
+            ReferenceSubtotal = hasLinkedQuotation ? invoice.Quotation!.Subtotal : (invoice.ReferenceLineSubtotal ?? invoice.Subtotal),
+            ReferenceDiscountAmount = hasLinkedQuotation ? quotationReferenceDiscount : (invoice.ReferenceLineDiscountAmount ?? invoice.DiscountAmount),
+            ReferenceVatAmount = hasLinkedQuotation ? invoice.Quotation!.VatAmount : (invoice.ReferenceLineVatAmount ?? invoice.VatAmount),
+            ReferenceTotalAmount = hasLinkedQuotation ? invoice.Quotation!.TotalAmount : (invoice.ReferenceLineTotalAmount ?? invoice.TotalAmount),
             PaidAmount = invoice.PaidAmount,
             BalanceAmount = invoice.BalanceAmount,
             Status = invoice.Status,
@@ -1736,6 +1738,34 @@ public class InvoicesController : CrudControllerBase
     private static decimal CalculateReferenceLineDiscount(IEnumerable<InvoiceLineEditorViewModel> details)
     {
         return details.Sum(x => x.DiscountAmount);
+    }
+
+    private static decimal GetQuotationAppliedDiscount(QuotationHeader quotation)
+    {
+        return string.Equals(quotation.DiscountMode, "Header", StringComparison.OrdinalIgnoreCase)
+            ? quotation.HeaderDiscountAmount
+            : quotation.DiscountAmount;
+    }
+
+    private static void ApplyReferenceSnapshot(InvoiceHeader invoice, InvoiceFormViewModel model, QuotationHeader? quotation)
+    {
+        if (model.QuotationId.HasValue && quotation is not null)
+        {
+            invoice.ReferenceLineSubtotal = quotation.Subtotal;
+            invoice.ReferenceLineDiscountAmount = GetQuotationAppliedDiscount(quotation);
+            invoice.ReferenceLineVatAmount = quotation.VatAmount;
+            invoice.ReferenceLineTotalAmount = quotation.TotalAmount;
+            return;
+        }
+
+        invoice.ReferenceLineSubtotal = CalculateReferenceSubtotal(model.Details);
+        invoice.ReferenceLineDiscountAmount = model.DiscountMode == "Header"
+            ? model.HeaderDiscountAmount
+            : CalculateReferenceLineDiscount(model.Details);
+        invoice.ReferenceLineVatAmount = model.VatType == "VAT"
+            ? Math.Round(((invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m)) * 0.07m, 2, MidpointRounding.AwayFromZero)
+            : 0m;
+        invoice.ReferenceLineTotalAmount = (invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m) + (invoice.ReferenceLineVatAmount ?? 0m);
     }
 
     private string BuildIssueValidationNotice()

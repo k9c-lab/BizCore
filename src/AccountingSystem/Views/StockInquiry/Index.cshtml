@@ -1,73 +1,73 @@
 ﻿@model BizCore.Models.ViewModels.StockInquiryPageViewModel
 
 @{
-    ViewData["Title"] = "Stock Inquiry";
+    ViewData["Title"] = "สอบถามสต็อก";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Inquiry</div>
-        <h1 class="page-title">Stock Inquiry</h1>
+        <div class="page-eyebrow">สอบถามข้อมูลคลังสินค้า</div>
+        <h1 class="page-title">สอบถามสต็อก</h1>
         </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Stock Balances</h2>
+            <h2 class="section-title">ยอดคงเหลือสต็อก</h2>
             </div>
-        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label for="search" class="form-label">Search</label>
-                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Code, name, part number, type, or unit" />
+                <label for="search" class="form-label">ค้นหา</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="รหัส, ชื่อ, Part Number, ประเภท หรือหน่วยนับ" />
             </div>
             <div class="list-filter-field">
-                <label for="itemType" class="form-label">Type</label>
+                <label for="itemType" class="form-label">ประเภท</label>
                 <select id="itemType" name="itemType" class="form-select">
-                    <option value="">All</option>
-                    <option value="Product" selected="@(Model.ItemType == "Product")">Product</option>
-                    <option value="Service" selected="@(Model.ItemType == "Service")">Service</option>
-                    <option value="Spare Part" selected="@(Model.ItemType == "Spare Part")">Spare Part</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Product" selected="@(Model.ItemType == "Product")">สินค้า</option>
+                    <option value="Service" selected="@(Model.ItemType == "Service")">บริการ</option>
+                    <option value="Spare Part" selected="@(Model.ItemType == "Spare Part")">อะไหล่</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label for="status" class="form-label">Status</label>
+                <label for="status" class="form-label">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Active" selected="@(Model.Status == "Active")">Active</option>
-                    <option value="Inactive" selected="@(Model.Status == "Inactive")">Inactive</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Active" selected="@(Model.Status == "Active")">ใช้งาน</option>
+                    <option value="Inactive" selected="@(Model.Status == "Inactive")">ไม่ใช้งาน</option>
                 </select>
             </div>
             @if (Model.CanAccessAllBranches)
             {
                 <div class="list-filter-field">
-                    <label for="branchId" class="form-label">Branch</label>
+                    <label for="branchId" class="form-label">สาขา</label>
                     <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
                 </div>
             }
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         <div class="table-responsive">
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Item Code</th>
-                        <th>Item Name</th>
+                        <th>รหัสสินค้า</th>
+                        <th>ชื่อสินค้า</th>
                         <th>Part Number</th>
-                        <th>Type</th>
-                        <th>Unit</th>
-                        <th>Branch</th>
-                        <th>Current Stock</th>
-                        <th>Track Stock</th>
-                        <th>Is Serial Controlled</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th>ประเภท</th>
+                        <th>หน่วยนับ</th>
+                        <th>สาขา</th>
+                        <th>สต็อกคงเหลือ</th>
+                        <th>ติดตามสต็อก</th>
+                        <th>ควบคุม Serial</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,15 +83,15 @@
                             <td>@item.Unit</td>
                             <td>@item.BranchName</td>
                             <td>@item.CurrentStock.ToString("N2")</td>
-                            <td>@(item.TrackStock ? "Yes" : "No")</td>
-                            <td>@(item.IsSerialControlled ? "Yes" : "No")</td>
-                            <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "Active" : "Inactive")</span></td>
+                            <td>@(item.TrackStock ? "ใช่" : "ไม่ใช่")</td>
+                            <td>@(item.IsSerialControlled ? "ใช่" : "ไม่ใช่")</td>
+                            <td><span class="status-pill @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? "ใช้งาน" : "ไม่ใช้งาน")</span></td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-primary">Ledger</a>
+                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-primary">สมุดสต็อก</a>
                                     @if (item.IsSerialControlled)
                                     {
-                                        <a asp-action="Serials" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-secondary">Serials</a>
+                                        <a asp-action="Serials" asp-route-itemId="@item.ItemId" asp-route-branchId="@Model.BranchId" class="btn btn-sm btn-outline-secondary">Serial</a>
                                     }
                                 </div>
                             </td>
@@ -101,7 +101,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="11" class="table-empty">No stock records matched the current search.</td>
+                        <td colspan="11" class="table-empty">ไม่พบข้อมูลสต็อกตามเงื่อนไขที่ค้นหา</td>
                     </tr>
                 }
                 </tbody>

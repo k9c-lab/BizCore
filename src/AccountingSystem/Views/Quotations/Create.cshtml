@@ -4,11 +4,25 @@
     ViewData["Title"] = "สร้างใบเสนอราคา";
 }
 
+<style>
+    .pricing-path-card,
+    .quotation-header-section .workflow-info,
+    input[name="QuotationNumber"] + .form-text,
+    #PriceLevelId + .form-text,
+    #HeaderDiscountPercent + .form-text,
+    #HeaderDiscountAmount + .form-text,
+    textarea[name="Remarks"] + .form-text,
+    #quotationDiscountModeText {
+        display: none;
+    }
+</style>
+
 <div class="page-header">
     <div>
         <div class="page-eyebrow">งานขาย</div>
         <h1 class="page-title">สร้างใบเสนอราคา</h1>
-        </div>
+        <p class="page-subtitle">เตรียมราคาและเงื่อนไขให้ลูกค้าตรวจสอบก่อนอนุมัติและสร้างใบแจ้งหนี้ในขั้นตอนถัดไป</p>
+    </div>
     <div class="page-actions">
         <button type="submit" form="quotationForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
         <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบเสนอราคา</a>

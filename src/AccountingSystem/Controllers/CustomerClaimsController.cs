@@ -103,7 +103,7 @@ public class CustomerClaimsController : CrudControllerBase
     {
         if (!serialId.HasValue)
         {
-            TempData["CustomerClaimNotice"] = "Open customer claim from a selected sold serial.";
+            TempData["CustomerClaimNotice"] = "กรุณาเปิดเคลมลูกค้าจาก Serial ที่ขายแล้ว";
             return RedirectToAction("Index", "SerialInquiry");
         }
 
@@ -179,7 +179,7 @@ public class CustomerClaimsController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Customer claim number is already in use. Please try again.");
+            ModelState.AddModelError(string.Empty, "เลขที่เคลมลูกค้าซ้ำ กรุณาลองใหม่อีกครั้ง");
         }
 
         return View(model);
@@ -254,7 +254,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (claim.Status != "Received" && claim.Status != "Repairing")
         {
-            TempData["CustomerClaimNotice"] = "Receive the customer item before sending it to supplier.";
+            TempData["CustomerClaimNotice"] = "กรุณารับสินค้าจากลูกค้าก่อนส่งเคลมผู้ขาย";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -274,13 +274,13 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (await _context.SerialClaimLogs.AnyAsync(x => x.CustomerClaimId == claim.CustomerClaimId))
         {
-            TempData["CustomerClaimNotice"] = "This customer claim is already linked to a supplier claim.";
+            TempData["CustomerClaimNotice"] = "เคลมลูกค้านี้ถูกผูกกับเคลมผู้ขายแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
         if (await _context.SerialClaimLogs.AnyAsync(x => x.SerialId == serial.SerialId && ActiveSupplierClaimStatuses.Contains(x.ClaimStatus)))
         {
-            TempData["CustomerClaimNotice"] = "This serial already has an active supplier claim.";
+            TempData["CustomerClaimNotice"] = "Serial นี้มีเคลมผู้ขายที่ยังดำเนินการอยู่แล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -313,12 +313,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Supplier claim was created and marked as sent.";
+            TempData["CustomerClaimNotice"] = "สร้างเคลมผู้ขายและบันทึกสถานะส่งแล้วเรียบร้อย";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Send to supplier failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "ส่งเคลมผู้ขายไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -403,13 +403,13 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (claim.Status != "Received" && claim.Status != "Repairing")
         {
-            TempData["CustomerClaimNotice"] = "Supplier claim can be created only after the customer item has been received.";
+            TempData["CustomerClaimNotice"] = "สร้างเคลมผู้ขายได้หลังจากรับสินค้าจากลูกค้าแล้วเท่านั้น";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
         if (await _context.SerialClaimLogs.AnyAsync(x => x.CustomerClaimId == claim.CustomerClaimId))
         {
-            TempData["CustomerClaimNotice"] = "This customer claim is already linked to a supplier claim.";
+            TempData["CustomerClaimNotice"] = "เคลมลูกค้านี้ถูกผูกกับเคลมผู้ขายแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -429,7 +429,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (await _context.SerialClaimLogs.AnyAsync(x => x.SerialId == serial.SerialId && ActiveSupplierClaimStatuses.Contains(x.ClaimStatus)))
         {
-            TempData["CustomerClaimNotice"] = "This serial already has an active supplier claim.";
+            TempData["CustomerClaimNotice"] = "Serial นี้มีเคลมผู้ขายที่ยังดำเนินการอยู่แล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -460,12 +460,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Supplier claim was created and linked to this customer claim.";
+            TempData["CustomerClaimNotice"] = "สร้างเคลมผู้ขายและผูกกับเคลมลูกค้านี้เรียบร้อย";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Supplier claim creation failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "สร้างเคลมผู้ขายไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -477,7 +477,7 @@ public class CustomerClaimsController : CrudControllerBase
     {
         if (!replacementSerialId.HasValue)
         {
-            TempData["CustomerClaimNotice"] = "Select a replacement serial before assigning replacement.";
+            TempData["CustomerClaimNotice"] = "กรุณาเลือก Serial ทดแทนก่อนกำหนดการเปลี่ยนสินค้า";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -493,7 +493,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (claim.Status != "Received" && claim.Status != "Repairing" && claim.Status != "SentToSupplier" && claim.Status != "ReadyToReturn")
         {
-            TempData["CustomerClaimNotice"] = "Replacement can be assigned only while the claim is active and before return to customer.";
+            TempData["CustomerClaimNotice"] = "กำหนด Serial ทดแทนได้เฉพาะช่วงที่เคลมยังดำเนินการอยู่และก่อนคืนลูกค้า";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -505,7 +505,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (detail.ReplacementSerialId.HasValue)
         {
-            TempData["CustomerClaimNotice"] = "This customer claim already has a replacement serial.";
+            TempData["CustomerClaimNotice"] = "เคลมลูกค้านี้มี Serial ทดแทนอยู่แล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -558,12 +558,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Replacement serial was assigned and claim is ready to return.";
+            TempData["CustomerClaimNotice"] = "กำหนด Serial ทดแทนเรียบร้อย และเคลมพร้อมคืนลูกค้าแล้ว";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Replacement assignment failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "กำหนด Serial ทดแทนไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -584,13 +584,13 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (!CancelAllowedStatuses.Contains(claim.Status))
         {
-            TempData["CustomerClaimNotice"] = "Only open, received, repairing, or ready-to-return customer claims can be cancelled.";
+            TempData["CustomerClaimNotice"] = "ยกเลิกได้เฉพาะเคลมลูกค้าที่สถานะเปิด รับสินค้าแล้ว กำลังซ่อม หรือพร้อมคืนลูกค้า";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
         if (HasReplacementSerial(claim))
         {
-            TempData["CustomerClaimNotice"] = "Cancel claim is blocked because a replacement serial has already been assigned.";
+            TempData["CustomerClaimNotice"] = "ยังยกเลิกเคลมไม่ได้ เพราะมีการกำหนด Serial ทดแทนแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -616,12 +616,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim was cancelled and serial status was restored to Sold.";
+            TempData["CustomerClaimNotice"] = "ยกเลิกเคลมลูกค้าเรียบร้อย และคืนสถานะ Serial เป็นขายแล้ว";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim cancellation failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "ยกเลิกเคลมลูกค้าไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -707,7 +707,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (!allowedStatuses.Contains(claim.Status))
         {
-            TempData["CustomerClaimNotice"] = $"Action is not available while claim status is {claim.Status}.";
+            TempData["CustomerClaimNotice"] = $"ไม่สามารถทำรายการนี้ได้ในสถานะ {claim.Status}";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -742,7 +742,7 @@ public class CustomerClaimsController : CrudControllerBase
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim workflow action failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "ทำรายการ workflow เคลมลูกค้าไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -758,7 +758,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (claim.Status != "ReadyToReturn")
         {
-            TempData["CustomerClaimNotice"] = "Return to customer is available only after the claim is ready to return.";
+            TempData["CustomerClaimNotice"] = "คืนลูกค้าได้หลังจากเคลมอยู่ในสถานะพร้อมคืนลูกค้าเท่านั้น";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -789,12 +789,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim item was returned to customer.";
+            TempData["CustomerClaimNotice"] = "คืนสินค้าให้ลูกค้าเรียบร้อยแล้ว";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim workflow action failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "ทำรายการ workflow เคลมลูกค้าไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -810,7 +810,7 @@ public class CustomerClaimsController : CrudControllerBase
 
         if (claim.Status != "ReturnedToCustomer" && claim.Status != "Rejected")
         {
-            TempData["CustomerClaimNotice"] = "Close claim is available only after return to customer or rejection.";
+            TempData["CustomerClaimNotice"] = "ปิดเคลมได้หลังจากคืนลูกค้าหรือปฏิเสธเคลมแล้วเท่านั้น";
             return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
         }
 
@@ -837,12 +837,12 @@ public class CustomerClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim was closed.";
+            TempData["CustomerClaimNotice"] = "ปิดเคลมลูกค้าเรียบร้อยแล้ว";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["CustomerClaimNotice"] = "Customer claim workflow action failed. No changes were saved.";
+            TempData["CustomerClaimNotice"] = "ทำรายการ workflow เคลมลูกค้าไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.CustomerClaimId });
@@ -991,7 +991,7 @@ public class CustomerClaimsController : CrudControllerBase
         if (await HasOpenClaimAsync(serial.SerialId))
         {
             model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "This serial already has an open customer claim.";
+            model.ClaimBlockMessage = "Serial นี้มีเคลมลูกค้าที่เปิดค้างอยู่แล้ว";
         }
     }
 
@@ -1023,7 +1023,7 @@ public class CustomerClaimsController : CrudControllerBase
         if (await HasOpenClaimAsync(serial.SerialId))
         {
             model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "This serial already has an open customer claim.";
+            model.ClaimBlockMessage = "Serial นี้มีเคลมลูกค้าที่เปิดค้างอยู่แล้ว";
             ModelState.AddModelError(string.Empty, model.ClaimBlockMessage);
         }
     }
@@ -1032,27 +1032,27 @@ public class CustomerClaimsController : CrudControllerBase
     {
         if (!string.Equals(serial.Status, "Sold", StringComparison.OrdinalIgnoreCase))
         {
-            return $"Customer claim is available only for Sold serials. Current status is {serial.Status}.";
+            return $"เปิดเคลมลูกค้าได้เฉพาะ Serial ที่ขายแล้วเท่านั้น สถานะปัจจุบันคือ {serial.Status}";
         }
 
         if (!serial.CurrentCustomerId.HasValue)
         {
-            return "Customer claim is blocked because this serial is not linked to a customer.";
+            return "ยังเปิดเคลมลูกค้าไม่ได้ เพราะ Serial นี้ยังไม่ผูกกับลูกค้า";
         }
 
         if (!serial.InvoiceId.HasValue)
         {
-            return "Customer claim is blocked because this serial is not linked to an invoice.";
+            return "ยังเปิดเคลมลูกค้าไม่ได้ เพราะ Serial นี้ยังไม่ผูกกับใบแจ้งหนี้";
         }
 
         if (serial.CustomerWarrantyStartDate.HasValue && claimDate.Date < serial.CustomerWarrantyStartDate.Value.Date)
         {
-            return "Claim date cannot be earlier than the customer warranty start date.";
+            return "วันที่เคลมห้ามก่อนวันเริ่มประกันลูกค้า";
         }
 
         if (serial.CustomerWarrantyEndDate.HasValue && claimDate.Date > serial.CustomerWarrantyEndDate.Value.Date)
         {
-            return "Customer warranty has expired. Claim creation is not allowed for this serial.";
+            return "ประกันลูกค้าหมดอายุแล้ว ไม่สามารถสร้างเคลมสำหรับ Serial นี้ได้";
         }
 
         return null;

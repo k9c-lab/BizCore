@@ -22,6 +22,16 @@
             })
         }),
         new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    var customerLookupJson = JsonSerializer.Serialize(
+        Model.CustomerOptions
+            .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+            .Select(x => new
+            {
+                customerId = x.Value,
+                displayText = x.Text ?? string.Empty
+            }),
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+    var selectedCustomerText = Model.CustomerOptions.FirstOrDefault(x => x.Value == Model.CustomerId?.ToString())?.Text ?? string.Empty;
 }
 
 <div class="page-header">
@@ -75,7 +85,16 @@
                         </div>
                         <div class="col-lg-3 col-md-6">
                             <label asp-for="CustomerId" class="form-label"></label>
-                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions" class="form-select">
+                            <div class="search-dropdown mb-2">
+                                <input type="text"
+                                       id="billingCustomerSearch"
+                                       class="form-control"
+                                       autocomplete="off"
+                                       placeholder="ค้นหาลูกค้า"
+                                       value="@selectedCustomerText" />
+                                <div id="billingCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                            </div>
+                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions" class="form-select d-none" tabindex="-1" aria-hidden="true">
                                 <option value="">เลือกลูกค้า</option>
                             </select>
                             <span asp-validation-for="CustomerId" class="text-danger"></span>
@@ -130,7 +149,16 @@
                         <div class="list-filter-bar">
                             <div class="list-filter-field grow">
                                 <label class="form-label" for="filterCustomerId">ลูกค้า</label>
-                                <select id="filterCustomerId" class="form-select" asp-items="Model.CustomerOptions">
+                                <div class="search-dropdown mb-2">
+                                    <input type="text"
+                                           id="filterCustomerSearch"
+                                           class="form-control"
+                                           autocomplete="off"
+                                           placeholder="ค้นหาลูกค้า"
+                                           value="@selectedCustomerText" />
+                                    <div id="filterCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                                </div>
+                                <select id="filterCustomerId" class="form-select d-none" asp-items="Model.CustomerOptions" tabindex="-1" aria-hidden="true">
                                     <option value="">เลือกลูกค้า</option>
                                 </select>
                             </div>
@@ -302,10 +330,16 @@
             const summaryModeTreatmentRight = 'TreatmentRight';
             const summaryModeItem = 'Item';
             const invoiceLookup = new Map((@Html.Raw(availableInvoicesJson)).map(x => [String(x.invoiceId), x]));
+            const customerLookup = @Html.Raw(customerLookupJson);
+            const customerMap = Object.fromEntries(customerLookup.map(x => [String(x.customerId), x]));
 
             const loadButton = document.getElementById('loadBillingInvoicesButton');
             const headerCustomerId = document.getElementById('@Html.IdFor(x => x.CustomerId)');
             const filterCustomerId = document.getElementById('filterCustomerId');
+            const headerCustomerSearch = document.getElementById('billingCustomerSearch');
+            const headerCustomerResults = document.getElementById('billingCustomerResults');
+            const filterCustomerSearch = document.getElementById('filterCustomerSearch');
+            const filterCustomerResults = document.getElementById('filterCustomerResults');
             const filterSearch = document.getElementById('filterSearch');
             const filterDateFrom = document.getElementById('filterDateFrom');
             const filterDateTo = document.getElementById('filterDateTo');
@@ -401,6 +435,132 @@
                 if (target.value !== source.value) {
                     target.value = source.value;
                 }
+            }
+
+            function getCustomerDisplayText(customerId) {
+                if (!customerId) {
+                    return '';
+                }
+
+                return customerMap[String(customerId)]?.displayText || '';
+            }
+
+            function hideCustomerResults(resultsTarget) {
+                if (!resultsTarget) {
+                    return;
+                }
+
+                resultsTarget.style.display = 'none';
+                resultsTarget.innerHTML = '';
+            }
+
+            function renderCustomerResults(query, resultsTarget) {
+                if (!resultsTarget) {
+                    return;
+                }
+
+                const keyword = (query || '').trim().toLowerCase();
+                const matches = customerLookup
+                    .filter(customer => !keyword || (customer.displayText || '').toLowerCase().includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    resultsTarget.innerHTML = '<div class="search-dropdown-empty">ไม่พบลูกค้าที่ค้นหา</div>';
+                    resultsTarget.style.display = '';
+                    return;
+                }
+
+                resultsTarget.innerHTML = matches
+                    .map(customer => `
+                        <button type="button" class="search-dropdown-option" data-customer-id="${customer.customerId}">
+                            <span class="search-dropdown-title">${customer.displayText}</span>
+                        </button>`)
+                    .join('');
+                resultsTarget.style.display = '';
+            }
+
+            function applyCustomerSelection(customerId) {
+                const customerText = getCustomerDisplayText(customerId);
+
+                if (headerCustomerId) {
+                    headerCustomerId.value = customerId || '';
+                }
+
+                if (filterCustomerId) {
+                    filterCustomerId.value = customerId || '';
+                }
+
+                if (headerCustomerSearch) {
+                    headerCustomerSearch.value = customerText;
+                    if (customerId) {
+                        headerCustomerSearch.dataset.selectedCustomerId = String(customerId);
+                    } else {
+                        delete headerCustomerSearch.dataset.selectedCustomerId;
+                    }
+                }
+
+                if (filterCustomerSearch) {
+                    filterCustomerSearch.value = customerText;
+                    if (customerId) {
+                        filterCustomerSearch.dataset.selectedCustomerId = String(customerId);
+                    } else {
+                        delete filterCustomerSearch.dataset.selectedCustomerId;
+                    }
+                }
+
+                hideCustomerResults(headerCustomerResults);
+                hideCustomerResults(filterCustomerResults);
+            }
+
+            function bindCustomerSearch(searchInput, resultsTarget) {
+                if (!searchInput || !resultsTarget) {
+                    return;
+                }
+
+                searchInput.addEventListener('input', () => {
+                    delete searchInput.dataset.selectedCustomerId;
+
+                    if (headerCustomerId) {
+                        headerCustomerId.value = '';
+                    }
+
+                    if (filterCustomerId) {
+                        filterCustomerId.value = '';
+                    }
+
+                    clearValidationSummary();
+                    renderCustomerResults(searchInput.value, resultsTarget);
+                });
+
+                searchInput.addEventListener('focus', () => {
+                    renderCustomerResults(searchInput.value, resultsTarget);
+                });
+
+                resultsTarget.addEventListener('click', event => {
+                    const option = event.target.closest('[data-customer-id]');
+                    if (!option) {
+                        return;
+                    }
+
+                    applyCustomerSelection(option.dataset.customerId);
+                    clearValidationSummary();
+                });
+
+                searchInput.addEventListener('blur', () => {
+                    window.setTimeout(() => {
+                        const selectedId = searchInput.dataset.selectedCustomerId;
+                        const exactMatch = customerLookup.find(customer =>
+                            (customer.displayText || '').toLowerCase() === (searchInput.value || '').trim().toLowerCase());
+
+                        if (selectedId && customerMap[selectedId]) {
+                            applyCustomerSelection(selectedId);
+                        } else if (exactMatch) {
+                            applyCustomerSelection(exactMatch.customerId);
+                        } else {
+                            applyCustomerSelection('');
+                        }
+                    }, 120);
+                });
             }
 
             function getSelectedInvoices() {
@@ -619,7 +779,7 @@
                 loadButton.addEventListener('click', () => {
                     if (!filterCustomerId?.value) {
                         setValidationSummary('กรุณาเลือกลูกค้าก่อนโหลดใบแจ้งหนี้');
-                        filterCustomerId?.focus();
+                        filterCustomerSearch?.focus();
                         return;
                     }
 
@@ -628,19 +788,9 @@
                 });
             }
 
-            if (headerCustomerId && filterCustomerId) {
-                headerCustomerId.addEventListener('change', () => {
-                    syncCustomerSelection(headerCustomerId, filterCustomerId);
-                    clearValidationSummary();
-                });
-
-                filterCustomerId.addEventListener('change', () => {
-                    syncCustomerSelection(filterCustomerId, headerCustomerId);
-                    clearValidationSummary();
-                });
-
-                syncCustomerSelection(headerCustomerId, filterCustomerId);
-            }
+            bindCustomerSearch(headerCustomerSearch, headerCustomerResults);
+            bindCustomerSearch(filterCustomerSearch, filterCustomerResults);
+            applyCustomerSelection(headerCustomerId?.value || filterCustomerId?.value || '');
 
             if (summaryModeSelect) {
                 summaryModeSelect.addEventListener('change', renderSummary);

@@ -1,14 +1,14 @@
 @model BizCore.Models.Entities.SerialClaimLog
 
 @{
-    ViewData["Title"] = "Supplier Claim Details";
+    ViewData["Title"] = "รายละเอียดเคลมผู้ขาย";
     var dateValue = DateTime.Today.ToString("yyyy-MM-dd");
     var canMarkSent = Model.ClaimStatus == "Open";
-    var markSentBlockedReason = canMarkSent ? string.Empty : "Mark sent is available only for Open supplier claims.";
+    var markSentBlockedReason = canMarkSent ? string.Empty : "บันทึกส่งได้เฉพาะเคลมผู้ขายสถานะเปิดเคลม";
     var canReceiveResult = Model.ClaimStatus == "Open" || Model.ClaimStatus == "Sent";
-    var receiveBlockedReason = canReceiveResult ? string.Empty : "Receiving supplier result is available only for Open or Sent supplier claims.";
+    var receiveBlockedReason = canReceiveResult ? string.Empty : "รับผลจากผู้ขายได้เฉพาะเคลมผู้ขายสถานะเปิดเคลมหรือส่งแล้ว";
     var canClose = Model.ClaimStatus == "Returned" || Model.ClaimStatus == "Replaced" || Model.ClaimStatus == "Rejected";
-    var closeBlockedReason = canClose ? string.Empty : "Close is available only after supplier claim result is received.";
+    var closeBlockedReason = canClose ? string.Empty : "ปิดเคลมได้หลังจากบันทึกผลจากผู้ขายแล้วเท่านั้น";
     var workflowReasons = new[] { markSentBlockedReason, closeBlockedReason }
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .Distinct()
@@ -22,25 +22,25 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Supplier Claim Module</div>
-        <h1 class="page-title">Supplier Claim Details</h1>
-        <p class="page-subtitle">Track supplier repair, replacement, rejection, and close-out for a claimed serial.</p>
+        <div class="page-eyebrow">โมดูลรับประกันผู้ขาย</div>
+        <h1 class="page-title">รายละเอียดเคลมผู้ขาย</h1>
+        <p class="page-subtitle">ติดตามการซ่อม การเปลี่ยนสินค้า การปฏิเสธ และการปิดงานของ Serial ที่ส่งเคลมผู้ขาย</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
         @if (canMarkSent)
         {
             <form asp-action="MarkSent" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="date" name="sentDate" value="@dateValue" class="form-control form-control-sm" title="Sent date" />
+                <input type="date" name="sentDate" value="@dateValue" class="form-control form-control-sm" title="วันที่ส่ง" />
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="markSentSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Mark Sent</button>
+                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="markSentSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">บันทึกส่ง</button>
                     <div class="confirm-popover" id="markSentSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
-                        <div class="confirm-popover-title">Mark this supplier claim as sent?</div>
-                        <div class="confirm-popover-text">This will mark the claim as sent out to the supplier.</div>
+                        <div class="confirm-popover-title">บันทึกว่าได้ส่งเคลมผู้ขายนี้แล้วหรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะเปลี่ยนสถานะเคลมเป็นส่งไปยังผู้ขายแล้ว</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -48,21 +48,21 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@markSentBlockedReason">Mark Sent</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@markSentBlockedReason">บันทึกส่ง</button>
         }
         @if (canClose)
         {
             <form asp-action="Close" asp-route-id="@Model.SerialClaimLogId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
+                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="วันที่ปิดเคลม" />
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">Close Claim</button>
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeSupplierClaimConfirm_@Model.SerialClaimLogId" aria-expanded="false">ปิดเคลม</button>
                     <div class="confirm-popover" id="closeSupplierClaimConfirm_@Model.SerialClaimLogId" hidden>
-                        <div class="confirm-popover-title">Close this supplier claim?</div>
-                        <div class="confirm-popover-text">This will close the supplier claim after the result has been recorded.</div>
+                        <div class="confirm-popover-title">ปิดเคลมผู้ขายนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะปิดเคลมผู้ขายหลังจากบันทึกผลเรียบร้อยแล้ว</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -70,7 +70,7 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">Close Claim</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">ปิดเคลม</button>
         }
     </div>
 </div>
@@ -88,13 +88,13 @@
 <div class="card content-card mb-3">
     <div class="card-body form-shell">
         <div class="form-section">
-            <div class="form-section-title">Claim Information</div>
+            <div class="form-section-title">ข้อมูลเคลม</div>
             <div class="detail-grid">
-                <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.ClaimDate.ToString("dd MMM yyyy")</p></div>
-                <div class="detail-item"><span class="detail-label">Claim Status</span><p class="detail-value">@Model.ClaimStatus</p></div>
-                <div class="detail-item"><span class="detail-label">Result Type</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ResultType) ? "-" : Model.ResultType)</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่เคลม</span><p class="detail-value">@Model.ClaimDate.ToString("dd MMM yyyy")</p></div>
+                <div class="detail-item"><span class="detail-label">สถานะเคลม</span><p class="detail-value">@(Model.ClaimStatus == "Open" ? "เปิดเคลม" : Model.ClaimStatus == "Sent" ? "ส่งแล้ว" : Model.ClaimStatus == "Returned" ? "รับของเดิมกลับแล้ว" : Model.ClaimStatus == "Replaced" ? "ได้รับของทดแทน" : Model.ClaimStatus == "Rejected" ? "ปฏิเสธเคลม" : Model.ClaimStatus == "Closed" ? "ปิดเคลม" : Model.ClaimStatus)</p></div>
+                <div class="detail-item"><span class="detail-label">ผลลัพธ์</span><p class="detail-value">@(string.IsNullOrWhiteSpace(Model.ResultType) ? "-" : Model.ResultType)</p></div>
                 <div class="detail-item">
-                    <span class="detail-label">Customer Claim</span>
+                    <span class="detail-label">เคลมลูกค้า</span>
                     <p class="detail-value">
                         @if (Model.CustomerClaimHeader is not null)
                         {
@@ -106,61 +106,61 @@
                         }
                     </p>
                 </div>
-                <div class="detail-item"><span class="detail-label">Created Date</span><p class="detail-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p></div>
-                <div class="detail-item"><span class="detail-label">Sent Date</span><p class="detail-value">@(Model.SentDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
-                <div class="detail-item"><span class="detail-label">Received Date</span><p class="detail-value">@(Model.ReceivedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
-                <div class="detail-item"><span class="detail-label">Closed Date</span><p class="detail-value">@(Model.ClosedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่สร้าง</span><p class="detail-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่ส่ง</span><p class="detail-value">@(Model.SentDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่รับผล</span><p class="detail-value">@(Model.ReceivedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่ปิดเคลม</span><p class="detail-value">@(Model.ClosedDate?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</p></div>
             </div>
         </div>
 
         <div class="form-section">
-            <div class="form-section-title">Supplier</div>
+            <div class="form-section-title">ผู้ขาย</div>
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Supplier Information</div>
+                <div class="quotation-info-card-title">ข้อมูลผู้ขาย</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Supplier Name</span>
+                        <span class="quotation-info-label">ชื่อผู้ขาย</span>
                         <span class="quotation-info-value">@Model.Supplier?.SupplierName</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Supplier Code</span>
+                        <span class="quotation-info-label">รหัสผู้ขาย</span>
                         <span class="quotation-info-value">@(Model.Supplier?.SupplierCode ?? "-")</span>
                     </div>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Phone</span>
+                        <span class="quotation-info-label">โทรศัพท์</span>
                         <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.PhoneNumber) ? "-" : Model.Supplier!.PhoneNumber)</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Email</span>
+                        <span class="quotation-info-label">อีเมล</span>
                         <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Email) ? "-" : Model.Supplier!.Email)</span>
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Address</span>
+                    <span class="quotation-info-label">ที่อยู่</span>
                     <span class="quotation-info-value">@(string.IsNullOrWhiteSpace(Model.Supplier?.Address) ? "-" : Model.Supplier!.Address)</span>
                 </div>
             </div>
         </div>
 
         <div class="form-section">
-            <div class="form-section-title">Serial / Item</div>
+            <div class="form-section-title">Serial / สินค้า</div>
             <div class="quotation-info-card">
-                <div class="quotation-info-card-title">Serial / Item Information</div>
+                <div class="quotation-info-card-title">ข้อมูล Serial / สินค้า</div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Serial No.</span>
+                        <span class="quotation-info-label">หมายเลข Serial</span>
                         <span class="quotation-info-value">@Model.SerialNumber?.SerialNo</span>
                     </div>
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Current Serial Status</span>
+                        <span class="quotation-info-label">สถานะ Serial ปัจจุบัน</span>
                         <span class="quotation-info-value">@Model.SerialNumber?.Status</span>
                     </div>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">
-                        <span class="quotation-info-label">Item</span>
+                        <span class="quotation-info-label">สินค้า</span>
                         <span class="quotation-info-value">@Model.SerialNumber?.Item?.ItemCode - @Model.SerialNumber?.Item?.ItemName</span>
                     </div>
                     <div class="quotation-info-field">
@@ -169,17 +169,17 @@
                     </div>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Supplier Warranty</span>
-                    <span class="quotation-info-value">@(Model.SerialNumber?.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(Model.SerialNumber?.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                    <span class="quotation-info-label">ประกันผู้ขาย</span>
+                    <span class="quotation-info-value">@(Model.SerialNumber?.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") ถึง @(Model.SerialNumber?.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
                 </div>
             </div>
         </div>
 
         <div class="form-section">
-            <div class="form-section-title">Problem / Remark</div>
+            <div class="form-section-title">อาการ / หมายเหตุ</div>
             <div class="detail-grid">
-                <div class="detail-item"><span class="detail-label">Problem Description</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
-                <div class="detail-item"><span class="detail-label">Remark</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
+                <div class="detail-item"><span class="detail-label">อาการ/ปัญหา</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.ProblemDescription) ? "-" : Model.ProblemDescription)</p></div>
+                <div class="detail-item"><span class="detail-label">หมายเหตุ</span><p class="detail-value quote-notes">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</p></div>
             </div>
         </div>
 

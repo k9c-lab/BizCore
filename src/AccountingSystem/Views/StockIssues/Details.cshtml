@@ -1,17 +1,17 @@
 @model BizCore.Models.Entities.StockIssueHeader
 
 @{
-    ViewData["Title"] = "Stock Issue Details";
+    ViewData["Title"] = "รายละเอียดใบเบิกสต็อก";
     var canEdit = Model.Status == "Draft";
-    var editBlockedReason = canEdit ? string.Empty : $"Edit is available only for Draft stock issues. Current status is {Model.Status}.";
+    var editBlockedReason = canEdit ? string.Empty : $"แก้ไขได้เฉพาะใบเบิกสถานะฉบับร่าง สถานะปัจจุบันคือ {Model.Status}.";
     var canPost = Model.Status == "Draft" && Model.StockIssueDetails.Any();
     var postBlockedReason = canPost
         ? string.Empty
         : Model.Status != "Draft"
-            ? $"Post is available only for Draft stock issues. Current status is {Model.Status}."
-            : "Post is blocked because no issue lines exist.";
+            ? $"ลงรายการได้เฉพาะใบเบิกสถานะฉบับร่าง สถานะปัจจุบันคือ {Model.Status}."
+            : "ยังลงรายการไม่ได้ เพราะยังไม่มีรายการเบิก";
     var canCancel = Model.Status == "Draft" || Model.Status == "Posted";
-    var cancelBlockedReason = canCancel ? string.Empty : "Cancelled stock issues are read-only.";
+    var cancelBlockedReason = canCancel ? string.Empty : "ใบเบิกที่ยกเลิกแล้วจะเป็นแบบอ่านอย่างเดียว";
 }
 
 @if (TempData["StockIssueNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -21,18 +21,18 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Module</div>
-        <h1 class="page-title">Stock Issue Details</h1>
-        <p class="page-subtitle">Review stock deduction, serials, and document history.</p>
+        <div class="page-eyebrow">โมดูลคลังสินค้า</div>
+        <h1 class="page-title">รายละเอียดใบเบิกสต็อก</h1>
+        <p class="page-subtitle">ตรวจสอบการตัดสต็อก รายการ Serial และประวัติเอกสาร</p>
     </div>
     <div class="page-actions">
         @if (canEdit)
         {
-            <a asp-action="Edit" asp-route-id="@Model.StockIssueId" class="btn btn-primary">Edit Issue</a>
+            <a asp-action="Edit" asp-route-id="@Model.StockIssueId" class="btn btn-primary">แก้ไขใบเบิก</a>
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">Edit Issue</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@editBlockedReason">แก้ไขใบเบิก</button>
         }
         @if (canPost)
         {
@@ -43,14 +43,14 @@
                             class="btn btn-success js-confirm-popover-toggle"
                             data-confirm-target="postStockIssueDetailsConfirm_@Model.StockIssueId"
                             aria-expanded="false">
-                        Post Issue
+                        ลงรายการใบเบิก
                     </button>
                     <div class="confirm-popover" id="postStockIssueDetailsConfirm_@Model.StockIssueId" hidden>
-                        <div class="confirm-popover-title">Post this stock issue?</div>
-                        <div class="confirm-popover-text">This will deduct stock from the selected branch and finalize the issue document.</div>
+                        <div class="confirm-popover-title">ลงรายการใบเบิกสต็อกนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะตัดสต็อกจากสาขาที่เลือกและปิดเอกสารใบเบิกนี้</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-success">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">Post Issue</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@postBlockedReason">ลงรายการใบเบิก</button>
         }
         @if (canCancel)
         {
@@ -69,18 +69,18 @@
                             class="btn btn-outline-danger js-confirm-popover-toggle"
                             data-confirm-target="cancelStockIssueDetailsConfirm_@Model.StockIssueId"
                             aria-expanded="false">
-                        Cancel Issue
+                        ยกเลิกใบเบิก
                     </button>
                     <div class="confirm-popover" id="cancelStockIssueDetailsConfirm_@Model.StockIssueId" hidden>
-                        <div class="confirm-popover-title">Cancel this stock issue?</div>
-                        <div class="confirm-popover-text">Optional reason helps explain why this stock issue was cancelled.</div>
+                        <div class="confirm-popover-title">ยกเลิกใบเบิกสต็อกนี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบุเหตุผลเพิ่มเติมได้ เพื่อใช้อธิบายการยกเลิกเอกสารนี้</div>
                         <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="cancelStockIssueDetailsReason_@Model.StockIssueId">Cancel Reason</label>
-                            <textarea id="cancelStockIssueDetailsReason_@Model.StockIssueId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                            <label class="confirm-popover-label" for="cancelStockIssueDetailsReason_@Model.StockIssueId">เหตุผลที่ยกเลิก</label>
+                            <textarea id="cancelStockIssueDetailsReason_@Model.StockIssueId" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)"></textarea>
                         </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -88,9 +88,9 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Issue</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกใบเบิก</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
     </div>
 </div>
 
@@ -104,54 +104,54 @@
     <div class="card-body">
         <div class="form-shell">
             <div class="form-section quotation-header-section">
-                <div class="form-section-title">Issue Header</div>
+                <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Issue No.</div>
+                        <div class="detail-label">เลขที่ใบเบิก</div>
                         <div class="form-control readonly-detail">@Model.IssueNo</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Issue Date</div>
+                        <div class="detail-label">วันที่เบิก</div>
                         <div class="form-control readonly-detail">@Model.IssueDate.ToString("dd MMM yyyy")</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Issue Type</div>
-                        <div class="form-control readonly-detail">@Model.IssueType</div>
+                        <div class="detail-label">ประเภทการเบิก</div>
+                        <div class="form-control readonly-detail">@(Model.IssueType == "InternalUse" ? "ใช้ภายใน" : Model.IssueType == "Damaged" ? "ชำรุด" : Model.IssueType == "Demo" ? "สาธิต" : Model.IssueType == "Adjustment" ? "ปรับปรุง" : Model.IssueType == "Other" ? "อื่น ๆ" : Model.IssueType)</div>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="form-control readonly-detail">@Model.Status</div>
+                        <div class="detail-label">สถานะ</div>
+                        <div class="form-control readonly-detail">@(Model.Status == "Draft" ? "ฉบับร่าง" : Model.Status == "Posted" ? "ลงรายการแล้ว" : Model.Status == "Cancelled" ? "ยกเลิกแล้ว" : Model.Status)</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="detail-label">Branch</div>
+                        <div class="detail-label">สาขา</div>
                         <div class="form-control readonly-detail">@(Model.Branch?.BranchName ?? "-")</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="detail-label">Total Qty</div>
+                        <div class="detail-label">จำนวนรวม</div>
                         <div class="form-control readonly-detail">@Model.StockIssueDetails.Sum(x => x.Qty).ToString("N2")</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="detail-label">Purpose</div>
+                        <div class="detail-label">วัตถุประสงค์</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.Purpose) ? "-" : Model.Purpose)</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="detail-label">Remark</div>
+                        <div class="detail-label">หมายเหตุ</div>
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
                     </div>
                 </div>
             </div>
 
             <div class="form-section">
-                <div class="form-section-title mb-3">Issued Items</div>
+                <div class="form-section-title mb-3">รายการสินค้าที่เบิก</div>
                 <div class="table-responsive">
                     <table class="table entity-table quote-editor-table align-middle">
                         <thead>
                             <tr>
                                 <th style="width: 6%;">#</th>
-                                <th>Item</th>
-                                <th style="width: 14%;">Qty</th>
-                                <th style="width: 34%;">Serial Numbers</th>
-                                <th style="width: 22%;">Remark</th>
+                                <th>สินค้า</th>
+                                <th style="width: 14%;">จำนวน</th>
+                                <th style="width: 34%;">หมายเลข Serial</th>
+                                <th style="width: 22%;">หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -192,25 +192,25 @@
             </div>
 
             <div class="form-section document-history-section">
-                <div class="form-section-title">Document History</div>
+                <div class="form-section-title">ประวัติเอกสาร</div>
                 <div class="document-history-list">
                     <div class="document-history-row">
-                        <span class="document-history-label">Created</span>
+                        <span class="document-history-label">สร้างโดย</span>
                         <span class="document-history-value">@(Model.CreatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Updated</span>
+                        <span class="document-history-label">แก้ไขล่าสุด</span>
                         <span class="document-history-value">@(Model.UpdatedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.UpdatedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Posted</span>
+                        <span class="document-history-label">ลงรายการโดย</span>
                         <span class="document-history-value">@(Model.PostedByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.PostedDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
                     <div class="document-history-row">
-                        <span class="document-history-label">Cancelled</span>
+                        <span class="document-history-label">ยกเลิกโดย</span>
                         <span class="document-history-value">@(Model.CancelledByUser?.DisplayName ?? "-")</span>
                         <span class="document-history-meta">@(Model.CancelledDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</span>
                     </div>
@@ -218,7 +218,7 @@
                 @if (Model.Status == "Cancelled")
                 {
                     <div class="document-history-reason">
-                        <span class="document-history-label">Cancel Reason</span>
+                        <span class="document-history-label">เหตุผลที่ยกเลิก</span>
                         <span class="document-history-value">@(string.IsNullOrWhiteSpace(Model.CancelReason) ? "-" : Model.CancelReason)</span>
                     </div>
                 }

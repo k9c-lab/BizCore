@@ -1,7 +1,7 @@
 ﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.CustomerClaimHeader>
 
 @{
-    ViewData["Title"] = "Customer Claims";
+    ViewData["Title"] = "เคลมลูกค้า";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -15,50 +15,50 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Warranty Module</div>
-        <h1 class="page-title">Customer Claims</h1>
+        <div class="page-eyebrow">โมดูลรับประกัน</div>
+        <h1 class="page-title">เคลมลูกค้า</h1>
         </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Customer Claim Register</h2>
+            <h2 class="section-title">รายการเคลมลูกค้า</h2>
             </div>
-        <div class="table-meta">@Model.TotalCount record(s)</div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Claim no., customer, serial, item, invoice, or problem" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่เคลม, ลูกค้า, Serial, สินค้า, ใบแจ้งหนี้ หรืออาการเสีย" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Open" selected="@(status == "Open")">Open</option>
-                    <option value="Received" selected="@(status == "Received")">Received</option>
-                    <option value="SentToSupplier" selected="@(status == "SentToSupplier")">Sent To Supplier</option>
-                    <option value="Repairing" selected="@(status == "Repairing")">Repairing</option>
-                    <option value="ReadyToReturn" selected="@(status == "ReadyToReturn")">Ready To Return</option>
-                    <option value="ReturnedToCustomer" selected="@(status == "ReturnedToCustomer")">Returned To Customer</option>
-                    <option value="Rejected" selected="@(status == "Rejected")">Rejected</option>
-                    <option value="Closed" selected="@(status == "Closed")">Closed</option>
-                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Open" selected="@(status == "Open")">เปิดเคลม</option>
+                    <option value="Received" selected="@(status == "Received")">รับสินค้าแล้ว</option>
+                    <option value="SentToSupplier" selected="@(status == "SentToSupplier")">ส่งเคลมผู้ขาย</option>
+                    <option value="Repairing" selected="@(status == "Repairing")">กำลังซ่อม</option>
+                    <option value="ReadyToReturn" selected="@(status == "ReadyToReturn")">พร้อมคืนลูกค้า</option>
+                    <option value="ReturnedToCustomer" selected="@(status == "ReturnedToCustomer")">คืนลูกค้าแล้ว</option>
+                    <option value="Rejected" selected="@(status == "Rejected")">ปฏิเสธเคลม</option>
+                    <option value="Closed" selected="@(status == "Closed")">ปิดเคลม</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิก</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">ตั้งแต่วันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
 
@@ -66,14 +66,14 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Claim No.</th>
-                        <th>Claim Date</th>
-                        <th>Customer</th>
-                        <th>Serial No.</th>
-                        <th>Item</th>
-                        <th>Invoice</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th>เลขที่เคลม</th>
+                        <th>วันที่เคลม</th>
+                        <th>ลูกค้า</th>
+                        <th>Serial</th>
+                        <th>สินค้า</th>
+                        <th>ใบแจ้งหนี้</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,16 +89,16 @@
                             <td>@line?.SerialNumber?.SerialNo</td>
                             <td>@line?.Item?.ItemName</td>
                             <td>@(claim.InvoiceHeader?.InvoiceNo ?? "-")</td>
-                            <td><span class="status-pill @(claim.Status == "Open" ? "active" : "inactive")">@claim.Status</span></td>
+                            <td><span class="status-pill @(claim.Status == "Open" ? "active" : "inactive")">@(claim.Status == "Open" ? "เปิดเคลม" : claim.Status == "Received" ? "รับสินค้าแล้ว" : claim.Status == "SentToSupplier" ? "ส่งเคลมผู้ขาย" : claim.Status == "Repairing" ? "กำลังซ่อม" : claim.Status == "ReadyToReturn" ? "พร้อมคืนลูกค้า" : claim.Status == "ReturnedToCustomer" ? "คืนลูกค้าแล้ว" : claim.Status == "Rejected" ? "ปฏิเสธเคลม" : claim.Status == "Closed" ? "ปิดเคลม" : claim.Status == "Cancelled" ? "ยกเลิก" : claim.Status)</span></td>
                             <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@claim.CustomerClaimId" class="btn btn-sm btn-outline-secondary">View</a>
+                                <a asp-action="Details" asp-route-id="@claim.CustomerClaimId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
                             </td>
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="8" class="table-empty">No customer claims yet. Start from an eligible sold serial.</td></tr>
+                    <tr><td colspan="8" class="table-empty">ยังไม่มีข้อมูลเคลมลูกค้า เริ่มต้นจาก Serial ที่ขายแล้วและอยู่ในเงื่อนไขการเคลม</td></tr>
                 }
                 </tbody>
             </table>

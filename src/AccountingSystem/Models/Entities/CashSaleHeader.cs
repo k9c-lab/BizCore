@@ -59,7 +59,7 @@ public class CashSaleHeader
     [Display(Name = "Referring Doctor")]
     public int? ReferringDoctorId { get; set; }
 
-    [StringLength(500)]
+    [StringLength(2000)]
     public string? Remark { get; set; }
 
     public decimal Subtotal { get; set; }

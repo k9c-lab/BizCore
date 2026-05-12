@@ -1,7 +1,7 @@
 ﻿@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockTransferHeader>
 
 @{
-    ViewData["Title"] = "Stock Transfers";
+    ViewData["Title"] = "โอนย้ายสต็อก";
     var search = ViewData["Search"] as string;
     var status = ViewData["Status"] as string;
     var dateFrom = ViewData["DateFrom"] as string;
@@ -10,11 +10,11 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Module</div>
-        <h1 class="page-title">Stock Transfers</h1>
+        <div class="page-eyebrow">โมดูลคลังสินค้า</div>
+        <h1 class="page-title">โอนย้ายสต็อก</h1>
         </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary px-4">New Transfer</a>
+        <a asp-action="Create" class="btn btn-primary px-4">สร้างใบโอนย้าย</a>
     </div>
 </div>
 
@@ -26,36 +26,36 @@
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Transfer Register</h2>
+            <h2 class="section-title">รายการใบโอนย้าย</h2>
             </div>
-        <div class="table-meta">@Model.TotalCount records</div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@search" class="form-control" placeholder="Transfer no., branch, item, or remark" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่ใบโอน, สาขา, สินค้า หรือหมายเหตุ" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="status">Status</label>
+                <label class="form-label" for="status">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="Draft" selected="@(status == "Draft")">Draft</option>
-                    <option value="Posted" selected="@(status == "Posted")">Posted</option>
-                    <option value="Cancelled" selected="@(status == "Cancelled")">Cancelled</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Draft" selected="@(status == "Draft")">ฉบับร่าง</option>
+                    <option value="Posted" selected="@(status == "Posted")">ลงรายการแล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิกแล้ว</option>
                 </select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">ตั้งแต่วันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
 
@@ -63,14 +63,14 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Transfer No.</th>
-                        <th>Date</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Lines</th>
-                        <th>Qty</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>เลขที่ใบโอน</th>
+                        <th>วันที่</th>
+                        <th>จาก</th>
+                        <th>ไปยัง</th>
+                        <th>จำนวนบรรทัด</th>
+                        <th>จำนวนรวม</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,8 +80,8 @@
                     {
                         var canPost = transfer.Status == "Draft" && transfer.StockTransferDetails.Any();
                         var postBlockedReason = transfer.Status == "Draft"
-                            ? "Post is blocked because no transfer lines exist."
-                            : $"Post is available only for Draft stock transfers. Current status is {transfer.Status}.";
+                            ? "ยังลงรายการไม่ได้ เพราะยังไม่มีรายการโอน"
+                            : $"ลงรายการได้เฉพาะใบโอนสถานะฉบับร่าง สถานะปัจจุบันคือ {transfer.Status}.";
                         <tr>
                             <td><span class="code-chip">@transfer.TransferNo</span></td>
                             <td>@transfer.TransferDate.ToString("dd MMM yyyy")</td>
@@ -89,10 +89,10 @@
                             <td>@(transfer.ToBranch?.BranchName ?? "-")</td>
                             <td>@transfer.StockTransferDetails.Count</td>
                             <td>@transfer.StockTransferDetails.Sum(x => x.Qty).ToString("N2")</td>
-                            <td><span class="status-pill active">@transfer.Status</span></td>
+                            <td><span class="status-pill active">@(transfer.Status == "Draft" ? "ฉบับร่าง" : transfer.Status == "Posted" ? "ลงรายการแล้ว" : transfer.Status == "Cancelled" ? "ยกเลิกแล้ว" : transfer.Status)</span></td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-action="Details" asp-route-id="@transfer.StockTransferId" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <a asp-action="Details" asp-route-id="@transfer.StockTransferId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
                                     @if (canPost)
                                     {
                                         <form asp-action="Post" asp-route-id="@transfer.StockTransferId" method="post" class="d-inline confirm-popover-form">
@@ -102,14 +102,14 @@
                                                         class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
                                                         data-confirm-target="postStockTransferConfirm_@transfer.StockTransferId"
                                                         aria-expanded="false">
-                                                    Post
+                                                    ลงรายการ
                                                 </button>
                                                 <div class="confirm-popover" id="postStockTransferConfirm_@transfer.StockTransferId" hidden>
-                                                    <div class="confirm-popover-title">Post this stock transfer?</div>
-                                                    <div class="confirm-popover-text">This will move stock and serial ownership between the selected branches.</div>
+                                                    <div class="confirm-popover-title">ลงรายการใบโอนสต็อกนี้หรือไม่?</div>
+                                                    <div class="confirm-popover-text">ระบบจะย้ายสต็อกและสิทธิ์การถือครอง Serial ระหว่างสาขาที่เลือก</div>
                                                     <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -117,7 +117,7 @@
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@postBlockedReason">Post</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@postBlockedReason">ลงรายการ</button>
                                     }
                                 </div>
                             </td>
@@ -126,7 +126,7 @@
                 }
                 else
                 {
-                    <tr><td colspan="8" class="table-empty">No stock transfers yet.</td></tr>
+                    <tr><td colspan="8" class="table-empty">ยังไม่มีข้อมูลใบโอนย้ายสต็อก</td></tr>
                 }
                 </tbody>
             </table>

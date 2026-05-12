@@ -8,12 +8,12 @@ public class InvoiceFormViewModel
     public int? InvoiceId { get; set; }
     public int? QuotationId { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาระบุเลขที่ใบแจ้งหนี้")]
     [Display(Name = "เลขที่ใบแจ้งหนี้")]
     [StringLength(30)]
     public string InvoiceNo { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาระบุวันที่ใบแจ้งหนี้")]
     [Display(Name = "วันที่ใบแจ้งหนี้")]
     [DataType(DataType.Date)]
     public DateTime InvoiceDate { get; set; } = DateTime.Today;
@@ -70,17 +70,17 @@ public class InvoiceFormViewModel
     [Display(Name = "แพทย์ส่ง")]
     public int? ReferringDoctorId { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
     [Display(Name = "ประเภทภาษี")]
     [StringLength(10)]
     public string VatType { get; set; } = "VAT";
 
-    [Required]
+    [Required(ErrorMessage = "กรุณาเลือกรูปแบบส่วนลด")]
     [Display(Name = "รูปแบบส่วนลด")]
     [StringLength(10)]
     public string DiscountMode { get; set; } = "Line";
 
-    [Range(typeof(decimal), "0", "9999999999999999.99")]
+    [Range(typeof(decimal), "0", "9999999999999999.99", ErrorMessage = "ส่วนลดท้ายเอกสารต้องมากกว่าหรือเท่ากับ 0")]
     [Display(Name = "ส่วนลดท้ายเอกสาร")]
     public decimal HeaderDiscountAmount { get; set; }
 
@@ -88,7 +88,7 @@ public class InvoiceFormViewModel
     [Display(Name = "ยอดเรียกเก็บใบนี้")]
     public decimal? AmountDueThisInvoice { get; set; }
 
-    [StringLength(500)]
+    [StringLength(2000, ErrorMessage = "หมายเหตุต้องมีความยาวไม่เกิน 2000 ตัวอักษร")]
     public string? Remark { get; set; }
 
     public decimal Subtotal { get; set; }

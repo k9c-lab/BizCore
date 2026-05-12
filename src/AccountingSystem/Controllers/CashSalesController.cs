@@ -1018,21 +1018,21 @@ public class CashSalesController : CrudControllerBase
 
         if (!model.CustomerId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.CustomerId), "Please select a customer.");
+            ModelState.AddModelError(nameof(model.CustomerId), "กรุณาเลือกลูกค้า");
         }
 
         if (!model.BranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "กรุณาเลือกสาขา");
         }
         else if (!CanAccessBranch(model.BranchId))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "You do not have access to the selected branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "คุณไม่มีสิทธิ์ใช้งานสาขาที่เลือก");
         }
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one item.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มอย่างน้อย 1 รายการ");
         }
 
         var itemIds = model.Details
@@ -1083,12 +1083,12 @@ public class CashSalesController : CrudControllerBase
 
             if (detail.Qty <= 0)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Quantity must be greater than zero.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนต้องมากกว่า 0");
             }
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out var item))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกรายการสินค้าที่ถูกต้อง");
                 continue;
             }
 
@@ -1111,7 +1111,7 @@ public class CashSalesController : CrudControllerBase
 
             if (requireAvailableStock && detail.TrackStock && detail.CurrentStock < detail.Qty)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Quantity cannot exceed available stock.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนต้องไม่มากกว่าสต๊อกคงเหลือ");
             }
 
             var gross = detail.Qty * detail.UnitPrice;
@@ -1122,7 +1122,7 @@ public class CashSalesController : CrudControllerBase
 
             if (detail.DiscountAmount > gross)
             {
-                ModelState.AddModelError($"Details[{i}].DiscountAmount", "Line discount cannot exceed line gross amount.");
+                ModelState.AddModelError($"Details[{i}].DiscountAmount", "ส่วนลดต่อรายการต้องไม่มากกว่ายอดก่อนหักส่วนลด");
                 continue;
             }
 
@@ -1130,57 +1130,57 @@ public class CashSalesController : CrudControllerBase
             {
                 if (detail.Qty != Math.Truncate(detail.Qty))
                 {
-                    ModelState.AddModelError($"Details[{i}].Qty", "Serial-controlled items must use whole-number quantity.");
+                    ModelState.AddModelError($"Details[{i}].Qty", "สินค้าที่คุม Serial ต้องใช้จำนวนเต็มเท่านั้น");
                 }
 
                 if (detail.SelectedSerialIds.Count > (int)detail.Qty)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial count cannot exceed quantity.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "จำนวน Serial ที่เลือกต้องไม่มากกว่าจำนวนสินค้า");
                 }
 
                 if (requireSerials && detail.SelectedSerialIds.Count == 0)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Please select serial numbers before issuing.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "กรุณาเลือก Serial ก่อนออกเอกสาร");
                 }
 
                 if (requireSerials && detail.SelectedSerialIds.Count != (int)detail.Qty)
                 {
-                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial count must match quantity.");
+                    ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "จำนวน Serial ที่เลือกต้องเท่ากับจำนวนสินค้า");
                 }
 
                 if (detail.CustomerWarrantyStartDate.HasValue &&
                     detail.CustomerWarrantyEndDate.HasValue &&
                     detail.CustomerWarrantyEndDate.Value.Date < detail.CustomerWarrantyStartDate.Value.Date)
                 {
-                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyEndDate", "Warranty end date must be on or after warranty start date.");
+                    ModelState.AddModelError($"Details[{i}].CustomerWarrantyEndDate", "วันที่สิ้นสุดประกันต้องไม่น้อยกว่าวันที่เริ่มประกัน");
                 }
 
                 foreach (var serialId in detail.SelectedSerialIds)
                 {
                     if (duplicateSerialIds.Contains(serialId))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "The same serial cannot be selected more than once.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "ไม่สามารถเลือก Serial เดิมซ้ำได้");
                     }
 
                     if (!serialMap.TryGetValue(serialId, out var serial))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "One or more selected serials could not be found.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "ไม่พบ Serial ที่เลือกอย่างน้อย 1 รายการ");
                         continue;
                     }
 
                     if (serial.ItemId != item.ItemId)
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial does not belong to the chosen item.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Serial ที่เลือกไม่ตรงกับสินค้าที่เลือก");
                     }
 
                     if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Only InStock serials can be used.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "สามารถใช้ได้เฉพาะ Serial ที่มีสถานะ InStock");
                     }
 
                     if (model.BranchId.HasValue && serial.BranchId != model.BranchId.Value)
                     {
-                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Selected serial is not in the selected branch.");
+                        ModelState.AddModelError($"Details[{i}].SelectedSerialIds", "Serial ที่เลือกไม่ได้อยู่ในสาขาที่เลือก");
                     }
                 }
             }
@@ -1206,7 +1206,7 @@ public class CashSalesController : CrudControllerBase
 
         if (!useLineDiscount && model.HeaderDiscountAmount > subtotal)
         {
-            ModelState.AddModelError(nameof(model.HeaderDiscountAmount), "Header discount cannot exceed subtotal.");
+            ModelState.AddModelError(nameof(model.HeaderDiscountAmount), "ส่วนลดท้ายเอกสารต้องไม่มากกว่ายอดก่อน VAT");
         }
 
         var appliedDiscount = useLineDiscount ? lineDiscountTotal : model.HeaderDiscountAmount;
@@ -1242,10 +1242,10 @@ public class CashSalesController : CrudControllerBase
 
         if (errors.Count == 0)
         {
-            return "Cannot issue cash sale. Please review the document data and try again.";
+            return "ไม่สามารถออกเอกสารขายสดได้ กรุณาตรวจสอบข้อมูลเอกสารแล้วลองใหม่อีกครั้ง";
         }
 
-        return $"Cannot issue cash sale. {string.Join(" ", errors)}";
+        return $"ไม่สามารถออกเอกสารขายสดได้ {string.Join(" ", errors)}";
     }
 
     private static void EnsureAtLeastOneLine(InvoiceFormViewModel model)

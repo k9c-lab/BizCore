@@ -9,11 +9,11 @@ public class CustomerClaimFormViewModel
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Claim Date")]
+    [Display(Name = "วันที่เคลม")]
     public DateTime CustomerClaimDate { get; set; } = DateTime.Today;
 
     [StringLength(1000)]
-    [Display(Name = "Problem Description")]
+    [Display(Name = "อาการ/ปัญหา")]
     public string? ProblemDescription { get; set; }
 
     [StringLength(500)]

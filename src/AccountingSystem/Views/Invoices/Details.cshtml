@@ -2,16 +2,26 @@
 
 @{
     ViewData["Title"] = "รายละเอียดใบแจ้งหนี้";
-    var referenceSubtotal = Model.ReferenceLineSubtotal
-        ?? Model.InvoiceDetails.Sum(x => x.Qty * x.UnitPrice);
-    var referenceDiscount = Model.ReferenceLineDiscountAmount
-        ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount);
-    var referenceVat = Model.ReferenceLineVatAmount
-        ?? (Model.VatType == "VAT"
-            ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m);
-    var referenceTotal = Model.ReferenceLineTotalAmount
-        ?? (referenceSubtotal - referenceDiscount + referenceVat);
+    var quotationAppliedDiscount = Model.Quotation is not null
+        ? (string.Equals(Model.Quotation.DiscountMode, "Header", StringComparison.OrdinalIgnoreCase)
+            ? Model.Quotation.HeaderDiscountAmount
+            : Model.Quotation.DiscountAmount)
+        : 0m;
+    var referenceSubtotal = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.Subtotal
+        : (Model.ReferenceLineSubtotal ?? Model.InvoiceDetails.Sum(x => x.Qty * x.UnitPrice));
+    var referenceDiscount = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? quotationAppliedDiscount
+        : (Model.ReferenceLineDiscountAmount ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount));
+    var referenceVat = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.VatAmount
+        : (Model.ReferenceLineVatAmount
+            ?? (Model.VatType == "VAT"
+                ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
+                : 0m));
+    var referenceTotal = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.TotalAmount
+        : (Model.ReferenceLineTotalAmount ?? (referenceSubtotal - referenceDiscount + referenceVat));
     var referenceNet = referenceSubtotal - referenceDiscount;
     var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") &&
         Model.PaidAmount <= 0 &&
@@ -296,7 +306,7 @@
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="detail-label">สิทธิการรักษา</div>
-                        <div class="form-control readonly-detail">@(Model.TreatmentRight is null ? "-" : $"{Model.TreatmentRight.TreatmentRightCode} - {Model.TreatmentRight.TreatmentRightName}")</div>
+                        <div class="form-control readonly-detail">@(Model.TreatmentRight is null ? "-" : Model.TreatmentRight.TreatmentRightName)</div>
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="detail-label">Ward</div>
@@ -304,7 +314,7 @@
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="detail-label">แพทย์ส่ง</div>
-                        <div class="form-control readonly-detail">@(Model.ReferringDoctor is null ? "-" : $"{Model.ReferringDoctor.DoctorCode} - {Model.ReferringDoctor.DoctorName}")</div>
+                        <div class="form-control readonly-detail">@(Model.ReferringDoctor is null ? "-" : Model.ReferringDoctor.DoctorName)</div>
                     </div>
                 </div>
             </div>

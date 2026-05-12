@@ -62,7 +62,7 @@ public class InvoiceHeader
     [Display(Name = "แพทย์ส่ง")]
     public int? ReferringDoctorId { get; set; }
 
-    [StringLength(500)]
+    [StringLength(2000)]
     public string? Remark { get; set; }
 
     public decimal Subtotal { get; set; }

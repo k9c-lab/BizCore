@@ -10,15 +10,15 @@ public class SupplierClaimFormViewModel
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Claim Date")]
+    [Display(Name = "วันที่เคลม")]
     public DateTime ClaimDate { get; set; } = DateTime.Today;
 
     [Required]
-    [Display(Name = "Claim Status")]
+    [Display(Name = "สถานะเคลม")]
     [StringLength(20)]
     public string ClaimStatus { get; set; } = "Open";
 
-    [Display(Name = "Problem Description")]
+    [Display(Name = "อาการ/ปัญหา")]
     [StringLength(1000)]
     public string? ProblemDescription { get; set; }
 

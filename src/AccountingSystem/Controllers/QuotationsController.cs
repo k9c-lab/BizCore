@@ -174,7 +174,7 @@ public class QuotationsController : CrudControllerBase
 
         _context.QuotationHeaders.Add(header);
 
-        if (!await TrySaveAsync("Quotation number must be unique."))
+        if (!await TrySaveAsync("เลขที่ใบเสนอราคาซ้ำ กรุณาตรวจสอบอีกครั้ง"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -203,7 +203,7 @@ public class QuotationsController : CrudControllerBase
 
         if (header.Status != "Draft")
         {
-            TempData["QuotationNotice"] = "Only draft quotations can be edited.";
+            TempData["QuotationNotice"] = "แก้ไขได้เฉพาะใบเสนอราคาฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = header.QuotationHeaderId });
         }
 
@@ -283,7 +283,7 @@ public class QuotationsController : CrudControllerBase
 
         if (header.Status != "Draft")
         {
-            TempData["QuotationNotice"] = "Only draft quotations can be edited.";
+            TempData["QuotationNotice"] = "แก้ไขได้เฉพาะใบเสนอราคาฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = header.QuotationHeaderId });
         }
 
@@ -312,7 +312,7 @@ public class QuotationsController : CrudControllerBase
         _context.QuotationDetails.RemoveRange(header.QuotationDetails);
         header.QuotationDetails = model.Details.Select(MapDetailEntity).ToList();
 
-        if (!await TrySaveAsync("Quotation number must be unique."))
+        if (!await TrySaveAsync("เลขที่ใบเสนอราคาซ้ำ กรุณาตรวจสอบอีกครั้ง"))
         {
             await PopulateLookupsAsync(model);
             return View(model);
@@ -352,7 +352,7 @@ public class QuotationsController : CrudControllerBase
                 QuotationHeaderId = quotation.QuotationHeaderId,
                 QuotationTotalAmount = quotation.TotalAmount,
                 RemainingAmount = quotation.TotalAmount,
-                Status = "Not Invoiced"
+                Status = "NotInvoiced"
             });
 
         return View(quotation);
@@ -397,7 +397,7 @@ public class QuotationsController : CrudControllerBase
 
         if (quotation.Status is not ("Approved" or "Converted"))
         {
-            TempData["QuotationNotice"] = "Only approved quotations can be used to prefill an invoice.";
+            TempData["QuotationNotice"] = "สามารถนำใบเสนอราคาที่อนุมัติแล้วไปสร้างใบแจ้งหนี้ได้เท่านั้น";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -418,7 +418,7 @@ public class QuotationsController : CrudControllerBase
 
         if (quotation.Status != "Draft")
         {
-            TempData["QuotationNotice"] = "Only draft quotations can be approved.";
+            TempData["QuotationNotice"] = "อนุมัติได้เฉพาะใบเสนอราคาฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -429,7 +429,7 @@ public class QuotationsController : CrudControllerBase
         quotation.ApprovedDate = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        TempData["QuotationNotice"] = "Quotation approved successfully.";
+        TempData["QuotationNotice"] = "อนุมัติใบเสนอราคาเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -475,7 +475,7 @@ public class QuotationsController : CrudControllerBase
                 .ToListAsync()
             : Array.Empty<SelectListItem>();
 
-        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "No Branch";
+        model.BranchName = branches.FirstOrDefault(x => x.BranchId == model.BranchId)?.BranchName ?? "ไม่ระบุสาขา";
 
         model.CustomerOptions = await _context.Customers
             .AsNoTracking()
@@ -578,27 +578,27 @@ public class QuotationsController : CrudControllerBase
 
         model.StatusOptions = new[]
         {
-            new SelectListItem("Draft", "Draft"),
-            new SelectListItem("Approved", "Approved"),
-            new SelectListItem("Cancelled", "Cancelled")
+            new SelectListItem("ฉบับร่าง", "Draft"),
+            new SelectListItem("อนุมัติแล้ว", "Approved"),
+            new SelectListItem("ยกเลิกแล้ว", "Cancelled")
         };
 
         model.DiscountModeOptions = new[]
         {
-            new SelectListItem("Line", "Line"),
-            new SelectListItem("Header", "Header")
+            new SelectListItem("ส่วนลดรายบรรทัด", "Line"),
+            new SelectListItem("ส่วนลดท้ายเอกสาร", "Header")
         };
 
         model.DiscountTypeOptions = new[]
         {
-            new SelectListItem("Amount", "Amount"),
-            new SelectListItem("Percent", "Percent")
+            new SelectListItem("จำนวนเงิน", "Amount"),
+            new SelectListItem("เปอร์เซ็นต์", "Percent")
         };
 
         model.VatTypeOptions = new[]
         {
             new SelectListItem("VAT", "VAT"),
-            new SelectListItem("No VAT", "NoVAT")
+            new SelectListItem("ไม่มี VAT", "NoVAT")
         };
     }
 
@@ -616,7 +616,7 @@ public class QuotationsController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one quotation line.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มอย่างน้อย 1 รายการ");
         }
 
         if (!ModelState.IsValid)
@@ -628,7 +628,7 @@ public class QuotationsController : CrudControllerBase
         var customerExists = await _context.Customers.AnyAsync(x => x.CustomerId == model.CustomerId);
         if (!customerExists)
         {
-            ModelState.AddModelError(nameof(model.CustomerId), "Selected customer was not found.");
+            ModelState.AddModelError(nameof(model.CustomerId), "ไม่พบลูกค้าที่เลือก");
         }
 
         if (!CurrentUserCanAccessAllBranches())
@@ -638,15 +638,15 @@ public class QuotationsController : CrudControllerBase
 
         if (!model.BranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Please select a branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "กรุณาเลือกสาขา");
         }
         else if (!CanAccessBranch(model.BranchId))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "You cannot create or edit quotations for this branch.");
+            ModelState.AddModelError(nameof(model.BranchId), "คุณไม่มีสิทธิ์สร้างหรือแก้ไขใบเสนอราคาสำหรับสาขานี้");
         }
         else if (!await _context.Branches.AnyAsync(x => x.BranchId == model.BranchId.Value && x.IsActive))
         {
-            ModelState.AddModelError(nameof(model.BranchId), "Selected branch was not found or inactive.");
+            ModelState.AddModelError(nameof(model.BranchId), "ไม่พบสาขาที่เลือก หรือสาขาถูกปิดการใช้งาน");
         }
 
         if (model.SalespersonId.HasValue)
@@ -654,7 +654,7 @@ public class QuotationsController : CrudControllerBase
             var salespersonExists = await _context.Salespersons.AnyAsync(x => x.SalespersonId == model.SalespersonId.Value);
             if (!salespersonExists)
             {
-                ModelState.AddModelError(nameof(model.SalespersonId), "Selected salesperson was not found.");
+                ModelState.AddModelError(nameof(model.SalespersonId), "ไม่พบพนักงานขายที่เลือก");
             }
         }
 
@@ -664,23 +664,23 @@ public class QuotationsController : CrudControllerBase
                 .AnyAsync(x => x.PriceLevelId == model.PriceLevelId.Value && x.IsActive);
             if (!priceLevelExists)
             {
-                ModelState.AddModelError(nameof(model.PriceLevelId), "Selected price level was not found.");
+                ModelState.AddModelError(nameof(model.PriceLevelId), "ไม่พบระดับราคาที่เลือก");
             }
         }
 
         if (model.VatType is not ("VAT" or "NoVAT"))
         {
-            ModelState.AddModelError(nameof(model.VatType), "VAT type must be VAT or NoVAT.");
+            ModelState.AddModelError(nameof(model.VatType), "ประเภทภาษีต้องเป็น VAT หรือ NoVAT");
         }
 
         if (model.DiscountMode is not ("Line" or "Header"))
         {
-            ModelState.AddModelError(nameof(model.DiscountMode), "Discount mode must be Line or Header.");
+            ModelState.AddModelError(nameof(model.DiscountMode), "รูปแบบส่วนลดต้องเป็น Line หรือ Header");
         }
 
         if (model.HeaderDiscountType is not ("Amount" or "Percent"))
         {
-            ModelState.AddModelError(nameof(model.HeaderDiscountType), "Header discount type must be Amount or Percent.");
+            ModelState.AddModelError(nameof(model.HeaderDiscountType), "ประเภทส่วนลดท้ายเอกสารต้องเป็น Amount หรือ Percent");
         }
 
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
@@ -709,7 +709,7 @@ public class QuotationsController : CrudControllerBase
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out var item))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกรายการสินค้าที่ถูกต้อง");
                 continue;
             }
 
@@ -731,13 +731,13 @@ public class QuotationsController : CrudControllerBase
 
             if (detail.DiscountType is not ("Amount" or "Percent"))
             {
-                ModelState.AddModelError($"Details[{i}].DiscountType", "Discount type must be Amount or Percent.");
+                ModelState.AddModelError($"Details[{i}].DiscountType", "ประเภทส่วนลดต้องเป็น Amount หรือ Percent");
                 continue;
             }
 
             if (detail.DiscountPercent < 0 || detail.DiscountPercent > 100)
             {
-                ModelState.AddModelError($"Details[{i}].DiscountPercent", "Discount percent must be between 0 and 100.");
+                ModelState.AddModelError($"Details[{i}].DiscountPercent", "เปอร์เซ็นต์ส่วนลดต้องอยู่ระหว่าง 0 ถึง 100");
                 continue;
             }
 
@@ -754,7 +754,7 @@ public class QuotationsController : CrudControllerBase
 
             if (detail.DiscountAmount > gross)
             {
-                ModelState.AddModelError($"Details[{i}].DiscountAmount", "Discount cannot exceed the line amount.");
+                ModelState.AddModelError($"Details[{i}].DiscountAmount", "ส่วนลดต้องไม่มากกว่ายอดรวมของรายการ");
                 continue;
             }
 
@@ -778,7 +778,7 @@ public class QuotationsController : CrudControllerBase
 
         if (!useLineDiscount && model.HeaderDiscountPercent > 100)
         {
-            ModelState.AddModelError(nameof(model.HeaderDiscountPercent), "Header discount percent must be between 0 and 100.");
+            ModelState.AddModelError(nameof(model.HeaderDiscountPercent), "เปอร์เซ็นต์ส่วนลดท้ายเอกสารต้องอยู่ระหว่าง 0 ถึง 100");
         }
 
         if (!useLineDiscount && model.HeaderDiscountType == "Percent")
@@ -794,7 +794,7 @@ public class QuotationsController : CrudControllerBase
 
         if (!useLineDiscount && model.HeaderDiscountAmount > subtotal)
         {
-            ModelState.AddModelError(nameof(model.HeaderDiscountAmount), "Header discount cannot exceed subtotal.");
+            ModelState.AddModelError(nameof(model.HeaderDiscountAmount), "ส่วนลดท้ายเอกสารต้องไม่มากกว่ายอดก่อน VAT");
         }
 
         model.Subtotal = subtotal;
@@ -995,10 +995,10 @@ public class QuotationsController : CrudControllerBase
                 var invoicedAmount = hasSummary ? summary!.InvoicedAmount : 0m;
                 var remainingAmount = Math.Max(x.Value - invoicedAmount, 0m);
                 var statusValue = invoicedAmount >= x.Value && x.Value > 0m
-                    ? "Fully Invoiced"
+                    ? "FullyInvoiced"
                     : invoicedAmount > 0m
-                        ? "Partially Invoiced"
-                        : "Not Invoiced";
+                        ? "PartiallyInvoiced"
+                        : "NotInvoiced";
 
                 return new QuotationPaymentStatusViewModel
                 {

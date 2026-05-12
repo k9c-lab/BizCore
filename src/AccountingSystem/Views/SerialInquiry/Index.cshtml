@@ -1,52 +1,52 @@
 ﻿@model BizCore.Models.ViewModels.SerialInquiryPageViewModel
 
 @{
-    ViewData["Title"] = "Serial Inquiry";
+    ViewData["Title"] = "สอบถาม Serial";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Inquiry</div>
-        <h1 class="page-title">Serial Inquiry</h1>
+        <div class="page-eyebrow">สอบถามข้อมูลคลังสินค้า</div>
+        <h1 class="page-title">สอบถาม Serial</h1>
         </div>
 </div>
 
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Serial Register</h2>
+            <h2 class="section-title">ทะเบียน Serial</h2>
             </div>
-        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label for="search" class="form-label">Search</label>
-                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Serial, item, part number, supplier, customer, or invoice" />
+                <label for="search" class="form-label">ค้นหา</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Serial, สินค้า, Part Number, ผู้ขาย, ลูกค้า หรือใบแจ้งหนี้" />
             </div>
             <div class="list-filter-field">
-                <label for="status" class="form-label">Status</label>
+                <label for="status" class="form-label">สถานะ</label>
                 <select id="status" name="status" class="form-select">
-                    <option value="">All</option>
-                    <option value="InStock" selected="@(Model.Status == "InStock")">In Stock</option>
-                    <option value="Sold" selected="@(Model.Status == "Sold")">Sold</option>
-                    <option value="CustomerClaim" selected="@(Model.Status == "CustomerClaim")">Customer Claim</option>
-                    <option value="ClaimedToSupplier" selected="@(Model.Status == "ClaimedToSupplier")">Claimed To Supplier</option>
-                    <option value="Replaced" selected="@(Model.Status == "Replaced")">Replaced</option>
-                    <option value="Defective" selected="@(Model.Status == "Defective")">Defective</option>
-                    <option value="Available" selected="@(Model.Status == "Available")">Available</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="InStock" selected="@(Model.Status == "InStock")">คงคลัง</option>
+                    <option value="Sold" selected="@(Model.Status == "Sold")">ขายแล้ว</option>
+                    <option value="CustomerClaim" selected="@(Model.Status == "CustomerClaim")">เคลมลูกค้า</option>
+                    <option value="ClaimedToSupplier" selected="@(Model.Status == "ClaimedToSupplier")">ส่งเคลมผู้ขาย</option>
+                    <option value="Replaced" selected="@(Model.Status == "Replaced")">เปลี่ยนสินค้าแล้ว</option>
+                    <option value="Defective" selected="@(Model.Status == "Defective")">เสีย/ชำรุด</option>
+                    <option value="Available" selected="@(Model.Status == "Available")">พร้อมใช้งาน</option>
                 </select>
             </div>
             @if (Model.CanAccessAllBranches)
             {
                 <div class="list-filter-field">
-                    <label for="branchId" class="form-label">Branch</label>
+                    <label for="branchId" class="form-label">สาขา</label>
                     <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
                 </div>
             }
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
         @if (Model.Results.Any())
@@ -68,48 +68,48 @@
                                 <span class="status-pill active">@serial.Status</span>
                                 @if (serial.CanCustomerClaim)
                                 {
-                                    <a asp-controller="CustomerClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-success">Customer Claim</a>
+                                    <a asp-controller="CustomerClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-success">เปิดเคลมลูกค้า</a>
                                 }
                                 else
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@serial.CustomerClaimBlockedReason">Customer Claim</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="@serial.CustomerClaimBlockedReason">เปิดเคลมลูกค้า</button>
                                 }
                                 @if (isWarrantyExpired)
                                 {
-                                    <span class="status-pill inactive">Warranty Expired</span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Supplier Claim</button>
+                                    <span class="status-pill inactive">ประกันผู้ขายหมดอายุ</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>เคลมผู้ขาย</button>
                                 }
                                 else
                                 {
-                                    <a asp-controller="SupplierClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-primary">Supplier Claim</a>
+                                    <a asp-controller="SupplierClaims" asp-action="Create" asp-route-serialId="@serial.SerialId" class="btn btn-sm btn-outline-primary">เคลมผู้ขาย</a>
                                 }
                             </div>
                         </div>
 
                         <div class="inquiry-card-grid">
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Branch</span>
+                                <span class="inquiry-card-label">สาขา</span>
                                 <span class="inquiry-card-value">@serial.BranchName</span>
                             </div>
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Supplier</span>
+                                <span class="inquiry-card-label">ผู้ขาย</span>
                                 <span class="inquiry-card-value">@serial.SupplierName</span>
                             </div>
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Customer</span>
+                                <span class="inquiry-card-label">ลูกค้า</span>
                                 <span class="inquiry-card-value">@serial.CurrentCustomerName</span>
                             </div>
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Supplier Warranty</span>
-                                <span class="inquiry-card-value">@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                                <span class="inquiry-card-label">ประกันผู้ขาย</span>
+                                <span class="inquiry-card-value">@(serial.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") ถึง @(serial.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
                             </div>
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Invoice Code</span>
+                                <span class="inquiry-card-label">เลขที่ใบแจ้งหนี้</span>
                                 <span class="inquiry-card-value">@serial.InvoiceCode</span>
                             </div>
                             <div class="inquiry-card-field">
-                                <span class="inquiry-card-label">Customer Warranty</span>
-                                <span class="inquiry-card-value">@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                                <span class="inquiry-card-label">ประกันลูกค้า</span>
+                                <span class="inquiry-card-value">@(serial.CustomerWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") ถึง @(serial.CustomerWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
                             </div>
                         </div>
                     </article>
@@ -118,7 +118,7 @@
         }
         else
         {
-            <div class="table-empty">No serial records matched the current search.</div>
+            <div class="table-empty">ไม่พบข้อมูล Serial ตามเงื่อนไขที่ค้นหา</div>
         }
         <partial name="_Pager" model="Model.Pagination" />
     </div>

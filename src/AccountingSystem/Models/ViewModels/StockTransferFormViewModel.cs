@@ -8,19 +8,19 @@ public class StockTransferFormViewModel
     public int? StockTransferId { get; set; }
 
     [Required]
-    [Display(Name = "Transfer No.")]
+    [Display(Name = "เลขที่ใบโอน")]
     [StringLength(30)]
     public string TransferNo { get; set; } = string.Empty;
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Transfer Date")]
+    [Display(Name = "วันที่โอน")]
     public DateTime TransferDate { get; set; } = DateTime.Today;
 
-    [Display(Name = "From Branch")]
+    [Display(Name = "จากสาขา")]
     public int? FromBranchId { get; set; }
 
-    [Display(Name = "To Branch")]
+    [Display(Name = "ไปยังสาขา")]
     public int? ToBranchId { get; set; }
 
     public string FromBranchName { get; set; } = string.Empty;

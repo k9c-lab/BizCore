@@ -7,17 +7,26 @@
     var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
     var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
     var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalAmount);
-    var referenceSubtotal = Model.ReferenceLineSubtotal
-        ?? Model.InvoiceDetails.Sum(x => (x.QuotedQty > 0 ? x.QuotedQty : x.Qty) * x.UnitPrice);
-    var referenceDiscount = Model.ReferenceLineDiscountAmount
-        ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount);
-    var referenceVat = Model.ReferenceLineVatAmount
-        ?? (Model.VatType == "VAT"
-            ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m);
-    var referenceTotal = Model.ReferenceLineTotalAmount
-        ?? (referenceSubtotal - referenceDiscount + referenceVat);
-    var referenceNet = referenceSubtotal - referenceDiscount;
+    var quotationAppliedDiscount = Model.Quotation is not null
+        ? (string.Equals(Model.Quotation.DiscountMode, "Header", StringComparison.OrdinalIgnoreCase)
+            ? Model.Quotation.HeaderDiscountAmount
+            : Model.Quotation.DiscountAmount)
+        : 0m;
+    var referenceSubtotal = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.Subtotal
+        : (Model.ReferenceLineSubtotal ?? Model.InvoiceDetails.Sum(x => (x.QuotedQty > 0 ? x.QuotedQty : x.Qty) * x.UnitPrice));
+    var referenceDiscount = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? quotationAppliedDiscount
+        : (Model.ReferenceLineDiscountAmount ?? Model.InvoiceDetails.Sum(x => x.DiscountAmount));
+    var referenceVat = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.VatAmount
+        : (Model.ReferenceLineVatAmount
+            ?? (Model.VatType == "VAT"
+                ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
+                : 0m));
+    var referenceTotal = Model.QuotationId.HasValue && Model.Quotation is not null
+        ? Model.Quotation.TotalAmount
+        : (Model.ReferenceLineTotalAmount ?? (referenceSubtotal - referenceDiscount + referenceVat));
     var showsInstallmentBilling = Model.QuotationId.HasValue && Math.Abs(referenceTotal - Model.TotalAmount) > 0.01m;
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
     var hasSalespersonInfo =
@@ -240,7 +249,7 @@
         .summary-wrap {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: flex-start;
             gap: 24px;
             margin-top: 14px;
         }
@@ -254,18 +263,6 @@
         .summary-table {
             min-width: 300px;
             border-collapse: collapse;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-            align-items: start;
-        }
-        .summary-card-title {
-            margin: 0 0 6px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e3a8a;
         }
         .summary-table td {
             padding: 4px 0 4px 18px;
@@ -431,7 +428,7 @@
                         {
                             <div>
                                 <div class="section-label">สิทธิการรักษา / Treatment Right</div>
-                                <div class="party-value patient-value-compact">@($"{Model.TreatmentRight!.TreatmentRightCode} - {Model.TreatmentRight.TreatmentRightName}")</div>
+                                <div class="party-value patient-value-compact">@Model.TreatmentRight!.TreatmentRightName</div>
                             </div>
                         }
                         @if (hasPatientWard)
@@ -445,7 +442,7 @@
                         {
                             <div class="patient-doctor-block">
                                 <div class="section-label">แพทย์ส่ง / Referring Doctor</div>
-                                <div class="party-value patient-value-compact">@($"{Model.ReferringDoctor!.DoctorCode} - {Model.ReferringDoctor.DoctorName}")</div>
+                                <div class="party-value patient-value-compact">@Model.ReferringDoctor!.DoctorName</div>
                             </div>
                         }
                     </div>
@@ -492,44 +489,17 @@
 
                 <div class="summary-wrap">
                     <div class="amount-text">@totalAmountText</div>
-                    @if (Model.QuotationId.HasValue)
-                    {
-                        <div class="summary-grid">
-                            <div>
-                                <div class="summary-card-title">Quotation Reference Summary</div>
-                                <table class="summary-table">
-                                    <tr><td class="summary-label">ยอดก่อนส่วนลด / Subtotal</td><td>@referenceSubtotal.ToString("N2")</td></tr>
-                                    <tr><td class="summary-label">ส่วนลด / Discount</td><td>@referenceDiscount.ToString("N2")</td></tr>
-                                    <tr><td class="summary-label">ราคาหลังส่วนลด / Net After Discount</td><td>@referenceNet.ToString("N2")</td></tr>
-                                    <tr><td class="summary-label">VAT</td><td>@referenceVat.ToString("N2")</td></tr>
-                                    <tr class="summary-separator"><td colspan="2"></td></tr>
-                                    <tr class="summary-total"><td>ยอดรวมอ้างอิง / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
-                                </table>
-                            </div>
-                            <div>
-                                <div class="summary-card-title">Invoice Summary</div>
-                                <table class="summary-table">
-                                    <tr><td class="summary-label">Amount Due This Invoice</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
-                                    <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
-                                    <tr class="summary-total"><td>Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <table class="summary-table">
-                            @if (showsInstallmentBilling)
-                            {
-                                <tr><td class="summary-label">ยอดอ้างอิงตามรายการ / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
-                                <tr class="summary-separator"><td colspan="2"></td></tr>
-                            }
-                            <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
-                            <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
-                            <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
-                            <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
-                        </table>
-                    }
+                    <table class="summary-table">
+                        @if (showsInstallmentBilling)
+                        {
+                            <tr><td class="summary-label">ยอดอ้างอิงตามรายการ / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
+                            <tr class="summary-separator"><td colspan="2"></td></tr>
+                        }
+                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
+                        <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
+                    </table>
                 </div>
             </section>
 

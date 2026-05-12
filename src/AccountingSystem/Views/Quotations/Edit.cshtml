@@ -8,7 +8,8 @@
     <div>
         <div class="page-eyebrow">งานขาย</div>
         <h1 class="page-title">แก้ไขใบเสนอราคา</h1>
-        </div>
+        <p class="page-subtitle">แก้ไขได้เฉพาะใบเสนอราคาสถานะร่าง เพื่อทบทวนราคา รายการสินค้า และเงื่อนไขก่อนอนุมัติ</p>
+    </div>
     <div class="page-actions">
         <button type="submit" form="quotationForm" class="btn btn-primary px-4">บันทึกฉบับร่าง</button>
         <a asp-action="Details" asp-route-id="@Model.QuotationHeaderId" class="btn btn-outline-secondary">ดูใบเสนอราคา</a>
@@ -17,6 +18,9 @@
 
 <div class="card content-card">
     <div class="card-body">
+        <div class="workflow-info workflow-info-info mb-3">
+            การบันทึกในขั้นตอนนี้ยังไม่ตัดสต๊อกและยังไม่สร้างใบแจ้งหนี้ ระบบจะนำไปใช้ต่อได้เมื่อใบเสนอราคาถูกอนุมัติแล้ว
+        </div>
         <form asp-action="Edit" method="post" id="quotationForm">
             <input type="hidden" asp-for="QuotationHeaderId" />
             <partial name="_Form" model="Model" />

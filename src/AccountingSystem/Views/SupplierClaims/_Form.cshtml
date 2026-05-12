@@ -10,7 +10,7 @@
 
 <div class="form-shell">
     <div class="form-section">
-        <div class="form-section-title">Claim Information</div>
+        <div class="form-section-title">ข้อมูลเคลม</div>
         <div class="detail-grid">
             <div class="detail-item">
                 <label asp-for="ClaimDate" class="detail-label"></label>
@@ -22,38 +22,38 @@
                 <select asp-for="ClaimStatus" asp-items="Model.StatusOptions" class="form-select"></select>
                 <span asp-validation-for="ClaimStatus" class="text-danger"></span>
             </div>
-            <div class="detail-item"><span class="detail-label">Current Serial Status</span><p class="detail-value">@Model.CurrentSerialStatus</p></div>
+            <div class="detail-item"><span class="detail-label">สถานะ Serial ปัจจุบัน</span><p class="detail-value">@Model.CurrentSerialStatus</p></div>
         </div>
     </div>
 
     <div class="form-section">
-        <div class="form-section-title">Supplier</div>
+        <div class="form-section-title">ผู้ขาย</div>
         <div class="quotation-info-card">
-            <div class="quotation-info-card-title">Supplier Information</div>
+            <div class="quotation-info-card-title">ข้อมูลผู้ขาย</div>
             <div class="quotation-info-field">
-                <span class="quotation-info-label">Supplier Name</span>
+                <span class="quotation-info-label">ชื่อผู้ขาย</span>
                 <span class="quotation-info-value">@Model.SupplierName</span>
             </div>
         </div>
     </div>
 
     <div class="form-section">
-        <div class="form-section-title">Serial / Item</div>
+        <div class="form-section-title">Serial / สินค้า</div>
         <div class="quotation-info-card">
-            <div class="quotation-info-card-title">Serial / Item Information</div>
+            <div class="quotation-info-card-title">ข้อมูล Serial / สินค้า</div>
             <div class="quotation-info-grid">
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Serial No.</span>
+                    <span class="quotation-info-label">หมายเลข Serial</span>
                     <span class="quotation-info-value">@Model.SerialNo</span>
                 </div>
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Serial Status</span>
+                    <span class="quotation-info-label">สถานะ Serial</span>
                     <span class="quotation-info-value">@Model.CurrentSerialStatus</span>
                 </div>
             </div>
             <div class="quotation-info-grid">
                 <div class="quotation-info-field">
-                    <span class="quotation-info-label">Item</span>
+                    <span class="quotation-info-label">สินค้า</span>
                     <span class="quotation-info-value">@Model.ItemCode - @Model.ItemName</span>
                 </div>
                 <div class="quotation-info-field">
@@ -62,14 +62,14 @@
                 </div>
             </div>
             <div class="quotation-info-field">
-                <span class="quotation-info-label">Supplier Warranty</span>
-                <span class="quotation-info-value">@(Model.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") to @(Model.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
+                <span class="quotation-info-label">ประกันผู้ขาย</span>
+                <span class="quotation-info-value">@(Model.SupplierWarrantyStartDate?.ToString("dd MMM yyyy") ?? "-") ถึง @(Model.SupplierWarrantyEndDate?.ToString("dd MMM yyyy") ?? "-")</span>
             </div>
         </div>
     </div>
 
     <div class="form-section">
-        <div class="form-section-title">Problem / Remark</div>
+        <div class="form-section-title">อาการ / หมายเหตุ</div>
         <div class="row g-3">
             <div class="col-12">
                 <label asp-for="ProblemDescription" class="form-label"></label>

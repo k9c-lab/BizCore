@@ -14,7 +14,8 @@
     <div>
         <div class="page-eyebrow">งานขาย</div>
         <h1 class="page-title">ใบเสนอราคา</h1>
-        </div>
+        <p class="page-subtitle">จัดการใบเสนอราคาเพื่อตรวจสอบราคา อนุมัติเอกสาร และต่อยอดไปสร้างใบแจ้งหนี้จากหน้าเดียวกัน</p>
+    </div>
     <div class="page-actions">
         <a asp-action="Create" class="btn btn-primary px-4">สร้างใบเสนอราคา</a>
     </div>
@@ -100,52 +101,6 @@
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a asp-action="Details" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = quotation.QuotationHeaderId })', '_blank', 'noopener');">พิมพ์</button>
-                                    @if (quotation.Status == "Draft")
-                                    {
-                                        <a asp-action="Edit" asp-route-id="@quotation.QuotationHeaderId" class="btn btn-sm btn-outline-primary">แก้ไข</a>
-                                        <form asp-action="Approve" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="approveQuotationConfirm_@quotation.QuotationHeaderId"
-                                                        aria-expanded="false">
-                                                    อนุมัติ
-                                                </button>
-                                                <div class="confirm-popover" id="approveQuotationConfirm_@quotation.QuotationHeaderId" hidden>
-                                                    <div class="confirm-popover-title">อนุมัติใบเสนอราคานี้หรือไม่?</div>
-                                                    <div class="confirm-popover-text">เมื่ออนุมัติแล้ว จะสามารถนำใบเสนอราคานี้ไปสร้างใบแจ้งหนี้ได้</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
-                                    @if (quotation.Status == "Approved" || quotation.Status == "Converted")
-                                    {
-                                        <form asp-action="ConvertToInvoice" asp-route-id="@quotation.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
-                                            @Html.AntiForgeryToken()
-                                            <div class="confirm-popover-shell">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-primary js-confirm-popover-toggle"
-                                                        data-confirm-target="convertQuotationConfirm_@quotation.QuotationHeaderId"
-                                                        aria-expanded="false">
-                                                    สร้างใบแจ้งหนี้
-                                                </button>
-                                                <div class="confirm-popover" id="convertQuotationConfirm_@quotation.QuotationHeaderId" hidden>
-                                                    <div class="confirm-popover-title">สร้างใบแจ้งหนี้จากใบเสนอราคานี้หรือไม่?</div>
-                                                    <div class="confirm-popover-text">ระบบจะเปิดเอกสารใบแจ้งหนี้ฉบับร่างเพื่อให้ตรวจสอบก่อนออกเอกสาร</div>
-                                                    <div class="confirm-popover-actions">
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    }
                                 </div>
                             </td>
                         </tr>

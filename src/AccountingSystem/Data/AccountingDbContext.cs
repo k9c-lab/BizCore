@@ -266,7 +266,7 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.MovementType).HasMaxLength(30);
             entity.Property(x => x.ReferenceType).HasMaxLength(30);
             entity.Property(x => x.Qty).HasPrecision(18, 2);
-            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.Remark).HasMaxLength(2000);
             entity.HasIndex(x => x.MovementDate);
             entity.HasIndex(x => x.ItemId);
             entity.HasIndex(x => x.SerialId);
@@ -297,7 +297,7 @@ public class AccountingDbContext : DbContext
             entity.HasKey(x => x.StockTransferId);
             entity.Property(x => x.TransferNo).HasMaxLength(30);
             entity.Property(x => x.Status).HasMaxLength(20);
-            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.Remark).HasMaxLength(2000);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasIndex(x => x.TransferNo).IsUnique();
             entity.HasOne(x => x.FromBranch)
@@ -330,7 +330,7 @@ public class AccountingDbContext : DbContext
         {
             entity.HasKey(x => x.StockTransferDetailId);
             entity.Property(x => x.Qty).HasPrecision(18, 2);
-            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.Remark).HasMaxLength(2000);
             entity.HasOne(x => x.StockTransferHeader)
                 .WithMany(x => x.StockTransferDetails)
                 .HasForeignKey(x => x.StockTransferId)
@@ -362,7 +362,7 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.IssueType).HasMaxLength(30);
             entity.Property(x => x.Purpose).HasMaxLength(500);
             entity.Property(x => x.Status).HasMaxLength(20);
-            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.Property(x => x.Remark).HasMaxLength(2000);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.HasIndex(x => x.IssueNo).IsUnique();
             entity.HasOne(x => x.Branch)

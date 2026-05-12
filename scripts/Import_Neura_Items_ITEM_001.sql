@@ -1,3 +1,12 @@
+/*
+    Item import script for BizCore.
+    - Safe to run more than once.
+    - Existing rows are updated by ItemCode.
+    - New rows are inserted when ItemCode does not exist.
+    - Base selling price is imported as 0 because this file does not contain price data.
+      Update `dbo.Items.UnitPrice` and `dbo.ItemPrices` separately after import if needed.
+*/
+
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
@@ -9,6 +18,11 @@ BEGIN TRY
         ItemCode NVARCHAR(30) NOT NULL,
         ItemName NVARCHAR(200) NOT NULL,
         PartNumber NVARCHAR(80) NOT NULL
+    );
+
+    DECLARE @ExistingItems TABLE
+    (
+        ItemCode NVARCHAR(30) NOT NULL PRIMARY KEY
     );
 
     INSERT INTO @Items (ItemCode, ItemName, PartNumber)
@@ -70,17 +84,36 @@ BEGIN TRY
         (N'ITEM-055', N'Yushou CT High-pressure Angiographic Syringe 200ml', N'ITEM-055'),
         (N'ITEM-056', N'350psi, 150cm coil tube with valve', N'ITEM-056');
 
+    INSERT INTO @ExistingItems (ItemCode)
+    SELECT i.ItemCode
+    FROM dbo.Items i
+    INNER JOIN @Items source
+        ON source.ItemCode = i.ItemCode;
+
     IF EXISTS
     (
         SELECT 1
-        FROM @Items i
-        INNER JOIN dbo.Items d
-            ON d.ItemCode = i.ItemCode
-            OR d.PartNumber = i.PartNumber
+        FROM @Items source
+        INNER JOIN dbo.Items existing
+            ON existing.PartNumber = source.PartNumber
+           AND existing.ItemCode <> source.ItemCode
     )
     BEGIN
-        THROW 50001, 'Import aborted because one or more ItemCode or PartNumber values already exist in dbo.Items.', 1;
+        THROW 50001, 'Import aborted because one or more PartNumber values already belong to a different ItemCode in dbo.Items.', 1;
     END;
+
+    UPDATE target
+    SET
+        target.ItemName = source.ItemName,
+        target.PartNumber = source.PartNumber,
+        target.ItemType = N'Product',
+        target.Unit = N'EA',
+        target.TrackStock = 1,
+        target.IsSerialControlled = 0,
+        target.IsActive = 1
+    FROM dbo.Items target
+    INNER JOIN @Items source
+        ON source.ItemCode = target.ItemCode;
 
     INSERT INTO dbo.Items
     (
@@ -107,15 +140,24 @@ BEGIN TRY
         0,
         1
     FROM @Items i
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.Items existing
+        WHERE existing.ItemCode = i.ItemCode
+    )
     ORDER BY i.ItemCode;
 
     COMMIT TRANSACTION;
 
     SELECT
-        COUNT(*) AS InsertedCount,
-        MIN(ItemCode) AS FirstItemCode,
-        MAX(ItemCode) AS LastItemCode
-    FROM @Items;
+        SUM(CASE WHEN existing.ItemCode IS NULL THEN 1 ELSE 0 END) AS InsertedCount,
+        SUM(CASE WHEN existing.ItemCode IS NOT NULL THEN 1 ELSE 0 END) AS UpdatedCount,
+        MIN(source.ItemCode) AS FirstItemCode,
+        MAX(source.ItemCode) AS LastItemCode
+    FROM @Items source
+    LEFT JOIN @ExistingItems existing
+        ON existing.ItemCode = source.ItemCode;
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0

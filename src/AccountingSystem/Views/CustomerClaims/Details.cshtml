@@ -1,7 +1,7 @@
 @model BizCore.Models.Entities.CustomerClaimHeader
 
 @{
-    ViewData["Title"] = "Customer Claim Details";
+    ViewData["Title"] = "รายละเอียดเคลมลูกค้า";
     var line = Model.CustomerClaimDetails.FirstOrDefault();
     var serial = line?.SerialNumber;
     var replacementSerial = line?.ReplacementSerialNumber;
@@ -11,53 +11,53 @@
     var today = DateTime.Today;
     var dateValue = today.ToString("yyyy-MM-dd");
     var canReceiveItem = Model.Status == "Open";
-    var receiveBlockedReason = canReceiveItem ? string.Empty : "Receive item is available only for newly opened customer claims.";
+    var receiveBlockedReason = canReceiveItem ? string.Empty : "รับสินค้าได้เฉพาะเคลมลูกค้าที่เพิ่งเปิดใหม่";
     var sendStatusAllowed = Model.Status == "Received" || Model.Status == "Repairing";
     var sendSupplierBlockedReason = string.Empty;
     if (!sendStatusAllowed)
     {
         sendSupplierBlockedReason = Model.Status == "Open"
-            ? "Receive the customer item first before sending it to supplier."
-            : "Send to supplier is available only after the customer item has been received.";
+            ? "กรุณารับสินค้าจากลูกค้าก่อนส่งเคลมผู้ขาย"
+            : "ส่งเคลมผู้ขายได้หลังจากรับสินค้าจากลูกค้าแล้วเท่านั้น";
     }
     else if (linkedSupplierClaimId.HasValue)
     {
-        sendSupplierBlockedReason = "Supplier claim is already linked to this customer claim.";
+        sendSupplierBlockedReason = "เคลมลูกค้านี้ถูกผูกกับเคลมผู้ขายแล้ว";
     }
     else if (serial?.SupplierId == null)
     {
-        sendSupplierBlockedReason = "Send to supplier is blocked because this serial is not linked to a supplier.";
+        sendSupplierBlockedReason = "ยังส่งเคลมผู้ขายไม่ได้ เพราะ Serial นี้ยังไม่ผูกกับผู้ขาย";
     }
     else if (serial.SupplierWarrantyStartDate.HasValue && today < serial.SupplierWarrantyStartDate.Value.Date)
     {
-        sendSupplierBlockedReason = "Send to supplier is blocked because supplier warranty has not started.";
+        sendSupplierBlockedReason = "ยังส่งเคลมผู้ขายไม่ได้ เพราะประกันผู้ขายยังไม่เริ่มต้น";
     }
     else if (serial.SupplierWarrantyEndDate.HasValue && today > serial.SupplierWarrantyEndDate.Value.Date)
     {
-        sendSupplierBlockedReason = "Send to supplier is blocked because supplier warranty has expired.";
+        sendSupplierBlockedReason = "ยังส่งเคลมผู้ขายไม่ได้ เพราะประกันผู้ขายหมดอายุแล้ว";
     }
     var canSendToSupplier = string.IsNullOrWhiteSpace(sendSupplierBlockedReason);
     var hasReplacement = line?.ReplacementSerialId.HasValue == true;
     var canReject = !hasReplacement &&
         (Model.Status == "Open" || Model.Status == "Received" || Model.Status == "Repairing" || Model.Status == "SentToSupplier" || Model.Status == "ReadyToReturn");
-    var rejectBlockedReason = canReject ? string.Empty : hasReplacement ? "Reject claim is blocked because a replacement serial has already been assigned." : "Reject claim is available only before the claim is returned, closed, or cancelled.";
+    var rejectBlockedReason = canReject ? string.Empty : hasReplacement ? "ยังปฏิเสธเคลมไม่ได้ เพราะมีการกำหนด Serial ทดแทนแล้ว" : "ปฏิเสธเคลมได้ก่อนคืนลูกค้า ปิดเคลม หรือยกเลิกเท่านั้น";
     var canRepairComplete = Model.Status == "Received" || Model.Status == "Repairing";
-    var repairCompleteBlockedReason = canRepairComplete ? string.Empty : "Repair complete is available only after the customer item has been received.";
+    var repairCompleteBlockedReason = canRepairComplete ? string.Empty : "ทำรายการพร้อมคืนได้หลังจากรับสินค้าจากลูกค้าแล้วเท่านั้น";
     var canReturn = Model.Status == "ReadyToReturn";
-    var returnBlockedReason = canReturn ? string.Empty : "Return to customer is available only after the claim is ready to return.";
+    var returnBlockedReason = canReturn ? string.Empty : "คืนลูกค้าได้หลังจากเคลมอยู่ในสถานะพร้อมคืนลูกค้าเท่านั้น";
     var canClose = Model.Status == "ReturnedToCustomer" || Model.Status == "Rejected";
-    var closeBlockedReason = canClose ? string.Empty : "Close claim is available only after return to customer or rejection.";
+    var closeBlockedReason = canClose ? string.Empty : "ปิดเคลมได้หลังจากคืนลูกค้าหรือปฏิเสธเคลมแล้วเท่านั้น";
     var canCancel = !hasReplacement && (Model.Status == "Open" || Model.Status == "Received" || Model.Status == "Repairing" || Model.Status == "ReadyToReturn");
-    var cancelBlockedReason = canCancel ? string.Empty : hasReplacement ? "Cancel claim is blocked because a replacement serial has already been assigned." : "Cancel claim is available only before supplier/customer return is completed.";
+    var cancelBlockedReason = canCancel ? string.Empty : hasReplacement ? "ยังยกเลิกเคลมไม่ได้ เพราะมีการกำหนด Serial ทดแทนแล้ว" : "ยกเลิกเคลมได้ก่อนจบขั้นตอนส่งคืนผู้ขาย/ลูกค้าเท่านั้น";
     var canAssignReplacement = !hasReplacement &&
         (Model.Status == "Received" || Model.Status == "Repairing" || Model.Status == "SentToSupplier" || Model.Status == "ReadyToReturn") &&
         replacementSerialOptions.Any();
     var replacementBlockedReason = hasReplacement
-        ? "Replacement serial is already assigned."
+        ? "มีการกำหนด Serial ทดแทนแล้ว"
         : !(Model.Status == "Received" || Model.Status == "Repairing" || Model.Status == "SentToSupplier" || Model.Status == "ReadyToReturn")
-            ? "Replacement can be assigned only while the claim is active and before return to customer."
+            ? "กำหนด Serial ทดแทนได้เฉพาะช่วงที่เคลมยังดำเนินการอยู่และก่อนคืนลูกค้า"
             : !replacementSerialOptions.Any()
-                ? "No InStock replacement serial is available for this item."
+                ? "ไม่พบ Serial ทดแทนสถานะ InStock สำหรับสินค้านี้"
                 : string.Empty;
     var canShowHandling = Model.Status == "Received" ||
         Model.Status == "Repairing" ||
@@ -84,24 +84,24 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Warranty Module</div>
+        <div class="page-eyebrow">โมดูลรับประกัน</div>
         <h1 class="page-title">@Model.CustomerClaimNo</h1>
-        <p class="page-subtitle">Customer claim for sold serial-controlled item.</p>
+        <p class="page-subtitle">เคลมลูกค้าสำหรับสินค้าที่ขายแล้วและควบคุม Serial</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
         @if (canReceiveItem)
         {
             <form asp-action="ReceiveItem" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="receiveCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Receive Item</button>
+                    <button type="button" class="btn btn-outline-primary js-confirm-popover-toggle" data-confirm-target="receiveCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">รับสินค้า</button>
                     <div class="confirm-popover" id="receiveCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
-                        <div class="confirm-popover-title">Receive this item?</div>
-                        <div class="confirm-popover-text">This will mark the customer item as received into the claim workflow.</div>
+                        <div class="confirm-popover-title">รับสินค้านี้เข้ากระบวนการเคลมหรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะบันทึกว่ารับสินค้าจากลูกค้าเข้าสู่กระบวนการเคลมแล้ว</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -109,29 +109,29 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">Receive Item</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@receiveBlockedReason">รับสินค้า</button>
         }
         @if (linkedSupplierClaimId.HasValue)
         {
-            <a asp-controller="SupplierClaims" asp-action="Details" asp-route-id="@linkedSupplierClaimId.Value" class="btn btn-outline-primary">Supplier Claim</a>
+            <a asp-controller="SupplierClaims" asp-action="Details" asp-route-id="@linkedSupplierClaimId.Value" class="btn btn-outline-primary">เคลมผู้ขาย</a>
         }
         @if (canReturn)
         {
             <form asp-action="ReturnToCustomer" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="date" name="returnedDate" value="@dateValue" class="form-control form-control-sm" title="Return date" />
+                <input type="date" name="returnedDate" value="@dateValue" class="form-control form-control-sm" title="วันที่คืน" />
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-outline-success js-confirm-popover-toggle" data-confirm-target="returnCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Return To Customer</button>
+                    <button type="button" class="btn btn-outline-success js-confirm-popover-toggle" data-confirm-target="returnCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">คืนลูกค้า</button>
                     <div class="confirm-popover" id="returnCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
-                        <div class="confirm-popover-title">Return this item to customer?</div>
-                        <div class="confirm-popover-text">Optional resolution remark helps document the return outcome.</div>
+                        <div class="confirm-popover-title">คืนสินค้านี้ให้ลูกค้าหรือไม่?</div>
+                        <div class="confirm-popover-text">สามารถระบุหมายเหตุผลลัพธ์เพิ่มเติมเพื่อบันทึกการคืนสินค้าได้</div>
                         <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="returnCustomerClaimRemark_@Model.CustomerClaimId">Resolution Remark</label>
-                            <textarea id="returnCustomerClaimRemark_@Model.CustomerClaimId" name="resolutionRemark" class="form-control" rows="3" placeholder="Optional remark"></textarea>
+                            <label class="confirm-popover-label" for="returnCustomerClaimRemark_@Model.CustomerClaimId">หมายเหตุผลลัพธ์</label>
+                            <textarea id="returnCustomerClaimRemark_@Model.CustomerClaimId" name="resolutionRemark" class="form-control" rows="3" placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
                         </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-success">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -139,21 +139,21 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@returnBlockedReason">Return To Customer</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@returnBlockedReason">คืนลูกค้า</button>
         }
         @if (canClose)
         {
             <form asp-action="CloseClaim" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline-flex align-items-center gap-2 confirm-popover-form">
                 @Html.AntiForgeryToken()
-                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="Close date" />
+                <input type="date" name="closedDate" value="@dateValue" class="form-control form-control-sm" title="วันที่ปิดเคลม" />
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Close Claim</button>
+                    <button type="button" class="btn btn-primary js-confirm-popover-toggle" data-confirm-target="closeCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">ปิดเคลม</button>
                     <div class="confirm-popover" id="closeCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
-                        <div class="confirm-popover-title">Close this customer claim?</div>
-                        <div class="confirm-popover-text">This will close the claim after return or rejection is complete.</div>
+                        <div class="confirm-popover-title">ปิดเคลมลูกค้านี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะปิดเคลมหลังจากคืนลูกค้าหรือปฏิเสธเคลมเสร็จแล้ว</div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -161,24 +161,24 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">Close Claim</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@closeBlockedReason">ปิดเคลม</button>
         }
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.CustomerClaimId" method="post" class="d-inline confirm-popover-form">
                 @Html.AntiForgeryToken()
                 <div class="confirm-popover-shell">
-                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">Cancel Claim</button>
+                    <button type="button" class="btn btn-outline-danger js-confirm-popover-toggle" data-confirm-target="cancelCustomerClaimConfirm_@Model.CustomerClaimId" aria-expanded="false">ยกเลิกเคลม</button>
                     <div class="confirm-popover" id="cancelCustomerClaimConfirm_@Model.CustomerClaimId" hidden>
-                        <div class="confirm-popover-title">Cancel this customer claim?</div>
-                        <div class="confirm-popover-text">This will cancel the claim and restore the original serial status to Sold.</div>
+                        <div class="confirm-popover-title">ยกเลิกเคลมลูกค้านี้หรือไม่?</div>
+                        <div class="confirm-popover-text">ระบบจะยกเลิกเคลมและคืนสถานะ Serial เดิมเป็น Sold</div>
                         <div class="confirm-popover-field">
-                            <label class="confirm-popover-label" for="cancelCustomerClaimReason_@Model.CustomerClaimId">Cancel Reason</label>
-                            <textarea id="cancelCustomerClaimReason_@Model.CustomerClaimId" name="cancelReason" class="form-control" rows="3" placeholder="Optional reason"></textarea>
+                            <label class="confirm-popover-label" for="cancelCustomerClaimReason_@Model.CustomerClaimId">เหตุผลที่ยกเลิก</label>
+                            <textarea id="cancelCustomerClaimReason_@Model.CustomerClaimId" name="cancelReason" class="form-control" rows="3" placeholder="ระบุเหตุผลเพิ่มเติม (ถ้ามี)"></textarea>
                         </div>
                         <div class="confirm-popover-actions">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Confirm</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยัน</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -186,7 +186,7 @@
         }
         else
         {
-            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">Cancel Claim</button>
+            <button type="button" class="btn btn-outline-secondary" disabled title="@cancelBlockedReason">ยกเลิกเคลม</button>
         }
     </div>
 </div>
@@ -204,12 +204,12 @@
 <div class="card content-card">
     <div class="card-body form-shell">
         <div class="form-section">
-            <div class="form-section-title">Claim Information</div>
+            <div class="form-section-title">ข้อมูลเคลม</div>
             <div class="detail-grid">
-                <div class="detail-item"><span class="detail-label">Claim No.</span><p class="detail-value">@Model.CustomerClaimNo</p></div>
-                <div class="detail-item"><span class="detail-label">Claim Date</span><p class="detail-value">@Model.CustomerClaimDate.ToString("dd MMM yyyy")</p></div>
-                <div class="detail-item"><span class="detail-label">Status</span><p class="detail-value"><span class="status-pill @(Model.Status == "Open" ? "active" : "inactive")">@Model.Status</span></p></div>
-                <div class="detail-item"><span class="detail-label">Invoice No.</span><p class="detail-value">@(Model.InvoiceHeader?.InvoiceNo ?? "-")</p></div>
+                <div class="detail-item"><span class="detail-label">เลขที่เคลม</span><p class="detail-value">@Model.CustomerClaimNo</p></div>
+                <div class="detail-item"><span class="detail-label">วันที่เคลม</span><p class="detail-value">@Model.CustomerClaimDate.ToString("dd MMM yyyy")</p></div>
+                <div class="detail-item"><span class="detail-label">สถานะ</span><p class="detail-value"><span class="status-pill @(Model.Status == "Open" ? "active" : "inactive")">@(Model.Status == "Open" ? "เปิดเคลม" : Model.Status == "Received" ? "รับสินค้าแล้ว" : Model.Status == "SentToSupplier" ? "ส่งเคลมผู้ขาย" : Model.Status == "Repairing" ? "กำลังซ่อม" : Model.Status == "ReadyToReturn" ? "พร้อมคืนลูกค้า" : Model.Status == "ReturnedToCustomer" ? "คืนลูกค้าแล้ว" : Model.Status == "Rejected" ? "ปฏิเสธเคลม" : Model.Status == "Closed" ? "ปิดเคลม" : Model.Status == "Cancelled" ? "ยกเลิก" : Model.Status)</span></p></div>
+                <div class="detail-item"><span class="detail-label">เลขที่ใบแจ้งหนี้</span><p class="detail-value">@(Model.InvoiceHeader?.InvoiceNo ?? "-")</p></div>
             </div>
         </div>
 

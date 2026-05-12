@@ -1,27 +1,27 @@
 ﻿@model BizCore.Models.ViewModels.StockAuditPageViewModel
 
 @{
-    ViewData["Title"] = "Stock Audit";
+    ViewData["Title"] = "ตรวจสอบสต็อก";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Audit</div>
-        <h1 class="page-title">Stock Audit</h1>
+        <div class="page-eyebrow">ตรวจสอบข้อมูลคลังสินค้า</div>
+        <h1 class="page-title">ตรวจสอบสต็อก</h1>
         </div>
 </div>
 
 <div class="quote-summary-grid mb-3">
     <div class="quote-summary-card">
-        <span class="quote-summary-label">Audited Rows</span>
+        <span class="quote-summary-label">รายการที่ตรวจสอบ</span>
         <p class="quote-summary-value">@Model.TotalRows</p>
     </div>
     <div class="quote-summary-card">
-        <span class="quote-summary-label">OK</span>
+        <span class="quote-summary-label">ปกติ</span>
         <p class="quote-summary-value">@Model.OkRows</p>
     </div>
     <div class="quote-summary-card">
-        <span class="quote-summary-label">Mismatch</span>
+        <span class="quote-summary-label">ไม่ตรงกัน</span>
         <p class="quote-summary-value">@Model.MismatchRows</p>
     </div>
 </div>
@@ -29,34 +29,34 @@
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Reconciliation Results</h2>
+            <h2 class="section-title">ผลการตรวจสอบ</h2>
             </div>
-        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Item code, name, or part number" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="รหัสสินค้า, ชื่อสินค้า หรือ Part Number" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="auditStatus">Status</label>
+                <label class="form-label" for="auditStatus">สถานะ</label>
                 <select id="auditStatus" name="auditStatus" class="form-select">
-                    <option value="">All</option>
-                    <option value="Mismatch" selected="@(Model.AuditStatus == "Mismatch")">Mismatch</option>
-                    <option value="OK" selected="@(Model.AuditStatus == "OK")">OK</option>
+                    <option value="">ทั้งหมด</option>
+                    <option value="Mismatch" selected="@(Model.AuditStatus == "Mismatch")">ไม่ตรงกัน</option>
+                    <option value="OK" selected="@(Model.AuditStatus == "OK")">ปกติ</option>
                 </select>
             </div>
             @if (Model.CanAccessAllBranches)
             {
                 <div class="list-filter-field">
-                    <label class="form-label" for="branchId">Branch</label>
+                    <label class="form-label" for="branchId">สาขา</label>
                     <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
                 </div>
             }
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
 
@@ -64,17 +64,17 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Branch</th>
-                        <th>Item</th>
+                        <th>สาขา</th>
+                        <th>สินค้า</th>
                         <th>Serial</th>
-                        <th class="text-end">Balance Qty</th>
-                        <th class="text-end">Serial InStock</th>
-                        <th class="text-end">Ledger Net</th>
-                        <th class="text-end">Bal-Ledger Diff</th>
-                        <th class="text-end">Bal-Serial Diff</th>
-                        <th>Status</th>
-                        <th>Issue</th>
-                        <th class="text-end">Action</th>
+                        <th class="text-end">ยอดคงเหลือ</th>
+                        <th class="text-end">Serial คงคลัง</th>
+                        <th class="text-end">สมุดสต็อกสุทธิ</th>
+                        <th class="text-end">ผลต่างคงเหลือ-สมุด</th>
+                        <th class="text-end">ผลต่างคงเหลือ-Serial</th>
+                        <th>สถานะ</th>
+                        <th>ปัญหาที่พบ</th>
+                        <th class="text-end">การทำงาน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -92,7 +92,7 @@
                                 <div class="table-meta">@row.ItemName</div>
                                 <div class="table-meta">@row.PartNumber</div>
                             </td>
-                            <td>@(row.IsSerialControlled ? "Yes" : "No")</td>
+                            <td>@(row.IsSerialControlled ? "ใช่" : "ไม่ใช่")</td>
                             <td class="text-end">@row.BalanceQty.ToString("N2")</td>
                             <td class="text-end">@(row.SerialInStockQty.HasValue ? row.SerialInStockQty.Value.ToString("N2") : "-")</td>
                             <td class="text-end">@row.LedgerNetQty.ToString("N2")</td>
@@ -102,10 +102,10 @@
                             <td>@row.IssueText</td>
                             <td class="text-end">
                                 <div class="table-actions">
-                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-primary">Ledger</a>
+                                    <a asp-controller="StockLedger" asp-action="Index" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-primary">สมุดสต็อก</a>
                                     @if (row.IsSerialControlled)
                                     {
-                                        <a asp-controller="StockInquiry" asp-action="Serials" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-secondary">Serials</a>
+                                        <a asp-controller="StockInquiry" asp-action="Serials" asp-route-itemId="@row.ItemId" asp-route-branchId="@row.BranchId" class="btn btn-sm btn-outline-secondary">Serial</a>
                                     }
                                 </div>
                             </td>
@@ -115,7 +115,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="11" class="table-empty">No stock audit rows matched the current search.</td>
+                        <td colspan="11" class="table-empty">ไม่พบข้อมูลตรวจสอบสต็อกตามเงื่อนไขที่ค้นหา</td>
                     </tr>
                 }
                 </tbody>

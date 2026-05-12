@@ -126,12 +126,12 @@ public class StockAuditController : CrudControllerBase
 
         if (balanceLedgerDiff != 0m)
         {
-            issues.Add("Balance vs ledger");
+            issues.Add("ยอดคงเหลือไม่ตรงกับสมุดสต็อก");
         }
 
         if (balanceSerialDiff.HasValue && balanceSerialDiff.Value != 0m)
         {
-            issues.Add("Balance vs serial");
+            issues.Add("ยอดคงเหลือไม่ตรงกับ Serial");
         }
 
         return new StockAuditRowViewModel
@@ -150,7 +150,7 @@ public class StockAuditController : CrudControllerBase
             BalanceLedgerDiff = balanceLedgerDiff,
             BalanceSerialDiff = balanceSerialDiff,
             IsMismatch = isMismatch,
-            IssueText = issues.Count == 0 ? "OK" : string.Join(", ", issues)
+            IssueText = issues.Count == 0 ? "ปกติ" : string.Join(", ", issues)
         };
     }
 
@@ -296,19 +296,19 @@ public class StockAuditController : CrudControllerBase
     {
         if (!branchId.HasValue && canAccessAllBranches)
         {
-            return "All Branches";
+            return "ทุกสาขา";
         }
 
         if (!branchId.HasValue)
         {
-            return "No Branch";
+            return "ไม่ระบุสาขา";
         }
 
         return await _context.Branches
             .AsNoTracking()
             .Where(x => x.BranchId == branchId.Value)
             .Select(x => x.BranchName)
-            .FirstOrDefaultAsync() ?? "No Branch";
+            .FirstOrDefaultAsync() ?? "ไม่ระบุสาขา";
     }
 
     private async Task<IReadOnlyList<SelectListItem>> BuildBranchOptionsAsync(int? selectedBranchId, bool canAccessAllBranches)
@@ -320,7 +320,7 @@ public class StockAuditController : CrudControllerBase
 
         var options = new List<SelectListItem>
         {
-            new() { Value = string.Empty, Text = "All Branches", Selected = !selectedBranchId.HasValue }
+            new() { Value = string.Empty, Text = "ทุกสาขา", Selected = !selectedBranchId.HasValue }
         };
 
         options.AddRange(await _context.Branches

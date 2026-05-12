@@ -94,7 +94,7 @@ public class SupplierClaimsController : CrudControllerBase
     {
         if (!serialId.HasValue)
         {
-            TempData["ClaimError"] = "Open the claim page from a selected serial.";
+            TempData["ClaimError"] = "กรุณาเปิดหน้าเคลมจาก Serial ที่เลือก";
             return RedirectToAction("Index", "SerialInquiry");
         }
 
@@ -206,7 +206,7 @@ public class SupplierClaimsController : CrudControllerBase
 
         if (claim.ClaimStatus != "Open" && claim.ClaimStatus != "Sent")
         {
-            TempData["ClaimNotice"] = "Receive repaired original is available only for Open or Sent supplier claims.";
+            TempData["ClaimNotice"] = "รับของซ่อมกลับได้เฉพาะเคลมผู้ขายสถานะเปิดหรือส่งแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
@@ -258,12 +258,12 @@ public class SupplierClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["ClaimNotice"] = "Supplier repaired original serial was received.";
+            TempData["ClaimNotice"] = "รับ Serial เดิมที่ซ่อมแล้วกลับเรียบร้อย";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["ClaimNotice"] = "Receive repaired original failed. No changes were saved.";
+            TempData["ClaimNotice"] = "รับของซ่อมกลับไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
@@ -281,7 +281,7 @@ public class SupplierClaimsController : CrudControllerBase
 
         if (claim.ClaimStatus != "Open" && claim.ClaimStatus != "Sent")
         {
-            TempData["ClaimNotice"] = "Receive replacement is available only for Open or Sent supplier claims.";
+            TempData["ClaimNotice"] = "รับสินค้าทดแทนได้เฉพาะเคลมผู้ขายสถานะเปิดหรือส่งแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
@@ -292,21 +292,21 @@ public class SupplierClaimsController : CrudControllerBase
 
         if (string.IsNullOrWhiteSpace(replacementSerialNo))
         {
-            TempData["ClaimNotice"] = "Replacement serial no. is required.";
+            TempData["ClaimNotice"] = "กรุณาระบุหมายเลข Serial ทดแทน";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
         var serialNo = replacementSerialNo.Trim();
         if (await _context.SerialNumbers.AnyAsync(x => x.SerialNo == serialNo))
         {
-            TempData["ClaimNotice"] = "Replacement serial no. already exists.";
+            TempData["ClaimNotice"] = "หมายเลข Serial ทดแทนนี้มีอยู่ในระบบแล้ว";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
         if (supplierWarrantyStartDate.HasValue && supplierWarrantyEndDate.HasValue &&
             supplierWarrantyEndDate.Value.Date < supplierWarrantyStartDate.Value.Date)
         {
-            TempData["ClaimNotice"] = "Supplier warranty end date cannot be earlier than start date.";
+            TempData["ClaimNotice"] = "วันสิ้นสุดประกันผู้ขายต้องไม่ก่อนวันเริ่มต้น";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
@@ -353,12 +353,12 @@ public class SupplierClaimsController : CrudControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["ClaimNotice"] = "Supplier replacement serial was received into stock.";
+            TempData["ClaimNotice"] = "รับ Serial ทดแทนจากผู้ขายเข้าสต็อกเรียบร้อย";
         }
         catch
         {
             await transaction.RollbackAsync();
-            TempData["ClaimNotice"] = "Receive replacement failed. No changes were saved.";
+            TempData["ClaimNotice"] = "รับสินค้าทดแทนไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
@@ -383,7 +383,7 @@ public class SupplierClaimsController : CrudControllerBase
                     claim.SerialNumber.Status = "Defective";
                 }
             },
-            "Supplier claim was rejected and original serial was marked Defective.");
+            "ผู้ขายปฏิเสธเคลมเรียบร้อย และกำหนดสถานะ Serial เดิมเป็นชำรุด");
     }
 
     [HttpPost]
@@ -399,7 +399,7 @@ public class SupplierClaimsController : CrudControllerBase
                 claim.ClosedDate = closedDate?.Date ?? DateTime.Today;
                 claim.UpdatedDate = DateTime.UtcNow;
             },
-            "Supplier claim was closed.");
+            "ปิดเคลมผู้ขายเรียบร้อยแล้ว");
     }
 
     private async Task<SerialNumber?> GetSerialAsync(int serialId, bool trackChanges)
@@ -451,7 +451,7 @@ public class SupplierClaimsController : CrudControllerBase
 
         if (!allowedStatuses.Contains(claim.ClaimStatus))
         {
-            TempData["ClaimNotice"] = $"Action is not available while supplier claim status is {claim.ClaimStatus}.";
+            TempData["ClaimNotice"] = $"ไม่สามารถทำรายการนี้ได้ในสถานะเคลมผู้ขาย {claim.ClaimStatus}";
             return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
         }
 
@@ -467,7 +467,7 @@ public class SupplierClaimsController : CrudControllerBase
         catch
         {
             await transaction.RollbackAsync();
-            TempData["ClaimNotice"] = "Supplier claim workflow action failed. No changes were saved.";
+            TempData["ClaimNotice"] = "ทำรายการ workflow เคลมผู้ขายไม่สำเร็จ ระบบไม่ได้บันทึกการเปลี่ยนแปลง";
         }
 
         return RedirectToAction(nameof(Details), new { id = claim.SerialClaimLogId });
@@ -568,7 +568,7 @@ public class SupplierClaimsController : CrudControllerBase
         if (serial.SupplierWarrantyEndDate.HasValue && serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
         {
             model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "Supplier warranty has expired. Claim creation is not allowed for this serial.";
+            model.ClaimBlockMessage = "ประกันผู้ขายหมดอายุแล้ว ไม่สามารถสร้างเคลมสำหรับ Serial นี้ได้";
         }
     }
 
@@ -576,11 +576,11 @@ public class SupplierClaimsController : CrudControllerBase
     {
         model.StatusOptions = new[]
         {
-            new SelectListItem("Open", "Open"),
-            new SelectListItem("Sent", "Sent"),
-            new SelectListItem("Returned", "Returned"),
-            new SelectListItem("Rejected", "Rejected"),
-            new SelectListItem("Closed", "Closed")
+            new SelectListItem("เปิด", "Open"),
+            new SelectListItem("ส่งแล้ว", "Sent"),
+            new SelectListItem("รับกลับแล้ว", "Returned"),
+            new SelectListItem("ปฏิเสธ", "Rejected"),
+            new SelectListItem("ปิดเคลม", "Closed")
         };
     }
 
@@ -588,29 +588,29 @@ public class SupplierClaimsController : CrudControllerBase
     {
         if (!CanAccessBranch(serial.BranchId))
         {
-            ModelState.AddModelError(string.Empty, "You cannot create a supplier claim for another branch.");
+            ModelState.AddModelError(string.Empty, "คุณไม่มีสิทธิ์สร้างเคลมผู้ขายให้สาขาอื่น");
         }
 
         if (!serial.SupplierId.HasValue)
         {
-            ModelState.AddModelError(string.Empty, "Selected serial does not have a supplier.");
+            ModelState.AddModelError(string.Empty, "Serial ที่เลือกยังไม่ผูกกับผู้ขาย");
         }
 
         if (serial.SupplierWarrantyEndDate.HasValue && serial.SupplierWarrantyEndDate.Value.Date < DateTime.Today)
         {
             model.IsClaimBlocked = true;
-            model.ClaimBlockMessage = "Supplier warranty has expired. Claim creation is not allowed for this serial.";
+            model.ClaimBlockMessage = "ประกันผู้ขายหมดอายุแล้ว ไม่สามารถสร้างเคลมสำหรับ Serial นี้ได้";
             ModelState.AddModelError(string.Empty, model.ClaimBlockMessage);
         }
 
         if (serial.SupplierWarrantyStartDate.HasValue && model.ClaimDate.Date < serial.SupplierWarrantyStartDate.Value.Date)
         {
-            ModelState.AddModelError(nameof(model.ClaimDate), "Claim date cannot be earlier than the supplier warranty start date.");
+            ModelState.AddModelError(nameof(model.ClaimDate), "วันที่เคลมห้ามก่อนวันเริ่มประกันผู้ขาย");
         }
 
         if (serial.SupplierWarrantyEndDate.HasValue && model.ClaimDate.Date > serial.SupplierWarrantyEndDate.Value.Date)
         {
-            ModelState.AddModelError(nameof(model.ClaimDate), "Claim date must be within the supplier warranty period.");
+            ModelState.AddModelError(nameof(model.ClaimDate), "วันที่เคลมต้องอยู่ในช่วงประกันผู้ขาย");
         }
     }
 

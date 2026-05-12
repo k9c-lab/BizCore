@@ -145,7 +145,7 @@ public class StockTransfersController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Transfer number must be unique.");
+            ModelState.AddModelError(string.Empty, "เลขที่ใบโอนซ้ำ กรุณาตรวจสอบอีกครั้ง");
             EnsureMinimumRows(model);
             await PopulateLookupsAsync(model);
             return View(model);
@@ -167,7 +167,7 @@ public class StockTransfersController : CrudControllerBase
 
         if (transfer.Status != "Draft")
         {
-            TempData["StockTransferNotice"] = "Only Draft stock transfers can be edited.";
+            TempData["StockTransferNotice"] = "แก้ไขได้เฉพาะใบโอนสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = transfer.StockTransferId });
         }
 
@@ -189,7 +189,7 @@ public class StockTransfersController : CrudControllerBase
 
         if (transfer.Status != "Draft")
         {
-            TempData["StockTransferNotice"] = "Only Draft stock transfers can be edited.";
+            TempData["StockTransferNotice"] = "แก้ไขได้เฉพาะใบโอนสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id = transfer.StockTransferId });
         }
 
@@ -241,7 +241,7 @@ public class StockTransfersController : CrudControllerBase
         catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
         {
             await transaction.RollbackAsync();
-            ModelState.AddModelError(string.Empty, "Transfer number must be unique.");
+            ModelState.AddModelError(string.Empty, "เลขที่ใบโอนซ้ำ กรุณาตรวจสอบอีกครั้ง");
             EnsureMinimumRows(model);
             await PopulateLookupsAsync(model);
             return View("Create", model);
@@ -330,14 +330,14 @@ public class StockTransfersController : CrudControllerBase
 
         if (transfer.Status != "Draft")
         {
-            TempData["StockTransferNotice"] = "Only Draft stock transfers can be posted.";
+            TempData["StockTransferNotice"] = "ลงรายการได้เฉพาะใบโอนสถานะฉบับร่าง";
             return RedirectToAction(nameof(Details), new { id });
         }
 
         var model = BuildFormModel(transfer);
         if (!await ValidateTransferAsync(model, requireComplete: true))
         {
-            TempData["StockTransferNotice"] = GetFirstModelStateErrorMessage("Post Stock Transfer is blocked because this draft is not complete.");
+            TempData["StockTransferNotice"] = GetFirstModelStateErrorMessage("ยังลงรายการใบโอนไม่ได้ เพราะข้อมูลฉบับร่างยังไม่ครบ");
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -354,7 +354,7 @@ public class StockTransfersController : CrudControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["StockTransferNotice"] = "Stock transfer posted successfully.";
+        TempData["StockTransferNotice"] = "ลงรายการใบโอนสต็อกเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -395,7 +395,7 @@ public class StockTransfersController : CrudControllerBase
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["StockTransferNotice"] = "Stock transfer cancelled successfully.";
+        TempData["StockTransferNotice"] = "ยกเลิกใบโอนสต็อกเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -451,7 +451,7 @@ public class StockTransfersController : CrudControllerBase
             .Select(x => new SelectListItem($"{x.BranchCode} - {x.BranchName}", x.BranchId.ToString(), x.BranchId == model.ToBranchId))
             .ToList();
 
-        model.FromBranchName = branches.FirstOrDefault(x => x.BranchId == model.FromBranchId)?.BranchName ?? "No Branch";
+        model.FromBranchName = branches.FirstOrDefault(x => x.BranchId == model.FromBranchId)?.BranchName ?? "ไม่ระบุสาขา";
         model.ToBranchName = branches.FirstOrDefault(x => x.BranchId == model.ToBranchId)?.BranchName ?? string.Empty;
 
         model.ItemLookup = await _context.Items
@@ -480,26 +480,26 @@ public class StockTransfersController : CrudControllerBase
 
         if (model.Details.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.Details), "Please add at least one transfer line.");
+            ModelState.AddModelError(nameof(model.Details), "กรุณาเพิ่มอย่างน้อย 1 รายการ");
         }
 
         if (!model.FromBranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.FromBranchId), "Please select source branch.");
+            ModelState.AddModelError(nameof(model.FromBranchId), "กรุณาเลือกสาขาต้นทาง");
         }
         else if (!CanTransferFromBranch(model.FromBranchId.Value))
         {
-            ModelState.AddModelError(nameof(model.FromBranchId), "You cannot transfer stock out of this branch.");
+            ModelState.AddModelError(nameof(model.FromBranchId), "คุณไม่มีสิทธิ์โอนสต็อกจากสาขานี้");
         }
 
         if (!model.ToBranchId.HasValue)
         {
-            ModelState.AddModelError(nameof(model.ToBranchId), "Please select destination branch.");
+            ModelState.AddModelError(nameof(model.ToBranchId), "กรุณาเลือกสาขาปลายทาง");
         }
 
         if (model.FromBranchId.HasValue && model.ToBranchId.HasValue && model.FromBranchId.Value == model.ToBranchId.Value)
         {
-            ModelState.AddModelError(nameof(model.ToBranchId), "Destination branch must be different from source branch.");
+            ModelState.AddModelError(nameof(model.ToBranchId), "สาขาปลายทางต้องไม่ซ้ำกับสาขาต้นทาง");
         }
 
         var branchIds = new[] { model.FromBranchId, model.ToBranchId }
@@ -510,7 +510,7 @@ public class StockTransfersController : CrudControllerBase
         var activeBranchCount = await _context.Branches.CountAsync(x => branchIds.Contains(x.BranchId) && x.IsActive);
         if (activeBranchCount != branchIds.Count)
         {
-            ModelState.AddModelError(string.Empty, "One or more selected branches were not found or inactive.");
+            ModelState.AddModelError(string.Empty, "พบสาขาที่เลือกไม่ถูกต้องหรือถูกปิดใช้งาน");
         }
 
         var itemIds = model.Details.Where(x => x.ItemId.HasValue).Select(x => x.ItemId!.Value).Distinct().ToList();
@@ -527,39 +527,39 @@ public class StockTransfersController : CrudControllerBase
 
             if (!detail.ItemId.HasValue || !itemMap.TryGetValue(detail.ItemId.Value, out var item))
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Please select a valid item.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "กรุณาเลือกรายการสินค้าที่ถูกต้อง");
                 continue;
             }
 
             if (!item.TrackStock)
             {
-                ModelState.AddModelError($"Details[{i}].ItemId", "Stock transfer supports stock-tracked items only.");
+                ModelState.AddModelError($"Details[{i}].ItemId", "ใบโอนรองรับเฉพาะสินค้าที่ติดตามสต็อก");
             }
 
             if (detail.Qty <= 0)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Qty must be greater than zero.");
+                ModelState.AddModelError($"Details[{i}].Qty", "จำนวนต้องมากกว่า 0");
             }
 
             if (item.IsSerialControlled && detail.Qty != Math.Truncate(detail.Qty))
             {
-                ModelState.AddModelError($"Details[{i}].Qty", "Serial-controlled items must be transferred in whole numbers.");
+                ModelState.AddModelError($"Details[{i}].Qty", "สินค้าที่ควบคุม Serial ต้องโอนเป็นจำนวนเต็มเท่านั้น");
             }
 
             var lineSerials = ExtractSerialNumbers(detail);
             if (lineSerials.Count != lineSerials.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Duplicate serial numbers are not allowed in the same line.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "ห้ามมี Serial ซ้ำในบรรทัดเดียวกัน");
             }
 
             if (item.IsSerialControlled && lineSerials.Count != (int)detail.Qty)
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", $"Serial count must exactly match transfer qty. Qty is {detail.Qty:N0}, selected serials are {lineSerials.Count:N0}.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", $"จำนวน Serial ต้องเท่ากับจำนวนโอน โดยจำนวนคือ {detail.Qty:N0} และ Serial ที่เลือกคือ {lineSerials.Count:N0}");
             }
 
             if (!item.IsSerialControlled && lineSerials.Count > 0)
             {
-                ModelState.AddModelError($"Details[{i}].SerialEntryText", "Serial numbers can be entered only for serial-controlled items.");
+                ModelState.AddModelError($"Details[{i}].SerialEntryText", "กรอก Serial ได้เฉพาะสินค้าที่ควบคุม Serial เท่านั้น");
             }
 
             serialTexts.AddRange(lineSerials);
@@ -567,7 +567,7 @@ public class StockTransfersController : CrudControllerBase
 
         if (serialTexts.Count != serialTexts.Distinct(StringComparer.OrdinalIgnoreCase).Count())
         {
-            ModelState.AddModelError(string.Empty, "Duplicate serial numbers are not allowed across transfer lines.");
+            ModelState.AddModelError(string.Empty, "ห้ามมี Serial ซ้ำกันข้ามบรรทัดรายการ");
         }
 
         if (model.FromBranchId.HasValue)
@@ -606,7 +606,7 @@ public class StockTransfersController : CrudControllerBase
             if (availableQty < row.Qty)
             {
                 var item = itemMap[row.ItemId];
-                ModelState.AddModelError(nameof(model.Details), $"Not enough stock for {item.ItemCode}. Available {availableQty:N2}, transfer {row.Qty:N2}.");
+                ModelState.AddModelError(nameof(model.Details), $"สต็อกของ {item.ItemCode} ไม่พอ คงเหลือ {availableQty:N2} แต่ต้องการโอน {row.Qty:N2}");
             }
         }
 
@@ -627,7 +627,7 @@ public class StockTransfersController : CrudControllerBase
             var availableQty = balanceMap.TryGetValue(itemId, out var qty) ? qty : 0m;
             if (runningQty > availableQty)
             {
-                ModelState.AddModelError($"Details[{i}].Qty", $"Not enough stock in source branch. Available {availableQty:N2}, requested total {runningQty:N2}.");
+                ModelState.AddModelError($"Details[{i}].Qty", $"สต็อกสาขาต้นทางไม่พอ คงเหลือ {availableQty:N2} แต่ร้องขอรวม {runningQty:N2}");
             }
         }
     }
@@ -663,23 +663,23 @@ public class StockTransfersController : CrudControllerBase
             var serial = serials.FirstOrDefault(x => string.Equals(x.SerialNo, request.SerialNo, StringComparison.OrdinalIgnoreCase));
             if (serial is null)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} was not found.");
+                ModelState.AddModelError(nameof(model.Details), $"ไม่พบ Serial {request.SerialNo}");
                 continue;
             }
 
             if (serial.ItemId != request.ItemId)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} does not belong to selected item.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่ตรงกับสินค้าที่เลือก");
             }
 
             if (serial.BranchId != model.FromBranchId.Value)
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} is not in the source branch.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่ได้อยู่ในสาขาต้นทาง");
             }
 
             if (!string.Equals(serial.Status, "InStock", StringComparison.OrdinalIgnoreCase))
             {
-                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} is not available for transfer.");
+                ModelState.AddModelError(nameof(model.Details), $"Serial {request.SerialNo} ไม่พร้อมสำหรับการโอน");
             }
         }
     }
@@ -801,7 +801,7 @@ public class StockTransfersController : CrudControllerBase
     {
         if (transfer.Status == "Cancelled")
         {
-            return "Cancelled stock transfers are read-only.";
+            return "ใบโอนที่ยกเลิกแล้วจะเป็นแบบอ่านอย่างเดียว";
         }
 
         if (transfer.Status == "Draft")
@@ -811,7 +811,7 @@ public class StockTransfersController : CrudControllerBase
 
         if (transfer.Status != "Posted")
         {
-            return $"Cancel Stock Transfer is available only for Draft or Posted documents. Current status is {transfer.Status}.";
+            return $"ยกเลิกใบโอนได้เฉพาะสถานะฉบับร่างหรือลงรายการแล้ว สถานะปัจจุบันคือ {transfer.Status}";
         }
 
         var grouped = transfer.StockTransferDetails
@@ -830,7 +830,7 @@ public class StockTransfersController : CrudControllerBase
             if (availableQty < row.Qty)
             {
                 var itemCode = transfer.StockTransferDetails.First(x => x.ItemId == row.ItemId).Item?.ItemCode ?? row.ItemId.ToString();
-                return $"Cancel is blocked because destination branch does not have enough stock for {itemCode}.";
+                return $"ยังยกเลิกไม่ได้ เพราะสาขาปลายทางมีสต็อกของ {itemCode} ไม่เพียงพอ";
             }
         }
 
@@ -849,7 +849,7 @@ public class StockTransfersController : CrudControllerBase
 
         return unavailable is null
             ? null
-            : $"Cancel is blocked because serial {unavailable.SerialNo} is no longer available in the destination branch.";
+            : $"ยังยกเลิกไม่ได้ เพราะ Serial {unavailable.SerialNo} ไม่พร้อมใช้งานในสาขาปลายทางแล้ว";
     }
 
     private async Task AdjustStockBalanceAsync(int branchId, int itemId, decimal qtyDelta)

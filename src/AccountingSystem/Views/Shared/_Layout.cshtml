@@ -81,7 +81,7 @@
             <nav class="sidebar-nav">
                 @if (showOverviewSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Home", "Reports", "FinancialOverview", "InventoryOverview", "Announcements"))">
+                    <div class="sidebar-section sidebar-section-overview@(ActiveSection("Home", "Reports", "FinancialOverview", "InventoryOverview", "Announcements"))">
                         <div class="sidebar-section-title">ภาพรวม</div>
                         @if (canUseDashboard)
                         {
@@ -108,7 +108,7 @@
 
                 @if (showSalesSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Quotations", "Invoices", "CashSales", "BillingNotes", "Payments", "Receipts"))">
+                    <div class="sidebar-section sidebar-section-sales@(ActiveSection("Quotations", "Invoices", "CashSales", "BillingNotes", "Payments", "Receipts"))">
                         <div class="sidebar-section-title">งานขาย</div>
                         @if (canUseQuotations)
                         {
@@ -120,7 +120,7 @@
                         }
                         @if (canUseCashSales)
                         {
-                            <a class="sidebar-link@(ActiveLink("CashSales"))" asp-controller="CashSales" asp-action="Index" aria-current="@AriaCurrent("CashSales")">เอกสารขายสด</a>
+                            <a class="sidebar-link@(ActiveLink("CashSales"))" asp-controller="CashSales" asp-action="Index" aria-current="@AriaCurrent("CashSales")">ขายบุคคลทั่วไป</a>
                         }
                         @if (canUseBillingNotes)
                         {
@@ -139,7 +139,7 @@
 
                 @if (showPurchasingSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("PurchaseRequests", "PurchaseOrders", "Receivings", "SupplierPayments"))">
+                    <div class="sidebar-section sidebar-section-purchasing@(ActiveSection("PurchaseRequests", "PurchaseOrders", "Receivings", "SupplierPayments"))">
                         <div class="sidebar-section-title">งานจัดซื้อ</div>
                         @if (canUsePurchaseRequests)
                         {
@@ -162,7 +162,7 @@
 
                 @if (showInventorySection)
                 {
-                    <div class="sidebar-section@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues"))">
+                    <div class="sidebar-section sidebar-section-inventory@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues"))">
                         <div class="sidebar-section-title">คลังสินค้า</div>
                         @if (canUseStockInquiry)
                         {
@@ -193,7 +193,7 @@
 
                 @if (showWarrantySection)
                 {
-                    <div class="sidebar-section@(ActiveSection("SupplierClaims", "CustomerClaims"))">
+                    <div class="sidebar-section sidebar-section-warranty@(ActiveSection("SupplierClaims", "CustomerClaims"))">
                         <div class="sidebar-section-title">งานเคลม</div>
                         @if (canUseCustomerClaims)
                         {
@@ -208,7 +208,7 @@
 
                 @if (showMasterDataSection)
                 {
-                    <div class="sidebar-section@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
+                    <div class="sidebar-section sidebar-section-master@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
                         <div class="sidebar-section-title">ข้อมูลหลัก</div>
                         @if (canUseBranches)
                         {
@@ -269,6 +269,7 @@
                             <div class="sidebar-user-role">@branchName</div>
                         }
                     </div>
+                    <a class="sidebar-logout sidebar-account-link" asp-controller="Account" asp-action="Profile">My Profile</a>
                     <form asp-controller="Account" asp-action="Logout" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="sidebar-logout">ออกจากระบบ</button>

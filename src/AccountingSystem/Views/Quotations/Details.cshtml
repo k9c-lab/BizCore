@@ -12,15 +12,41 @@
         };
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
     var netAfterDiscount = Model.Subtotal - appliedDiscount;
+    var statusLabel = Model.Status switch
+    {
+        "Draft" => "ฉบับร่าง",
+        "Approved" => "อนุมัติแล้ว",
+        "Converted" => "แปลงแล้ว",
+        "Cancelled" => "ยกเลิกแล้ว",
+        _ => Model.Status
+    };
+    var discountModeLabel = Model.DiscountMode switch
+    {
+        "Line" => "ส่วนลดรายบรรทัด",
+        "Header" => "ส่วนลดท้ายเอกสาร",
+        _ => Model.DiscountMode
+    };
+    var vatTypeLabel = Model.VatType switch
+    {
+        "VAT" => "VAT",
+        "NoVAT" => "ไม่มี VAT",
+        _ => Model.VatType
+    };
+    var headerDiscountTypeLabel = Model.HeaderDiscountType switch
+    {
+        "Amount" => "จำนวนเงิน",
+        "Percent" => "เปอร์เซ็นต์",
+        _ => Model.HeaderDiscountType
+    };
     var headerDiscountDisplay = Model.DiscountMode == "Header"
         ? Model.HeaderDiscountType == "Percent"
             ? $"{Model.HeaderDiscountPercent:N2}% ({Model.HeaderDiscountAmount:N2})"
             : Model.HeaderDiscountAmount.ToString("N2")
         : "-";
     var canApprove = Model.Status == "Draft";
-    var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"อนุมัติได้เฉพาะใบเสนอราคาฉบับร่าง สถานะปัจจุบันคือ {Model.Status}";
+    var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"อนุมัติได้เฉพาะใบเสนอราคาฉบับร่าง สถานะปัจจุบันคือ {statusLabel}";
     var canConvert = Model.Status == "Approved" || Model.Status == "Converted";
-    var convertBlockedReason = canConvert ? string.Empty : $"จะสร้างใบแจ้งหนี้ได้หลังจากอนุมัติแล้วเท่านั้น สถานะปัจจุบันคือ {Model.Status}";
+    var convertBlockedReason = canConvert ? string.Empty : $"จะสร้างใบแจ้งหนี้ได้หลังจากอนุมัติแล้วเท่านั้น สถานะปัจจุบันคือ {statusLabel}";
 }
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -89,7 +115,7 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@convertBlockedReason">สร้างใบแจ้งหนี้</button>
         }
-        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบเสนอราคา</a>
     </div>
 </div>
 
@@ -148,15 +174,15 @@
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="detail-label">รูปแบบส่วนลด</div>
-                                <div class="form-control readonly-detail">@Model.DiscountMode</div>
+                                <div class="form-control readonly-detail">@discountModeLabel</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="detail-label">ประเภท VAT</div>
-                                <div class="form-control readonly-detail">@Model.VatType</div>
+                                <div class="form-control readonly-detail">@vatTypeLabel</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="detail-label">ประเภทส่วนลดท้ายเอกสาร</div>
-                                <div class="form-control readonly-detail">@Model.HeaderDiscountType</div>
+                                <div class="form-control readonly-detail">@headerDiscountTypeLabel</div>
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="detail-label">ส่วนลดท้ายเอกสาร</div>
@@ -316,7 +342,7 @@
                                 <td class="quote-notes">@(string.IsNullOrWhiteSpace(line.Description) ? "-" : line.Description)</td>
                                 <td>@line.Quantity.ToString("N2")</td>
                                 <td>@line.UnitPrice.ToString("N2")</td>
-                                <td>@(line.DiscountType == "Percent" ? $"{line.DiscountPercent:N2}% ({line.DiscountAmount:N2})" : line.DiscountType)</td>
+                                <td>@(line.DiscountType == "Percent" ? $"{line.DiscountPercent:N2}% ({line.DiscountAmount:N2})" : "จำนวนเงิน")</td>
                                 <td>@line.DiscountAmount.ToString("N2")</td>
                                 <td>@(line.Quantity > 0 ? (line.LineTotal / line.Quantity).ToString("N2") : "0.00")</td>
                                 <td>@line.LineTotal.ToString("N2")</td>

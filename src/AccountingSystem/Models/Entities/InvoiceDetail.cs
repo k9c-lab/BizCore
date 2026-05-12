@@ -30,7 +30,7 @@ public class InvoiceDetail
 
     public decimal LineTotal { get; set; }
 
-    [StringLength(500)]
+    [StringLength(2000)]
     public string? Remark { get; set; }
 
     [DataType(DataType.Date)]

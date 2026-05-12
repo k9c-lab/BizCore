@@ -8,23 +8,23 @@ public class StockIssueFormViewModel
     public int? StockIssueId { get; set; }
 
     [Required]
-    [Display(Name = "Issue No.")]
+    [Display(Name = "เลขที่ใบเบิก")]
     [StringLength(30)]
     public string IssueNo { get; set; } = string.Empty;
 
     [Required]
     [DataType(DataType.Date)]
-    [Display(Name = "Issue Date")]
+    [Display(Name = "วันที่เบิก")]
     public DateTime IssueDate { get; set; } = DateTime.Today;
 
-    [Display(Name = "Branch")]
+    [Display(Name = "สาขา")]
     public int? BranchId { get; set; }
 
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
 
     [Required]
-    [Display(Name = "Issue Type")]
+    [Display(Name = "ประเภทการเบิก")]
     [StringLength(30)]
     public string IssueType { get; set; } = "InternalUse";
 

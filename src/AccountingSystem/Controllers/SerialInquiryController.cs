@@ -102,15 +102,15 @@ public class SerialInquiryController : CrudControllerBase
                          d.CustomerClaimHeader.Status == "ReadyToReturn" ||
                          d.CustomerClaimHeader.Status == "ReturnedToCustomer")),
                 CustomerClaimBlockedReason = x.Status != "Sold"
-                    ? "Customer claim is available only for Sold serials."
+                    ? "เปิดเคลมลูกค้าได้เฉพาะ Serial ที่ขายแล้วเท่านั้น"
                     : !x.CurrentCustomerId.HasValue
-                        ? "Customer claim is blocked because this serial is not linked to a customer."
+                        ? "ยังเปิดเคลมลูกค้าไม่ได้ เพราะ Serial นี้ยังไม่ผูกกับลูกค้า"
                         : !x.InvoiceId.HasValue
-                            ? "Customer claim is blocked because this serial is not linked to an invoice."
+                            ? "ยังเปิดเคลมลูกค้าไม่ได้ เพราะ Serial นี้ยังไม่ผูกกับใบแจ้งหนี้"
                             : x.CustomerWarrantyStartDate.HasValue && x.CustomerWarrantyStartDate.Value.Date > DateTime.Today
-                                ? "Customer warranty has not started."
+                                ? "ประกันลูกค้ายังไม่เริ่มต้น"
                                 : x.CustomerWarrantyEndDate.HasValue && x.CustomerWarrantyEndDate.Value.Date < DateTime.Today
-                                    ? "Customer warranty has expired."
+                                    ? "ประกันลูกค้าหมดอายุแล้ว"
                                     : _context.CustomerClaimDetails.Any(d => d.SerialId == x.SerialId &&
                                         d.CustomerClaimHeader != null &&
                                         (d.CustomerClaimHeader.Status == "Open" ||
@@ -119,7 +119,7 @@ public class SerialInquiryController : CrudControllerBase
                                          d.CustomerClaimHeader.Status == "Repairing" ||
                                          d.CustomerClaimHeader.Status == "ReadyToReturn" ||
                                          d.CustomerClaimHeader.Status == "ReturnedToCustomer"))
-                                        ? "This serial already has an open customer claim."
+                                        ? "Serial นี้มีรายการเคลมลูกค้าที่เปิดค้างอยู่แล้ว"
                                         : string.Empty
             }), page, pageSize);
 
@@ -157,19 +157,19 @@ public class SerialInquiryController : CrudControllerBase
     {
         if (!branchId.HasValue && canAccessAllBranches)
         {
-            return "All Branches";
+            return "ทุกสาขา";
         }
 
         if (!branchId.HasValue)
         {
-            return "No Branch";
+            return "ไม่ระบุสาขา";
         }
 
         return await _context.Branches
             .AsNoTracking()
             .Where(x => x.BranchId == branchId.Value)
             .Select(x => x.BranchName)
-            .FirstOrDefaultAsync() ?? "No Branch";
+            .FirstOrDefaultAsync() ?? "ไม่ระบุสาขา";
     }
 
     private async Task<IReadOnlyList<SelectListItem>> BuildBranchOptionsAsync(int? selectedBranchId, bool canAccessAllBranches)
@@ -181,7 +181,7 @@ public class SerialInquiryController : CrudControllerBase
 
         var options = new List<SelectListItem>
         {
-            new() { Value = string.Empty, Text = "All Branches", Selected = !selectedBranchId.HasValue }
+            new() { Value = string.Empty, Text = "ทุกสาขา", Selected = !selectedBranchId.HasValue }
         };
 
         options.AddRange(await _context.Branches

@@ -1,16 +1,16 @@
 ﻿@model BizCore.Models.ViewModels.SupplierClaimFormViewModel
 
 @{
-    ViewData["Title"] = "Supplier Claim";
+    ViewData["Title"] = "สร้างเคลมผู้ขาย";
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Supplier Claim Module</div>
-        <h1 class="page-title">Supplier Claim</h1>
+        <div class="page-eyebrow">โมดูลรับประกันผู้ขาย</div>
+        <h1 class="page-title">สร้างเคลมผู้ขาย</h1>
         </div>
     <div class="page-actions">
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Claims</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการเคลม</a>
     </div>
 </div>
 
@@ -19,16 +19,16 @@
         <form asp-action="Create" method="post">
             <partial name="_Form" model="Model" />
             <div class="form-actions mt-3">
-                <span class="table-meta">Saving this claim creates a supplier claim log and updates the serial status to ClaimedToSupplier.</span>
+                <span class="table-meta">เมื่อบันทึก ระบบจะสร้างประวัติการเคลมผู้ขายและเปลี่ยนสถานะ Serial เป็น `ClaimedToSupplier`</span>
                 <div class="page-actions">
-                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
                     @if (Model.IsClaimBlocked)
                     {
-                        <button type="submit" class="btn btn-primary px-4" disabled>Save Claim</button>
+                        <button type="submit" class="btn btn-primary px-4" disabled>บันทึกเคลม</button>
                     }
                     else
                     {
-                        <button type="submit" class="btn btn-primary px-4">Save Claim</button>
+                        <button type="submit" class="btn btn-primary px-4">บันทึกเคลม</button>
                     }
                 </div>
             </div>

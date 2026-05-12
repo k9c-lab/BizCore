@@ -1,7 +1,7 @@
 ﻿@model BizCore.Models.ViewModels.StockLedgerPageViewModel
 
 @{
-    ViewData["Title"] = "Stock Ledger";
+    ViewData["Title"] = "สมุดสต็อก";
 
     string? ReferenceAction(string? referenceType)
     {
@@ -26,26 +26,58 @@
             _ => null
         };
     }
+    string DisplayMovementType(string? value)
+    {
+        return value switch
+        {
+            "Receiving" => "รับเข้า",
+            "ReceivingCancel" => "ยกเลิกรับเข้า",
+            "InvoiceIssue" => "ตัดสต็อกจากใบแจ้งหนี้",
+            "InvoiceCancel" => "คืนสต็อกจากยกเลิกใบแจ้งหนี้",
+            "Transfer" => "โอนย้าย",
+            "TransferCancel" => "ยกเลิกโอนย้าย",
+            "Issue" => "เบิกออก",
+            "IssueCancel" => "ยกเลิกเบิก",
+            "CustomerClaimReplacement" => "เปลี่ยนสินค้าเคลมลูกค้า",
+            "SupplierReplacement" => "รับของแทนจากผู้ขาย",
+            "SupplierRepairReturn" => "รับคืนจากซ่อมผู้ขาย",
+            _ => value ?? "-"
+        };
+    }
+
+    string DisplayReferenceType(string? value)
+    {
+        return value switch
+        {
+            "Receiving" => "รับสินค้า",
+            "Invoice" => "ใบแจ้งหนี้",
+            "StockTransfer" => "ใบโอนย้ายสต็อก",
+            "StockIssue" => "ใบเบิกสต็อก",
+            "CustomerClaim" => "เคลมลูกค้า",
+            "SupplierClaim" => "เคลมผู้ขาย",
+            _ => value ?? "-"
+        };
+    }
 }
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">Inventory Inquiry</div>
-        <h1 class="page-title">Stock Ledger</h1>
+        <div class="page-eyebrow">สอบถามข้อมูลคลังสินค้า</div>
+        <h1 class="page-title">สมุดสต็อก</h1>
         </div>
 </div>
 
 <div class="quote-summary-grid mb-3">
     <div class="quote-summary-card">
-        <span class="quote-summary-label">Issued Qty</span>
+        <span class="quote-summary-label">จำนวนเบิก</span>
         <p class="quote-summary-value">@Model.IssueQty.ToString("N2")</p>
     </div>
     <div class="quote-summary-card">
-        <span class="quote-summary-label">Issue Cancel Qty</span>
+        <span class="quote-summary-label">จำนวนยกเลิกเบิก</span>
         <p class="quote-summary-value">@Model.IssueCancelQty.ToString("N2")</p>
     </div>
     <div class="quote-summary-card">
-        <span class="quote-summary-label">Net Issued Qty</span>
+        <span class="quote-summary-label">จำนวนเบิกสุทธิ</span>
         <p class="quote-summary-value">@Model.NetIssuedQty.ToString("N2")</p>
     </div>
 </div>
@@ -53,46 +85,46 @@
 <div class="card content-card table-card">
     <div class="table-card-header">
         <div>
-            <h2 class="section-title">Movement History</h2>
+            <h2 class="section-title">ประวัติการเคลื่อนไหว</h2>
             </div>
-        <div class="table-meta">@Model.Pagination.TotalCount record(s)</div>
+        <div class="table-meta">@Model.Pagination.TotalCount รายการ</div>
     </div>
     <div class="card-body">
         <form method="get" class="list-filter-bar">
             <div class="list-filter-field grow">
-                <label class="form-label" for="search">Search</label>
-                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Item, serial, movement, branch, or remark" />
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@Model.Search" class="form-control" placeholder="สินค้า, Serial, การเคลื่อนไหว, สาขา หรือหมายเหตุ" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="itemId">Item</label>
+                <label class="form-label" for="itemId">สินค้า</label>
                 <select id="itemId" name="itemId" asp-items="Model.ItemOptions" class="form-select"></select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="movementType">Movement</label>
+                <label class="form-label" for="movementType">การเคลื่อนไหว</label>
                 <select id="movementType" name="movementType" asp-items="Model.MovementTypeOptions" class="form-select"></select>
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="referenceType">Reference</label>
+                <label class="form-label" for="referenceType">เอกสารอ้างอิง</label>
                 <select id="referenceType" name="referenceType" asp-items="Model.ReferenceTypeOptions" class="form-select"></select>
             </div>
             @if (Model.CanAccessAllBranches)
             {
                 <div class="list-filter-field">
-                    <label class="form-label" for="branchId">Branch</label>
+                    <label class="form-label" for="branchId">สาขา</label>
                     <select id="branchId" name="branchId" asp-items="Model.BranchOptions" class="form-select"></select>
                 </div>
             }
             <div class="list-filter-field">
-                <label class="form-label" for="dateFrom">From</label>
+                <label class="form-label" for="dateFrom">ตั้งแต่วันที่</label>
                 <input id="dateFrom" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
             </div>
             <div class="list-filter-field">
-                <label class="form-label" for="dateTo">To</label>
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
                 <input id="dateTo" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" class="form-control" />
             </div>
             <div class="list-filter-actions">
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-                <button type="submit" class="btn btn-primary">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
             </div>
         </form>
 
@@ -100,18 +132,18 @@
             <table class="table entity-table align-middle">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Movement</th>
-                        <th>Reference</th>
-                        <th>Item</th>
+                        <th>วันที่</th>
+                        <th>การเคลื่อนไหว</th>
+                        <th>เอกสารอ้างอิง</th>
+                        <th>สินค้า</th>
                         <th>Serial</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Qty</th>
-                        <th>In</th>
-                        <th>Out</th>
-                        <th>Created By</th>
-                        <th>Remark</th>
+                        <th>จาก</th>
+                        <th>ไปยัง</th>
+                        <th>จำนวน</th>
+                        <th>เข้า</th>
+                        <th>ออก</th>
+                        <th>ผู้บันทึก</th>
+                        <th>หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,15 +155,15 @@
                         var referenceAction = ReferenceAction(movement.ReferenceType);
                         <tr>
                             <td>@movement.MovementDate.ToString("dd MMM yyyy")</td>
-                            <td><span class="code-chip">@movement.MovementType</span></td>
+                            <td><span class="code-chip">@DisplayMovementType(movement.MovementType)</span></td>
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(referenceController) && !string.IsNullOrWhiteSpace(referenceAction) && movement.ReferenceId.HasValue)
                                 {
-                                    <a asp-controller="@referenceController" asp-action="@referenceAction" asp-route-id="@movement.ReferenceId.Value">@movement.ReferenceText</a>
+                                    <a asp-controller="@referenceController" asp-action="@referenceAction" asp-route-id="@movement.ReferenceId.Value">@DisplayReferenceType(movement.ReferenceType) @movement.ReferenceText</a>
                                 }
                                 else
                                 {
-                                    @movement.ReferenceText
+                                    @($"{DisplayReferenceType(movement.ReferenceType)} {movement.ReferenceText}".Trim())
                                 }
                             </td>
                             <td>
@@ -153,7 +185,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="12" class="table-empty">No stock movement records matched the current search.</td>
+                        <td colspan="12" class="table-empty">ไม่พบข้อมูลการเคลื่อนไหวสต็อกตามเงื่อนไขที่ค้นหา</td>
                     </tr>
                 }
                 </tbody>

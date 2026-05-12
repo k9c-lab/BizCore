@@ -1,0 +1,106 @@
+@model BizCore.Models.ViewModels.AccountProfilePageViewModel
+
+@{
+    ViewData["Title"] = "โปรไฟล์ของฉัน";
+    var notice = TempData["ProfileNotice"]?.ToString();
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">บัญชีผู้ใช้</div>
+        <h1 class="page-title">โปรไฟล์ของฉัน</h1>
+        <p class="page-subtitle">อัปเดตข้อมูลบัญชีผู้ใช้และเปลี่ยนรหัสผ่านของคุณ</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(notice))
+{
+    <partial name="_Notice" model="notice" />
+}
+
+<div class="profile-page-grid profile-page-grid-compact">
+    <div class="profile-top-grid">
+        <section class="form-section profile-panel profile-summary-panel">
+            <div class="form-section-title profile-section-title">สรุปข้อมูลบัญชี</div>
+            <div class="detail-grid profile-detail-grid">
+                <div class="detail-item profile-detail-item">
+                    <span class="detail-label">ชื่อผู้ใช้</span>
+                    <p class="detail-value">@Model.Username</p>
+                </div>
+                <div class="detail-item profile-detail-item">
+                    <span class="detail-label">บทบาท</span>
+                    <p class="detail-value">@Model.RoleName</p>
+                </div>
+                <div class="detail-item profile-detail-item">
+                    <span class="detail-label">สาขา</span>
+                    <p class="detail-value">@Model.BranchName</p>
+                </div>
+                <div class="detail-item profile-detail-item">
+                    <span class="detail-label">การเข้าถึง</span>
+                    <p class="detail-value">@(Model.CanAccessAllBranches ? "ทุกสาขา" : "เฉพาะสาขาที่ได้รับมอบหมาย")</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section profile-panel profile-edit-panel">
+            <div class="form-section-title profile-section-title">ข้อมูลโปรไฟล์</div>
+            <form asp-action="UpdateProfile" method="post" class="form-shell profile-form-shell">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+                <div class="profile-form-grid profile-form-grid-compact">
+                    <div>
+                        <label asp-for="Profile.DisplayName" class="form-label"></label>
+                        <input asp-for="Profile.DisplayName" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="Profile.DisplayName" class="text-danger"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Profile.Email" class="form-label"></label>
+                        <input asp-for="Profile.Email" class="form-control" autocomplete="email" />
+                        <span asp-validation-for="Profile.Email" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-actions profile-form-actions">
+                    <span class="form-text">ชื่อผู้ใช้ บทบาท และสาขาที่สังกัด จะถูกกำหนดโดยผู้ดูแลระบบ</span>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <section class="form-section profile-panel profile-password-panel">
+        <div class="form-section-title profile-section-title">เปลี่ยนรหัสผ่าน</div>
+        <form asp-action="ChangePassword" method="post" class="form-shell profile-form-shell">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+            <div class="profile-form-grid profile-password-grid">
+                <div>
+                    <label asp-for="Password.CurrentPassword" class="form-label"></label>
+                    <input asp-for="Password.CurrentPassword" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Password.CurrentPassword" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="Password.NewPassword" class="form-label"></label>
+                    <input asp-for="Password.NewPassword" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="Password.NewPassword" class="text-danger"></span>
+                </div>
+                <div>
+                    <label asp-for="Password.ConfirmNewPassword" class="form-label"></label>
+                    <input asp-for="Password.ConfirmNewPassword" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="Password.ConfirmNewPassword" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-actions profile-form-actions">
+                <span class="form-text">ใช้รหัสผ่านอย่างน้อย 8 ตัวอักษร และหลังเปลี่ยนรหัสผ่านแล้ว ระบบจะยังคงให้คุณใช้งานใน session ปัจจุบันต่อได้</span>
+                <button type="submit" class="btn btn-primary">เปลี่ยนรหัสผ่าน</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

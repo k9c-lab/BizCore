@@ -33,6 +33,15 @@
     </style>
 }
 
+<style>
+    input[name="InvoiceNo"] + .form-text,
+    #QuotationId + .form-text,
+    #HeaderDiscountAmount + .form-text,
+    #PriceLevelId + .form-text {
+        display: none;
+    }
+</style>
+
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="InvoiceId" type="hidden" />
 <input asp-for="PricingMode" type="hidden" id="invoicePricingMode" />
@@ -156,7 +165,7 @@
             }
             <div class="col-12">
                 <label asp-for="Remark" class="form-label"></label>
-                <textarea asp-for="Remark" class="form-control" rows="3"></textarea>
+                <textarea asp-for="Remark" class="form-control" rows="3" maxlength="2000"></textarea>
                 <span asp-validation-for="Remark" class="text-danger"></span>
             </div>
         </div>
@@ -346,7 +355,7 @@
 
                     <div class="invoice-entry-conditional js-entry-remark-section">
                         <label class="form-label" for="invoiceEntryRemark">หมายเหตุรายการ</label>
-                        <textarea id="invoiceEntryRemark" class="form-control" rows="3"></textarea>
+                        <textarea id="invoiceEntryRemark" class="form-control" rows="3" maxlength="2000"></textarea>
                     </div>
                 </div>
 
@@ -445,7 +454,7 @@
                             <div class="invoice-line-detail-shell">
                                 <div class="invoice-line-detail-block js-line-detail-text-block">
                                     <div class="detail-label js-line-detail-label">@detailLabel</div>
-                                    <textarea name="Details[@i].Remark" class="form-control js-remark-input" rows="3">@Model.Details[i].Remark</textarea>
+                                    <textarea name="Details[@i].Remark" class="form-control js-remark-input" rows="3" maxlength="2000">@Model.Details[i].Remark</textarea>
                                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[@i].Remark" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="invoice-line-detail-block js-line-detail-stock-block" style="@(Model.Details[i].TrackStock ? null : "display:none;")">
