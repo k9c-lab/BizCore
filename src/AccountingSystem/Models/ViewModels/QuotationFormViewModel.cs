@@ -49,7 +49,7 @@ public class QuotationFormViewModel
 
     [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
     [Display(Name = "ประเภทภาษี")]
-    [StringLength(10)]
+    [StringLength(20)]
     public string VatType { get; set; } = "NoVAT";
 
     [StringLength(500, ErrorMessage = "หมายเหตุต้องมีความยาวไม่เกิน 500 ตัวอักษร")]

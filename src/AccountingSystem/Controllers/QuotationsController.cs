@@ -2,6 +2,7 @@ using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
+using BizCore.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -95,7 +96,7 @@ public class QuotationsController : CrudControllerBase
             QuotationNumber = await GetNextQuotationNumberAsync(DateTime.Today),
             Status = "Draft",
             DiscountMode = "Line",
-            VatType = "NoVAT",
+            VatType = VatModeHelper.NoVat,
             ExpiryDate = null,
             BranchId = CurrentBranchId()
         };
@@ -220,7 +221,7 @@ public class QuotationsController : CrudControllerBase
             BranchName = header.Branch?.BranchName ?? string.Empty,
             ReferenceNo = header.ReferenceNo,
             Status = header.Status,
-            VatType = header.VatType,
+            VatType = VatModeHelper.Normalize(header.VatType, VatModeHelper.NoVat),
             Remarks = header.Remarks,
             Subtotal = header.Subtotal,
             DiscountAmount = header.DiscountAmount,
@@ -597,8 +598,9 @@ public class QuotationsController : CrudControllerBase
 
         model.VatTypeOptions = new[]
         {
-            new SelectListItem("VAT", "VAT"),
-            new SelectListItem("ไม่มี VAT", "NoVAT")
+            new SelectListItem("ราคายังไม่รวม VAT", VatModeHelper.VatExclusive),
+            new SelectListItem("ราคารวม VAT", VatModeHelper.VatInclusive),
+            new SelectListItem("ไม่มี VAT", VatModeHelper.NoVat)
         };
     }
 
@@ -668,9 +670,10 @@ public class QuotationsController : CrudControllerBase
             }
         }
 
-        if (model.VatType is not ("VAT" or "NoVAT"))
+        model.VatType = VatModeHelper.Normalize(model.VatType, VatModeHelper.NoVat);
+        if (!VatModeHelper.IsValid(model.VatType))
         {
-            ModelState.AddModelError(nameof(model.VatType), "ประเภทภาษีต้องเป็น VAT หรือ NoVAT");
+            ModelState.AddModelError(nameof(model.VatType), "ประเภทภาษีต้องเป็น NoVAT, VATExclusive หรือ VATInclusive");
         }
 
         if (model.DiscountMode is not ("Line" or "Header"))
@@ -804,10 +807,9 @@ public class QuotationsController : CrudControllerBase
             ? subtotal
             : subtotal - model.HeaderDiscountAmount;
 
-        model.VatAmount = model.VatType == "VAT"
-            ? Math.Round(Math.Max(netBeforeVat, 0m) * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        model.TotalAmount = netBeforeVat + model.VatAmount;
+        var vatComputation = VatModeHelper.ComputeFromDocumentPricing(netBeforeVat, model.VatType);
+        model.VatAmount = vatComputation.VatAmount;
+        model.TotalAmount = vatComputation.TotalAmount;
         EnsureAtLeastOneLine(model);
         return ModelState.IsValid;
     }

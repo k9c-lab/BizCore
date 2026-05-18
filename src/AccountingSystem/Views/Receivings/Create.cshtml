@@ -131,7 +131,7 @@
                             <div class="quotation-info-grid">
                                 <div class="quotation-info-field">
                                     <span class="quotation-info-label">ประเภทภาษี</span>
-                                    <span class="quotation-info-value" id="receivingVatType">@(selectedPo?.VatType ?? "-")</span>
+                                    <span class="quotation-info-value" id="receivingVatType">@(selectedPo is null ? "-" : BizCore.Utilities.VatModeHelper.GetDisplayLabel(selectedPo.VatType))</span>
                                 </div>
                                 <div class="quotation-info-field">
                                     <span class="quotation-info-label">รายการคงเหลือ</span>
@@ -483,7 +483,13 @@
                 document.getElementById("receivingBranchName").textContent = selected?.BranchName || "-";
                 document.getElementById("poInfoNo").textContent = selected?.PONo || "-";
                 document.getElementById("poInfoSupplier").textContent = selected?.SupplierName || "-";
-                document.getElementById("receivingVatType").textContent = selected?.VatType || "-";
+                document.getElementById("receivingVatType").textContent = !selected
+                    ? "-"
+                    : selected.VatType === "VATExclusive"
+                        ? "ราคายังไม่รวม VAT"
+                        : selected.VatType === "VATInclusive"
+                            ? "ราคารวม VAT"
+                            : "ไม่มี VAT";
                 document.getElementById("receivingOpenLines").textContent = selected ? String(selected.Lines.length) : "0";
                 document.getElementById("receivingSubtotal").textContent = selected ? money(selected.Subtotal) : "0.00";
                 document.getElementById("receivingVatAmount").textContent = selected ? money(selected.VatAmount) : "0.00";

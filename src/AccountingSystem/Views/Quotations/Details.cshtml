@@ -11,7 +11,8 @@
             Status = "NotInvoiced"
         };
     var appliedDiscount = Model.DiscountMode == "Header" ? Model.HeaderDiscountAmount : Model.DiscountAmount;
-    var netAfterDiscount = Model.Subtotal - appliedDiscount;
+    var vatSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, appliedDiscount, Model.VatType);
+    var netAfterDiscount = vatSummary.NetBeforeVat;
     var statusLabel = Model.Status switch
     {
         "Draft" => "ฉบับร่าง",
@@ -26,12 +27,7 @@
         "Header" => "ส่วนลดท้ายเอกสาร",
         _ => Model.DiscountMode
     };
-    var vatTypeLabel = Model.VatType switch
-    {
-        "VAT" => "VAT",
-        "NoVAT" => "ไม่มี VAT",
-        _ => Model.VatType
-    };
+    var vatTypeLabel = BizCore.Utilities.VatModeHelper.GetDisplayLabel(Model.VatType);
     var headerDiscountTypeLabel = Model.HeaderDiscountType switch
     {
         "Amount" => "จำนวนเงิน",
@@ -190,17 +186,17 @@
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <div class="detail-label">ส่วนลดที่ใช้จริง</div>
-                                <div class="form-control readonly-detail">@appliedDiscount.ToString("N2")</div>
+                                <div class="form-control readonly-detail">@vatSummary.DiscountBeforeVat.ToString("N2")</div>
                             </div>
                         </div>
                         <div class="quotation-summary-strip">
                             <div class="quotation-summary-chip">
                                 <span>มูลค่าก่อนส่วนลด</span>
-                                <strong>@Model.Subtotal.ToString("N2")</strong>
+                                <strong>@vatSummary.SubtotalBeforeVat.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
                                 <span>ส่วนลด</span>
-                                <strong>@appliedDiscount.ToString("N2")</strong>
+                                <strong>@vatSummary.DiscountBeforeVat.ToString("N2")</strong>
                             </div>
                             <div class="quotation-summary-chip">
                                 <span>ยอดสุทธิหลังหักส่วนลด</span>
@@ -356,11 +352,11 @@
                     <div class="quotation-summary-stack">
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
-                            <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                            <span class="quotation-summary-amount">@vatSummary.SubtotalBeforeVat.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">ส่วนลด</span>
-                            <span class="quotation-summary-amount">@appliedDiscount.ToString("N2")</span>
+                            <span class="quotation-summary-amount">@vatSummary.DiscountBeforeVat.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">ยอดสุทธิหลังหักส่วนลด</span>

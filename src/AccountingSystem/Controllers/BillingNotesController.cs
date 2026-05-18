@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Utilities;
 using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -838,7 +839,7 @@ public class BillingNotesController : CrudControllerBase
                 continue;
             }
 
-            if (!string.Equals(invoice.VatType, "VAT", StringComparison.OrdinalIgnoreCase))
+            if (!VatModeHelper.IsTaxable(invoice.VatType))
             {
                 subtotalAmount += openAmount;
                 continue;

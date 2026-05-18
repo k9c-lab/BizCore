@@ -267,6 +267,7 @@ public class RolePermissionsController : CrudControllerBase
             "PriceLevels" => "Price Levels",
             "TreatmentRights" => "Treatment Rights",
             "ReferringDoctors" => "Doctors",
+            "ReadingDoctors" => "Reading Doctors",
             "CashSales" => "Cash Sales",
             "BillingNotes" => "Billing Notes",
             "StockInquiry" => "Stock Inquiry",

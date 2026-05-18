@@ -66,7 +66,7 @@ public class QuotationHeader
     public decimal HeaderDiscountPercent { get; set; }
 
     [Display(Name = "VAT Type")]
-    [StringLength(10)]
+    [StringLength(20)]
     public string VatType { get; set; } = "NoVAT";
 
     [Display(Name = "VAT")]

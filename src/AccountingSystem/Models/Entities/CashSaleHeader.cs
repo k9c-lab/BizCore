@@ -66,8 +66,8 @@ public class CashSaleHeader
     public decimal DiscountAmount { get; set; }
 
     [Required]
-    [StringLength(10)]
-    public string VatType { get; set; } = "VAT";
+    [StringLength(20)]
+    public string VatType { get; set; } = "VATExclusive";
 
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }

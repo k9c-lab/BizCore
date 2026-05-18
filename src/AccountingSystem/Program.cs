@@ -2,6 +2,7 @@ using BizCore.Data;
 using BizCore.Services;
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -27,11 +28,90 @@ builder.Services.AddScoped<PurchaseWorkflowEmailService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.Cookie.Name = "BizCore.Auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnSigningIn = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("AuthDebug");
+
+                logger.LogInformation(
+                    "Cookie signing in for user {UserName}. Persistent={IsPersistent}, ExpiresUtc={ExpiresUtc}, Path={Path}",
+                    context.Principal?.Identity?.Name ?? "(unknown)",
+                    context.Properties?.IsPersistent ?? false,
+                    context.Properties?.ExpiresUtc,
+                    context.HttpContext.Request.Path.Value);
+
+                return Task.CompletedTask;
+            },
+            OnSignedIn = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("AuthDebug");
+
+                logger.LogInformation(
+                    "Cookie signed in for user {UserName}. Response path={Path}",
+                    context.Principal?.Identity?.Name ?? "(unknown)",
+                    context.HttpContext.Request.Path.Value);
+
+                return Task.CompletedTask;
+            },
+            OnValidatePrincipal = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("AuthDebug");
+
+                logger.LogDebug(
+                    "Validating auth cookie for user {UserName}. Request={Url}",
+                    context.Principal?.Identity?.Name ?? "(unknown)",
+                    context.HttpContext.Request.GetDisplayUrl());
+
+                return Task.CompletedTask;
+            },
+            OnRedirectToLogin = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("AuthDebug");
+
+                logger.LogWarning(
+                    "Redirecting to login. Request={Url}, RedirectUri={RedirectUri}, Authenticated={Authenticated}, CookieNames={CookieNames}",
+                    context.Request.GetDisplayUrl(),
+                    context.RedirectUri,
+                    context.HttpContext.User.Identity?.IsAuthenticated ?? false,
+                    string.Join(", ", context.Request.Cookies.Keys.OrderBy(x => x)));
+
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("AuthDebug");
+
+                logger.LogWarning(
+                    "Redirecting to access denied. Request={Url}, RedirectUri={RedirectUri}, User={UserName}",
+                    context.Request.GetDisplayUrl(),
+                    context.RedirectUri,
+                    context.HttpContext.User.Identity?.Name ?? "(unknown)");
+
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
@@ -60,6 +140,26 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode is 400 or 401 or 403)
+    {
+        var logger = context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("AuthDebug");
+
+        logger.LogWarning(
+            "Request completed with status {StatusCode}. Method={Method}, Url={Url}, Authenticated={Authenticated}, User={UserName}, CookieNames={CookieNames}",
+            context.Response.StatusCode,
+            context.Request.Method,
+            context.Request.GetDisplayUrl(),
+            context.User.Identity?.IsAuthenticated ?? false,
+            context.User.Identity?.Name ?? "(anonymous)",
+            string.Join(", ", context.Request.Cookies.Keys.OrderBy(x => x)));
+    }
+});
 
 app.MapControllerRoute(
     name: "default",

@@ -580,7 +580,7 @@
                         return;
                     }
 
-                    if ((invoice.vatType || '').toUpperCase() !== 'VAT') {
+                    if ((invoice.vatType || '').toUpperCase() === 'NOVAT') {
                         subtotalAmount += openAmount;
                         return;
                     }

@@ -1,4 +1,7 @@
 @model BizCore.Models.ViewModels.QuotationFormViewModel
+@{
+    var quotationSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
+}
 
 <div asp-validation-summary="All" class="form-alert"></div>
 <input asp-for="PricingMode" type="hidden" id="quotationPricingMode" />
@@ -314,15 +317,15 @@
             <div class="quotation-summary-stack">
                 <div class="quotation-summary-row">
                     <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
-                    <span class="quotation-summary-amount" id="quotationSubtotal">@Model.Subtotal.ToString("N2")</span>
+                    <span class="quotation-summary-amount" id="quotationSubtotal">@quotationSummary.SubtotalBeforeVat.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
                     <span class="quotation-summary-name">ส่วนลด</span>
-                    <span class="quotation-summary-amount" id="quotationDiscount">@Model.DiscountAmount.ToString("N2")</span>
+                    <span class="quotation-summary-amount" id="quotationDiscount">@quotationSummary.DiscountBeforeVat.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
                     <span class="quotation-summary-name">ยอดสุทธิหลังหักส่วนลด</span>
-                    <span class="quotation-summary-amount" id="quotationNet">@((Model.Subtotal - Model.DiscountAmount).ToString("N2"))</span>
+                    <span class="quotation-summary-amount" id="quotationNet">@quotationSummary.NetBeforeVat.ToString("N2")</span>
                 </div>
                 <div class="quotation-summary-row">
                     <span class="quotation-summary-name">VAT</span>

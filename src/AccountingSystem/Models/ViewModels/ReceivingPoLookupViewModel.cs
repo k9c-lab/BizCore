@@ -8,7 +8,7 @@ public class ReceivingPoLookupViewModel
     public string SupplierName { get; set; } = string.Empty;
     public int? BranchId { get; set; }
     public string BranchName { get; set; } = string.Empty;
-    public string VatType { get; set; } = "VAT";
+    public string VatType { get; set; } = "VATExclusive";
     public decimal Subtotal { get; set; }
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }

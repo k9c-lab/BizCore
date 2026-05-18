@@ -16,13 +16,14 @@
     var referenceVat = Model.QuotationId.HasValue && Model.Quotation is not null
         ? Model.Quotation.VatAmount
         : (Model.ReferenceLineVatAmount
-            ?? (Model.VatType == "VAT"
-                ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
-                : 0m));
+            ?? BizCore.Utilities.VatModeHelper.ComputeFromDocumentPricing(referenceSubtotal - referenceDiscount, Model.VatType).VatAmount);
     var referenceTotal = Model.QuotationId.HasValue && Model.Quotation is not null
         ? Model.Quotation.TotalAmount
         : (Model.ReferenceLineTotalAmount ?? (referenceSubtotal - referenceDiscount + referenceVat));
     var referenceNet = referenceSubtotal - referenceDiscount;
+    var currentSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
+    var referenceVatType = Model.QuotationId.HasValue && Model.Quotation is not null ? Model.Quotation.VatType : Model.VatType;
+    var referenceSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(referenceSubtotal, referenceDiscount, referenceVatType);
     var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") &&
         Model.PaidAmount <= 0 &&
         !Model.PaymentAllocations.Any();
@@ -138,6 +139,10 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
+                    <div class="col-lg-4 col-md-6 d-none">
+                        <div class="detail-label">แพทย์อ่านผล</div>
+                        <div class="form-control readonly-detail">@(Model.ReadingDoctor is null ? "-" : Model.ReadingDoctor.DoctorName)</div>
+                    </div>
                 </div>
             </form>
         }
@@ -204,7 +209,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">ประเภท VAT</div>
-                        <div class="form-control readonly-detail">@Model.VatType</div>
+                        <div class="form-control readonly-detail">@BizCore.Utilities.VatModeHelper.GetDisplayLabel(Model.VatType)</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">ยอดที่ชำระแล้ว</div>
@@ -293,6 +298,10 @@
                         <div class="form-control readonly-detail">@(string.IsNullOrWhiteSpace(Model.PatientFullName) ? "-" : Model.PatientFullName)</div>
                     </div>
                     <div class="col-lg-2 col-md-3">
+                        <div class="detail-label">วันเกิด</div>
+                        <div class="form-control readonly-detail">@(Model.PatientBirthDate?.ToString("dd/MM/yyyy") ?? "-")</div>
+                    </div>
+                    <div class="col-lg-2 col-md-3">
                         <div class="detail-label">อายุ (ปี)</div>
                         <div class="form-control readonly-detail">@(Model.PatientAge?.ToString() ?? "-")</div>
                     </div>
@@ -315,6 +324,10 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="detail-label">แพทย์ส่ง</div>
                         <div class="form-control readonly-detail">@(Model.ReferringDoctor is null ? "-" : Model.ReferringDoctor.DoctorName)</div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="detail-label">แพทย์อ่านผล</div>
+                        <div class="form-control readonly-detail">@(Model.ReadingDoctor is null ? "-" : Model.ReadingDoctor.DoctorName)</div>
                     </div>
                 </div>
             </div>
@@ -393,23 +406,23 @@
                                 <div class="quotation-summary-title">สรุปยอดจากใบเสนอราคา</div>
                                 <div class="quotation-summary-row">
                                     <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
-                                    <span class="quotation-summary-amount">@referenceSubtotal.ToString("N2")</span>
+                                    <span class="quotation-summary-amount">@referenceSummary.SubtotalBeforeVat.ToString("N2")</span>
                                 </div>
                                 <div class="quotation-summary-row">
                                     <span class="quotation-summary-name">ส่วนลด</span>
-                                    <span class="quotation-summary-amount">@referenceDiscount.ToString("N2")</span>
+                                    <span class="quotation-summary-amount">@referenceSummary.DiscountBeforeVat.ToString("N2")</span>
                                 </div>
                                 <div class="quotation-summary-row">
                                     <span class="quotation-summary-name">ยอดสุทธิหลังหักส่วนลด</span>
-                                    <span class="quotation-summary-amount">@referenceNet.ToString("N2")</span>
+                                    <span class="quotation-summary-amount">@referenceSummary.NetBeforeVat.ToString("N2")</span>
                                 </div>
                                 <div class="quotation-summary-row">
                                     <span class="quotation-summary-name">VAT</span>
-                                    <span class="quotation-summary-amount">@referenceVat.ToString("N2")</span>
+                                    <span class="quotation-summary-amount">@referenceSummary.VatAmount.ToString("N2")</span>
                                 </div>
                                 <div class="quotation-summary-row total">
                                     <span class="quotation-summary-name">ยอดรวมอ้างอิง</span>
-                                    <span class="quotation-summary-amount">@referenceTotal.ToString("N2")</span>
+                                    <span class="quotation-summary-amount">@referenceSummary.TotalAmount.ToString("N2")</span>
                                 </div>
                             </div>
 
@@ -435,11 +448,11 @@
                         <div class="quotation-summary-stack">
                             <div class="quotation-summary-row">
                                 <span class="quotation-summary-name">มูลค่าก่อนส่วนลด</span>
-                                <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                                <span class="quotation-summary-amount">@currentSummary.SubtotalBeforeVat.ToString("N2")</span>
                             </div>
                             <div class="quotation-summary-row">
                                 <span class="quotation-summary-name">ส่วนลด</span>
-                                <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                                <span class="quotation-summary-amount">@currentSummary.DiscountBeforeVat.ToString("N2")</span>
                             </div>
                             <div class="quotation-summary-row">
                                 <span class="quotation-summary-name">VAT</span>

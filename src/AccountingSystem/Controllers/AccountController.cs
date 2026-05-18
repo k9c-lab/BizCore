@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text;
+using System.Text.RegularExpressions;
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
@@ -14,6 +16,7 @@ namespace BizCore.Controllers;
 [Authorize]
 public class AccountController : Controller
 {
+    private static readonly Regex UsernamePattern = new("^[A-Za-z0-9._-]+$", RegexOptions.Compiled);
     private readonly AccountingDbContext _context;
     private readonly PasswordHashService _passwordHashService;
 
@@ -39,12 +42,20 @@ public class AccountController : Controller
     [AllowAnonymous]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
+        model.Username = NormalizeUsername(model.Username);
+
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        var username = model.Username.Trim();
+        if (!IsValidUsername(model.Username))
+        {
+            ModelState.AddModelError(nameof(model.Username), "ชื่อผู้ใช้ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษ ตัวเลข จุด (.) ขีดล่าง (_) และขีดกลาง (-)");
+            return View(model);
+        }
+
+        var username = model.Username;
         var user = await _context.Users
             .AsNoTracking()
             .Include(x => x.Branch)
@@ -271,5 +282,15 @@ public class AccountController : Controller
             },
             Password = password ?? new AccountChangePasswordViewModel()
         };
+    }
+
+    private static string NormalizeUsername(string? username)
+    {
+        return (username ?? string.Empty).Trim().Normalize(NormalizationForm.FormKC);
+    }
+
+    private static bool IsValidUsername(string username)
+    {
+        return !string.IsNullOrWhiteSpace(username) && UsernamePattern.IsMatch(username);
     }
 }

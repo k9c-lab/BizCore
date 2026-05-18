@@ -42,6 +42,7 @@ public abstract class CrudControllerBase : Controller
         ["Salespersons"] = "MasterData.Salespersons.Menu",
         ["TreatmentRights"] = "MasterData.TreatmentRights.Menu",
         ["ReferringDoctors"] = "MasterData.ReferringDoctors.Menu",
+        ["ReadingDoctors"] = "MasterData.ReadingDoctors.Menu",
         ["Items"] = "MasterData.Items.Menu",
         ["Users"] = "MasterData.Users.Menu",
         ["RolePermissions"] = "MasterData.RolePermissions.Menu",

@@ -7,6 +7,7 @@
     var companyPhone = ViewData["PrintCompanyPhone"] as string ?? "-";
     var companyEmail = ViewData["PrintCompanyEmail"] as string ?? "-";
     var totalAmountText = BizCore.Utilities.ThaiBahtTextConverter.ToText(Model.TotalAmount);
+    var poSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
 }
 <!DOCTYPE html>
@@ -329,8 +330,8 @@
                 <div class="summary-wrap">
                     <div class="amount-text">@totalAmountText</div>
                     <table class="summary-table">
-                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
-                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@poSummary.SubtotalBeforeVat.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@poSummary.DiscountBeforeVat.ToString("N2")</td></tr>
                         <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
                         <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
                     </table>

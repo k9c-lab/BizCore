@@ -2677,6 +2677,32 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
     - `NU1900` from inability to access NuGet vulnerability feed in the current environment
 - 2026-05-12
 
+- Pending after customer presentation:
+  - VAT pricing mode enhancement is still pending and was intentionally deferred until after the customer presentation on `2026-05-13`
+  - current system behavior:
+    - `VAT` means price is treated as `VAT Exclusive`
+    - example: price `100` -> VAT `7` -> total `107`
+  - requested future behavior:
+    - support document-level VAT pricing mode for both:
+      - `VAT Exclusive`
+      - `VAT Inclusive`
+    - `VAT Inclusive` must reverse-calculate tax from entered price
+    - example: gross price `100` should be split into pre-VAT amount and VAT portion instead of becoming `107`
+  - expected impact area when implementing:
+    - `Quotations`
+    - `Invoices`
+    - `CashSales`
+    - `BillingNotes`
+    - form-side JavaScript summary calculation
+    - server-side validation / compute logic
+    - details / print / reports that show `Subtotal`, `VAT`, `Total`
+  - recommendation for implementation:
+    - extend current `VatType` behavior from simple `VAT / NoVAT` to explicit pricing modes such as:
+      - `NoVAT`
+      - `VATExclusive`
+      - `VATInclusive`
+    - implement and test discount interaction carefully before rollout
+
 - Account / Profile:
   - added complete self-service `Profile` flow for logged-in users:
     - update `Display Name`
@@ -2758,3 +2784,370 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - reset running codes in import data:
     - customers start from `CUS-0001`
     - suppliers start from `SUP-0001`
+
+- 2026-05-13
+
+- Production login / 403 investigation follow-up:
+  - customer reported recurring `403` behavior on production `neura.thevvapp.com`
+  - symptom was initially confusing because it could appear:
+    - on first open of `/Account/Login`
+    - after login
+    - when clicking menu such as `/CashSales`
+  - deleting browser cookies consistently cleared the issue temporarily
+  - one separate login problem was also found locally in the login form:
+    - users could type malformed username input such as Thai combining characters before branch-style usernames like `b1`
+    - this was hardened in code by validating login usernames to allow only English letters, numbers, `.`, `_`, and `-`
+  - production root cause for the recurring `403` was then confirmed from Plesk / ModSecurity logs:
+    - request example:
+      - `GET /Account/Login`
+    - blocking layer:
+      - `ModSecurity for IIS` under Plesk
+    - triggered rule:
+      - `942440`
+      - `SQL Comment Sequence Detected`
+    - false positive was matched against ASP.NET Core antiforgery cookie:
+      - `.AspNetCore.Antiforgery.*`
+    - log showed the antiforgery cookie value contained `--`, which ModSecurity interpreted as SQL comment syntax
+  - important conclusion:
+    - the recurring production `403` was not caused by business permission logic in the application
+    - it was caused by Plesk ModSecurity false-positive inspection of ASP.NET Core cookies
+  - production mitigation applied / recommended:
+    - in Plesk, use `Switch off security rules`
+    - disable rule id:
+      - `942440`
+    - this is the fastest targeted workaround for the affected site
+  - recommended longer-term server-side direction:
+    - keep ModSecurity enabled
+    - prefer targeted exclusion / whitelist for ASP.NET Core auth and antiforgery cookies rather than disabling unrelated protections broadly
+    - likely relevant cookie names:
+      - `.AspNetCore.Antiforgery.*`
+      - `.AspNetCore.Cookies`
+      - `BizCore.Auth` if newer cookie naming is deployed
+  - application-side debug support was also added locally during investigation:
+    - extra auth / cookie diagnostic logging in `Program.cs`
+    - explicit auth cookie naming and cookie option hardening for easier tracing
+
+## 2026-05-13 VAT Pricing Mode Rollout / Inclusive Subtotal Fix / Login Thai
+
+- Invoice patient birth date / age:
+  - changed invoice patient input from direct age entry to `PatientBirthDate`
+  - `PatientAge` is now auto-calculated from:
+    - patient birth date
+    - invoice date
+  - invoice details page now shows both:
+    - birth date
+    - age
+  - invoice print still shows age only
+  - added migration:
+    - `063_invoice_patient_birth_date.sql`
+  - migration file was added in:
+    - `database`
+    - `database/system-migrations`
+    - `src/AccountingSystem/DatabaseMigrations`
+
+- VAT pricing mode implementation:
+  - replaced ambiguous `VAT / NoVAT` behavior with explicit document pricing modes:
+    - `NoVAT`
+    - `VATExclusive`
+    - `VATInclusive`
+  - added shared helper:
+    - `VatModeHelper`
+  - helper centralizes:
+    - mode normalization
+    - taxable checks
+    - display labels
+    - VAT / total computation
+    - pre-VAT summary breakdown for display
+  - updated affected document flows:
+    - `Quotations`
+    - `Invoices`
+    - `CashSales`
+    - `PurchaseOrders`
+    - `BillingNotes`
+    - `Receivings` display of PO VAT mode
+  - expanded `VatType` database / model length to support new explicit values
+  - added migration:
+    - `064_expand_vat_type_and_add_pricing_modes.sql`
+  - migration file was added in:
+    - `database`
+    - `database/system-migrations`
+    - `src/AccountingSystem/DatabaseMigrations`
+
+- VAT inclusive subtotal / discount bug fix:
+  - after rollout, a follow-up review found `VATInclusive` still displayed wrong values for:
+    - `ยอดก่อน VAT / Subtotal`
+    - `ส่วนลด / Discount`
+  - root cause:
+    - raw stored `Subtotal` was still being treated as if it were always pre-VAT
+    - this was incorrect for `VATInclusive`, where entered price is gross
+  - fixed by switching affected views and form summaries to use helper-based breakdown values instead of raw subtotal fields
+  - corrected display/calculation on:
+    - `Invoices/_Form`
+    - `Invoices/_InvoiceEditorScripts`
+    - `Invoices/Details`
+    - `Invoices/Print`
+    - quotation-reference summary inside invoice form/details
+    - `PurchaseOrders/_Form`
+    - `PurchaseOrders/_FormScripts`
+    - `PurchaseOrders/Details`
+    - `PurchaseOrders/Print`
+    - `Receivings/Print`
+  - example verified:
+    - `VATInclusive`
+    - entered subtotal `107`
+    - displays as pre-VAT `100`
+    - VAT `7`
+    - total `107`
+  - additional sample checks were verified for:
+    - `NoVAT`
+    - `VATExclusive`
+    - `VATInclusive`
+    - with and without discount
+
+- Login page Thai localization:
+  - translated login page UI to Thai:
+    - page title
+    - caption
+    - field labels
+    - remember-me text
+    - login button
+  - added Thai display names / validation messages in `LoginViewModel`
+  - translated username-format validation in `AccountController`
+
+- Follow-up requirement to confirm with customer:
+  - invoice patient information is expected to add a new field:
+    - `แพทย์อ่านผล`
+  - data model / UX is not finalized yet
+  - open question:
+    - should `แพทย์อ่านผล` reuse the same doctor master as the current referring-doctor field
+    - or should it be a separate master / separate free-text field
+  - action:
+    - confirm with customer before implementation
+
+- Build / verification:
+  - VAT rollout batch built successfully with:
+    - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false -p:OutDir=d:\accountingCodex\scratch_build\vat_mode_full_build\`
+    - `0 warnings`
+    - `0 errors`
+  - login Thai localization batch built successfully with:
+    - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false -p:OutDir=d:\accountingCodex\scratch_build\login_th_build\`
+    - `0 warnings`
+    - `0 errors`
+
+## 2026-05-15 Reading Doctor Master Split
+
+- Customer direction was clarified:
+  - `แพทย์อ่านผล` should be a separate master from `แพทย์ส่ง`
+  - do not reuse the existing `ReferringDoctors` table / menu / permission
+
+- Implemented new master data module:
+  - added new entity / table:
+    - `ReadingDoctors`
+  - added new controller:
+    - `ReadingDoctorsController`
+  - added new views:
+    - `Index`
+    - `Create`
+    - `Edit`
+    - `Details`
+    - `Delete`
+  - added new menu permission:
+    - `MasterData.ReadingDoctors.Menu`
+  - added sidebar menu entry:
+    - `แพทย์อ่านผล`
+  - existing `ReferringDoctors` sidebar wording was clarified to:
+    - `แพทย์ส่ง`
+
+- Invoice patient information:
+  - added new invoice field:
+    - `ReadingDoctorId`
+  - field is separate from:
+    - `ReferringDoctorId`
+  - invoice create / edit now allow selecting both:
+    - `แพทย์ส่ง`
+    - `แพทย์อ่านผล`
+  - invoice details / print now show both doctor fields separately
+
+- Database:
+  - added migration:
+    - `065_reading_doctor_master_and_invoice_field.sql`
+  - migration file was added in:
+    - `database`
+    - `database/system-migrations`
+    - `src/AccountingSystem/DatabaseMigrations`
+
+- Build / verification:
+  - verified with:
+    - `dotnet build src/AccountingSystem/BizCore.csproj -p:UseAppHost=false -p:OutDir=d:\accountingCodex\scratch_build\reading_doctor_build\`
+  - result:
+    - `0 errors`
+  - warning seen in current environment:
+    - `NU1900` from inability to reach NuGet vulnerability feed
+
+## 2026-05-15 Change Guardrails Alignment
+
+- Customer direction was clarified for future changes:
+  - the system is now considered more stable
+  - future edits should prioritize protecting existing workflows
+  - avoid changing behavior that can affect operational flow without first checking impact carefully
+
+- Working agreement for future implementation:
+  - before making non-trivial changes, review likely impact on:
+    - `Create`
+    - `Edit`
+    - `Details`
+    - `Print`
+    - `Report`
+    - `Permission`
+    - calculations / business rules / posting-related flow
+  - if a request may affect workflow or business logic, summarize impact and align with customer before implementation
+  - small UI-only adjustments such as labels, spacing, wording, or icons can usually proceed directly, but should still be called out as low-risk UI changes
+
+- Areas explicitly called out as needing extra caution before edits:
+  - tax / VAT logic
+  - document totals / discounts
+  - stock movement or stock allocation flow
+  - permissions
+  - print layouts
+  - dropdown behavior that can affect data entry speed or correctness
+
+- Documentation follow-up:
+  - added project-level change policy in:
+    - `docs/CHANGE_GUARDRAILS.md`
+
+- Shared-scope lesson from invoice search behavior changes:
+  - changing shared invoice form / script logic does not affect only `Invoices`
+  - because `CashSales` reuses:
+    - `Views/Invoices/_Form.cshtml`
+    - `Views/Invoices/_InvoiceEditorScripts.cshtml`
+  - customer / item search behavior updates applied across every workflow that uses the shared invoice editor assets
+  - future changes to shared partials or shared scripts must include explicit impact-scope review before implementation
+  - do not describe these changes as page-local fixes unless the reuse scope has already been checked
+
+- Test-data cleanup note for next session:
+  - if the goal is to clear test/business documents but keep master data, use:
+    - `database/100_clear_transaction_data_keep_master.sql`
+  - this is the preferred script when customer/supplier/salesperson/item masters should remain available for more testing
+- stronger cleanup scripts to remember:
+    - `database/101_clear_customer_handover_keep_admin.sql`
+    - `database/102_clear_business_data_keep_system_masters.sql`
+    - `database/103_keep_only_main_branch_and_admin.sql`
+
+## 2026-05-18 Treatment Right Seed Follow-up
+
+- Added additional `TreatmentRights` seed migration so healthcare setups can load more required rights without manual code assignment.
+
+- New treatment rights added:
+  - `เบิกได้ DRG`
+  - `พรบ.รถ`
+  - `ชำระเงินเอง`
+  - `ประกันสังคม`
+  - `บัตรทองต่างด้าว`
+  - `ผู้มีปัญหาสถานะทางสิทธิ์`
+
+- New migration added:
+  - `066_seed_additional_treatment_rights.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Migration behavior:
+  - assigns `TRT-xxxx` codes by continuing from the current highest existing treatment-right code
+  - inserts only missing names
+  - re-activates matching existing rows if they already exist but were inactive
+
+## 2026-05-18 Referring Doctor Seed From Excel
+
+- Reviewed `docs/doctor.xlsx` for importing `ReferringDoctors`.
+
+- Current direction confirmed for this round:
+  - do **not** link `ReferringDoctors` to `Customer` / hospital yet
+  - import doctor master data only
+
+- Excel review result:
+  - source sheet used:
+    - `doctor`
+  - source rows with doctor names:
+    - `151`
+  - unique doctor names after de-duplicating exact repeats:
+    - `143`
+  - final seed names after normalizing repeated internal spaces:
+    - `142`
+  - notable normalization:
+    - collapsed repeated spaces to avoid duplicate names such as `นพ.กมล  กลิ่นไทย` vs `นพ.กมล กลิ่นไทย`
+
+- New migration added:
+  - `067_seed_referring_doctors_from_doctor_xlsx.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Migration behavior:
+  - seeds doctor names from `doctor.xlsx`
+  - assigns `DOC-xxxx` codes by continuing from the current highest existing doctor code
+  - inserts only missing names
+  - re-activates matching existing rows if they already exist but were inactive
+
+- Important note for future enhancement:
+  - hospital names in the Excel file were reviewed but are intentionally not stored in this round
+  - if future workflow needs doctor-to-hospital mapping, `ReferringDoctors` will need a later schema extension such as `CustomerId`
+
+## 2026-05-18 Service Item Seed From itemservice Sheet
+
+- Reviewed `docs/doctor.xlsx` sheet `itemservice` for importing additional service items.
+
+- Excel review result:
+  - source sheet used:
+    - `itemservice`
+  - source rows with item data:
+    - `67`
+  - required source columns all present:
+    - `Part Number`
+    - `ชื่อสินค้า`
+    - `หน่วย`
+  - no blank values were found in those key columns
+  - no duplicate `Part Number` values were found in the source
+  - no duplicate item names were found in the source
+
+- Existing database comparison result before seed:
+  - current `Service` items in database:
+    - `3`
+  - current highest service code in live data:
+    - `SRV-0003`
+  - no collisions found against existing items by:
+    - `PartNumber`
+    - `ItemName`
+
+- New migration added:
+  - `068_seed_service_items_from_itemservice_sheet.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Migration behavior:
+  - seeds service items from the `itemservice` sheet
+  - assigns `SRV-xxxx` codes by continuing from the current highest existing service code
+  - inserts only missing rows based on `PartNumber`
+  - if an item with the same `PartNumber` already exists, it updates:
+    - `ItemName`
+    - `Unit`
+    - `ItemType`
+    - `TrackStock`
+    - `IsSerialControlled`
+    - `CurrentStock`
+    - `IsActive`
+  - new rows are inserted with:
+    - `ItemType = Service`
+    - `TrackStock = 0`
+    - `IsSerialControlled = 0`
+    - `UnitPrice = 0`
+    - `CurrentStock = 0`
+    - `IsActive = 1`
+
+- Important source note:
+  - most items used unit `ครั้ง`
+  - one source row used unit `50 ml`
+  - current migration intentionally keeps the source unit exactly as provided

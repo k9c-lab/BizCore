@@ -19,6 +19,9 @@
         const amountDueSection = byId("invoiceAmountDueSection");
         const lineBody = byId("invoiceLineBody");
         const addButton = byId("addInvoiceLine");
+        const invoiceDateInput = byId("InvoiceDate");
+        const patientBirthDateInput = byId("PatientBirthDate");
+        const patientAgeInput = byId("PatientAge");
         const vatTypeInput = byId("VatType");
         const discountModeInput = byId("DiscountMode");
         const headerDiscountInput = byId("HeaderDiscountAmount");
@@ -33,6 +36,7 @@
         const customerResults = byId("invoiceCustomerResults");
         const salespersonSelect = byId("SalespersonId");
         const referringDoctorSelect = byId("ReferringDoctorId");
+        const readingDoctorSelect = byId("ReadingDoctorId");
         const entryQuotedQty = byId("invoiceEntryQuotedQty");
         const entryQty = byId("invoiceEntryQty");
         const entryUnitPrice = byId("invoiceEntryUnitPrice");
@@ -66,15 +70,17 @@
         const itemDisplayMap = Object.fromEntries(itemLookup.map(item => [item.DisplayText.toLowerCase(), item]));
         const customerMap = Object.fromEntries(customerLookup.map(customer => [String(customer.CustomerId), customer]));
         const salespersonMap = Object.fromEntries(salespersonLookup.map(salesperson => [String(salesperson.SalespersonId), salesperson]));
-        const referringDoctorOptions = referringDoctorSelect
-            ? [...referringDoctorSelect.options]
+        const buildDoctorOptions = (selectElement, idKey) => selectElement
+            ? [...selectElement.options]
                 .filter(option => option.value)
                 .map(option => ({
-                    ReferringDoctorId: option.value,
+                    [idKey]: option.value,
                     DisplayText: option.text,
                     SearchText: option.text.toLowerCase()
                 }))
             : [];
+        const referringDoctorOptions = buildDoctorOptions(referringDoctorSelect, "ReferringDoctorId");
+        const readingDoctorOptions = buildDoctorOptions(readingDoctorSelect, "ReadingDoctorId");
         const serialByItem = serialLookup.reduce((acc, serial) => {
             const key = String(serial.ItemId);
             acc[key] = acc[key] || [];
@@ -84,8 +90,36 @@
 
         let referringDoctorSearch = null;
         let referringDoctorResults = null;
+        let readingDoctorSearch = null;
+        let readingDoctorResults = null;
 
         const formatAmount = value => Number(value || 0).toFixed(2);
+        const calculatePatientAge = (birthDateValue, referenceDateValue) => {
+            if (!birthDateValue || !referenceDateValue) {
+                return "";
+            }
+
+            const birthDate = new Date(`${birthDateValue}T00:00:00`);
+            const referenceDate = new Date(`${referenceDateValue}T00:00:00`);
+            if (Number.isNaN(birthDate.getTime()) || Number.isNaN(referenceDate.getTime()) || birthDate > referenceDate) {
+                return "";
+            }
+
+            let age = referenceDate.getFullYear() - birthDate.getFullYear();
+            const monthDiff = referenceDate.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birthDate.getDate())) {
+                age -= 1;
+            }
+
+            return age >= 0 ? String(age) : "";
+        };
+        const updatePatientAge = () => {
+            if (!patientAgeInput) {
+                return;
+            }
+
+            patientAgeInput.value = calculatePatientAge(patientBirthDateInput?.value, invoiceDateInput?.value);
+        };
         const buildQuotationProgressText = line => {
             if (!line || !line.QuotationDetailId) {
                 return "";
@@ -148,6 +182,15 @@
 
             referringDoctorResults.style.display = "none";
             referringDoctorResults.innerHTML = "";
+        };
+
+        const hideReadingDoctorResults = () => {
+            if (!readingDoctorResults) {
+                return;
+            }
+
+            readingDoctorResults.style.display = "none";
+            readingDoctorResults.innerHTML = "";
         };
 
         const showEntryError = message => {
@@ -466,7 +509,7 @@
         };
 
         const initializeReferringDoctorSearch = () => {
-            if (!referringDoctorSelect || referringDoctorOptions.length === 0) {
+            if (!referringDoctorSelect) {
                 return;
             }
 
@@ -519,10 +562,14 @@
                 else
                 {
                     referringDoctorSelect.value = "";
+                    referringDoctorSearch.value = "";
+                    delete referringDoctorSearch.dataset.selectedReferringDoctorId;
+                    hideReferringDoctorResults();
                 }
             });
 
-            referringDoctorResults.addEventListener("click", event => {
+            referringDoctorResults.addEventListener("mousedown", event => {
+                event.preventDefault();
                 const optionElement = event.target.closest(".search-dropdown-option");
                 if (!optionElement) {
                     return;
@@ -538,6 +585,113 @@
                 const selected = referringDoctorOptions.find(option => option.ReferringDoctorId === referringDoctorSelect.value);
                 if (selected) {
                     selectReferringDoctor(selected);
+                }
+            }
+        };
+
+        const initializeReadingDoctorSearch = () => {
+            if (!readingDoctorSelect) {
+                return;
+            }
+
+            readingDoctorSelect.classList.add("d-none");
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "search-dropdown";
+
+            readingDoctorSearch = document.createElement("input");
+            readingDoctorSearch.type = "text";
+            readingDoctorSearch.id = "invoiceReadingDoctorSearch";
+            readingDoctorSearch.className = "form-control";
+            readingDoctorSearch.autocomplete = "off";
+            readingDoctorSearch.placeholder = "ค้นหาจากรหัสหรือชื่อแพทย์อ่านผล";
+
+            readingDoctorResults = document.createElement("div");
+            readingDoctorResults.id = "invoiceReadingDoctorResults";
+            readingDoctorResults.className = "search-dropdown-menu";
+            readingDoctorResults.style.display = "none";
+
+            wrapper.appendChild(readingDoctorSearch);
+            wrapper.appendChild(readingDoctorResults);
+            readingDoctorSelect.insertAdjacentElement("afterend", wrapper);
+
+            const renderReadingDoctorResults = query => {
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = readingDoctorOptions
+                    .filter(option => !keyword || option.SearchText.includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    readingDoctorResults.innerHTML = "<div class=\"search-dropdown-empty\">ไม่พบแพทย์อ่านผลที่ค้นหา</div>";
+                    readingDoctorResults.style.display = "";
+                    return;
+                }
+
+                readingDoctorResults.innerHTML = matches
+                    .map(option => `
+                        <button type="button" class="search-dropdown-option" data-reading-doctor-id="${option.ReadingDoctorId}">
+                            <span class="search-dropdown-title">${escapeHtml(option.DisplayText)}</span>
+                        </button>`)
+                    .join("");
+                readingDoctorResults.style.display = "";
+            };
+
+            const selectReadingDoctor = option => {
+                readingDoctorSelect.value = option.ReadingDoctorId;
+                readingDoctorSearch.value = option.DisplayText;
+                readingDoctorSearch.dataset.selectedReadingDoctorId = option.ReadingDoctorId;
+                hideReadingDoctorResults();
+            };
+
+            readingDoctorSearch.addEventListener("input", () => {
+                delete readingDoctorSearch.dataset.selectedReadingDoctorId;
+                readingDoctorSelect.value = "";
+                renderReadingDoctorResults(readingDoctorSearch.value);
+            });
+
+            readingDoctorSearch.addEventListener("focus", () => renderReadingDoctorResults(readingDoctorSearch.value));
+
+            readingDoctorSearch.addEventListener("change", () => {
+                const selectedId = readingDoctorSearch.dataset.selectedReadingDoctorId;
+                if (selectedId) {
+                    const selected = readingDoctorOptions.find(option => option.ReadingDoctorId === selectedId);
+                    if (selected) {
+                        selectReadingDoctor(selected);
+                        return;
+                    }
+                }
+
+                const value = (readingDoctorSearch.value || "").trim().toLowerCase();
+                const match = readingDoctorOptions.find(option => option.DisplayText.toLowerCase() === value);
+                if (match) {
+                    selectReadingDoctor(match);
+                }
+                else
+                {
+                    readingDoctorSelect.value = "";
+                    readingDoctorSearch.value = "";
+                    delete readingDoctorSearch.dataset.selectedReadingDoctorId;
+                    hideReadingDoctorResults();
+                }
+            });
+
+            readingDoctorResults.addEventListener("mousedown", event => {
+                event.preventDefault();
+                const optionElement = event.target.closest(".search-dropdown-option");
+                if (!optionElement) {
+                    return;
+                }
+
+                const option = readingDoctorOptions.find(item => item.ReadingDoctorId === optionElement.dataset.readingDoctorId);
+                if (option) {
+                    selectReadingDoctor(option);
+                }
+            });
+
+            if (readingDoctorSelect.value) {
+                const selected = readingDoctorOptions.find(option => option.ReadingDoctorId === readingDoctorSelect.value);
+                if (selected) {
+                    selectReadingDoctor(selected);
                 }
             }
         };
@@ -736,9 +890,22 @@
             });
 
             const appliedDiscount = isLineDiscountMode() ? discount : headerDiscount;
-            const net = Math.max(subtotal - appliedDiscount, 0);
-            const vat = vatTypeInput?.value === "VAT" ? (net * 0.07) : 0;
-            const referenceTotal = net + vat;
+            const grossNet = Math.max(subtotal - appliedDiscount, 0);
+            const vatMode = vatTypeInput?.value || "NoVAT";
+            let subtotalBeforeVat = subtotal;
+            let discountBeforeVat = appliedDiscount;
+            let vat = 0;
+            let referenceTotal = grossNet;
+
+            if (vatMode === "VATExclusive") {
+                vat = grossNet * 0.07;
+                referenceTotal = grossNet + vat;
+            } else if (vatMode === "VATInclusive") {
+                subtotalBeforeVat = subtotal / 1.07;
+                const netBeforeVat = grossNet / 1.07;
+                discountBeforeVat = subtotalBeforeVat - netBeforeVat;
+                vat = grossNet - netBeforeVat;
+            }
             const hasQuotation = !!(quotationSelect && quotationSelect.value);
             const enteredDueAmount = amountDueInput && amountDueInput.value ? parseFloat(amountDueInput.value) : Number.NaN;
             const dueAmount = hasQuotation && Number.isFinite(enteredDueAmount) && enteredDueAmount > 0
@@ -746,8 +913,8 @@
                 : referenceTotal;
 
             const fields = {
-                invoiceSubtotal: subtotal,
-                invoiceDiscount: appliedDiscount,
+                invoiceSubtotal: subtotalBeforeVat,
+                invoiceDiscount: discountBeforeVat,
                 invoiceVat: vat,
                 invoiceTotal: dueAmount,
                 invoiceBalance: dueAmount,
@@ -941,7 +1108,9 @@
                     selectEntryItem(item);
                 } else {
                     delete entryItemSearch.dataset.selectedItemId;
+                    entryItemSearch.value = "";
                     renderEntryMode(null);
+                    hideEntryResults();
                 }
             });
 
@@ -955,7 +1124,8 @@
         }
 
         if (entryItemResults) {
-            entryItemResults.addEventListener("click", event => {
+            entryItemResults.addEventListener("mousedown", event => {
+                event.preventDefault();
                 const option = event.target.closest(".search-dropdown-option");
                 if (!option) {
                     return;
@@ -972,6 +1142,7 @@
             const clickedItemSearch = entryItemSearch && (event.target === entryItemSearch || entryItemResults?.contains(event.target));
             const clickedCustomerSearch = customerSearch && (event.target === customerSearch || customerResults?.contains(event.target));
             const clickedReferringDoctorSearch = referringDoctorSearch && (event.target === referringDoctorSearch || referringDoctorResults?.contains(event.target));
+            const clickedReadingDoctorSearch = readingDoctorSearch && (event.target === readingDoctorSearch || readingDoctorResults?.contains(event.target));
             if (!clickedItemSearch) {
                 hideEntryResults();
             }
@@ -980,6 +1151,9 @@
             }
             if (!clickedReferringDoctorSearch) {
                 hideReferringDoctorResults();
+            }
+            if (!clickedReadingDoctorSearch) {
+                hideReadingDoctorResults();
             }
         });
 
@@ -1008,19 +1182,21 @@
                     customer.CustomerName.toLowerCase() === value);
                 if (match) {
                     selectCustomer(match);
-                } else if (customerInput?.value && customerMap[customerInput.value]) {
-                    selectCustomer(customerMap[customerInput.value]);
                 } else {
                     if (customerInput) {
                         customerInput.value = "";
                     }
+                    customerSearch.value = "";
+                    delete customerSearch.dataset.selectedCustomerId;
                     updateCustomerInfo();
+                    hideCustomerResults();
                 }
             });
         }
 
         if (customerResults) {
-            customerResults.addEventListener("click", event => {
+            customerResults.addEventListener("mousedown", event => {
+                event.preventDefault();
                 const option = event.target.closest(".search-dropdown-option");
                 if (!option) {
                     return;
@@ -1105,6 +1281,9 @@
         amountDueInput?.addEventListener("input", updateSummary);
         salespersonSelect?.addEventListener("change", updateSalespersonInfo);
         priceLevelInput?.addEventListener("change", refreshLinePricesForPriceLevel);
+        invoiceDateInput?.addEventListener("change", updatePatientAge);
+        patientBirthDateInput?.addEventListener("change", updatePatientAge);
+        patientBirthDateInput?.addEventListener("input", updatePatientAge);
 
         invoiceForm?.addEventListener("submit", () => {
             const zeroIfBlankSelectors = [
@@ -1130,7 +1309,9 @@
         updateCustomerInfo();
         updateSalespersonInfo();
         initializeReferringDoctorSearch();
+        initializeReadingDoctorSearch();
         updateDiscountModeState();
+        updatePatientAge();
         renderEntryMode(null);
         getMainRows().forEach(row => {
             const item = getRowItem(row);

@@ -2,6 +2,7 @@
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
+using BizCore.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -251,7 +252,7 @@ public class PurchaseOrdersController : CrudControllerBase
             Remark = header.Remark,
             Subtotal = header.Subtotal,
             DiscountAmount = header.DiscountAmount,
-            VatType = header.VatType,
+            VatType = VatModeHelper.Normalize(header.VatType, VatModeHelper.VatExclusive),
             VatAmount = header.VatAmount,
             TotalAmount = header.TotalAmount,
             Status = header.Status,
@@ -707,8 +708,9 @@ public class PurchaseOrdersController : CrudControllerBase
 
         model.VatTypeOptions = new[]
         {
-            new SelectListItem("VAT", "VAT"),
-            new SelectListItem("No VAT", "NoVAT")
+            new SelectListItem("ราคายังไม่รวม VAT", VatModeHelper.VatExclusive),
+            new SelectListItem("ราคารวม VAT", VatModeHelper.VatInclusive),
+            new SelectListItem("No VAT", VatModeHelper.NoVat)
         };
     }
 
@@ -1021,12 +1023,11 @@ public class PurchaseOrdersController : CrudControllerBase
 
         model.Subtotal = subtotal;
         discount = model.DiscountAmount;
-        model.VatType = model.VatType == "NoVAT" ? "NoVAT" : "VAT";
+        model.VatType = VatModeHelper.Normalize(model.VatType, VatModeHelper.VatExclusive);
         var taxableAmount = subtotal - discount;
-        model.VatAmount = model.VatType == "VAT"
-            ? Math.Round(taxableAmount * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        model.TotalAmount = taxableAmount + model.VatAmount;
+        var vatComputation = VatModeHelper.ComputeFromDocumentPricing(taxableAmount, model.VatType);
+        model.VatAmount = vatComputation.VatAmount;
+        model.TotalAmount = vatComputation.TotalAmount;
 
         return ModelState.IsValid;
     }

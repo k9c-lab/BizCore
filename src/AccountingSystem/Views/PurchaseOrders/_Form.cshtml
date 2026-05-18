@@ -2,6 +2,7 @@
 @{
     var selectedSupplier = Model.SupplierLookup.FirstOrDefault(x => x.SupplierId == Model.SupplierId);
     var branchOptions = Model.BranchOptions.ToList();
+    var poSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
 }
 
 <div asp-validation-summary="All" class="form-alert"></div>
@@ -262,11 +263,11 @@
         <div class="quotation-summary-stack">
             <div class="quotation-summary-row">
                 <span class="quotation-summary-name">ยอดก่อนภาษี</span>
-                <span class="quotation-summary-amount" id="poSubtotal">@Model.Subtotal.ToString("N2")</span>
+                <span class="quotation-summary-amount" id="poSubtotal">@poSummary.SubtotalBeforeVat.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
                 <span class="quotation-summary-name">ส่วนลด</span>
-                <span class="quotation-summary-amount" id="poDiscount">@Model.DiscountAmount.ToString("N2")</span>
+                <span class="quotation-summary-amount" id="poDiscount">@poSummary.DiscountBeforeVat.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
                 <span class="quotation-summary-name">VAT</span>

@@ -1,0 +1,35 @@
+@model BizCore.Models.Entities.ReadingDoctor
+
+@{
+    ViewData["Title"] = "แก้ไขแพทย์อ่านผล";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">แก้ไขแพทย์อ่านผล</h1>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Details" asp-route-id="@Model.ReadingDoctorId" class="btn btn-outline-secondary">ดูรายละเอียด</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            <input type="hidden" asp-for="ReadingDoctorId" />
+            <partial name="_Form" model="Model" />
+            <div class="form-actions">
+                <span class="table-meta">รายการนี้จะถูกใช้กับเอกสารใหม่เมื่อยังเปิดใช้งานอยู่</span>
+                <div class="page-actions">
+                    <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกการเปลี่ยนแปลง</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

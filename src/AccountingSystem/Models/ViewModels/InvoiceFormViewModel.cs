@@ -48,8 +48,11 @@ public class InvoiceFormViewModel
     [StringLength(200)]
     public string? PatientFullName { get; set; }
 
+    [Display(Name = "วันเกิด")]
+    [DataType(DataType.Date)]
+    public DateTime? PatientBirthDate { get; set; }
+
     [Display(Name = "อายุ (ปี)")]
-    [Range(0, 150, ErrorMessage = "อายุต้องอยู่ระหว่าง 0 ถึง 150 ปี")]
     public int? PatientAge { get; set; }
 
     [Display(Name = "เพศ")]
@@ -70,10 +73,13 @@ public class InvoiceFormViewModel
     [Display(Name = "แพทย์ส่ง")]
     public int? ReferringDoctorId { get; set; }
 
+    [Display(Name = "แพทย์อ่านผล")]
+    public int? ReadingDoctorId { get; set; }
+
     [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
     [Display(Name = "ประเภทภาษี")]
-    [StringLength(10)]
-    public string VatType { get; set; } = "VAT";
+    [StringLength(20)]
+    public string VatType { get; set; } = "VATExclusive";
 
     [Required(ErrorMessage = "กรุณาเลือกรูปแบบส่วนลด")]
     [Display(Name = "รูปแบบส่วนลด")]
@@ -113,6 +119,7 @@ public class InvoiceFormViewModel
     public IEnumerable<SelectListItem> PatientGenderOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> TreatmentRightOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> ReferringDoctorOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> ReadingDoctorOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> DiscountModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> VatTypeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<InvoiceItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<InvoiceItemLookupViewModel>();

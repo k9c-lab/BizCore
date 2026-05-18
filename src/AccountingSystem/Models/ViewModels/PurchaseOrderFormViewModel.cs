@@ -52,9 +52,9 @@ public class PurchaseOrderFormViewModel
     public decimal DiscountAmount { get; set; }
 
     [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
-    [StringLength(10)]
+    [StringLength(20)]
     [Display(Name = "ประเภทภาษี")]
-    public string VatType { get; set; } = "VAT";
+    public string VatType { get; set; } = "VATExclusive";
 
     [Range(typeof(decimal), "0", "9999999999999999.99")]
     [Display(Name = "จำนวนภาษีมูลค่าเพิ่ม")]

@@ -21,12 +21,11 @@
     var referenceVat = Model.QuotationId.HasValue && Model.Quotation is not null
         ? Model.Quotation.VatAmount
         : (Model.ReferenceLineVatAmount
-            ?? (Model.VatType == "VAT"
-                ? Math.Round((referenceSubtotal - referenceDiscount) * 0.07m, 2, MidpointRounding.AwayFromZero)
-                : 0m));
+            ?? BizCore.Utilities.VatModeHelper.ComputeFromDocumentPricing(referenceSubtotal - referenceDiscount, Model.VatType).VatAmount);
     var referenceTotal = Model.QuotationId.HasValue && Model.Quotation is not null
         ? Model.Quotation.TotalAmount
         : (Model.ReferenceLineTotalAmount ?? (referenceSubtotal - referenceDiscount + referenceVat));
+    var currentSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
     var showsInstallmentBilling = Model.QuotationId.HasValue && Math.Abs(referenceTotal - Model.TotalAmount) > 0.01m;
     var hasRemark = !string.IsNullOrWhiteSpace(Model.Remark);
     var hasSalespersonInfo =
@@ -40,6 +39,7 @@
     var hasTreatmentRight = Model.TreatmentRight is not null;
     var hasPatientWard = !string.IsNullOrWhiteSpace(Model.PatientWard);
     var hasReferringDoctor = Model.ReferringDoctor is not null;
+    var hasReadingDoctor = Model.ReadingDoctor is not null;
 }
 <!DOCTYPE html>
 <html lang="th">
@@ -343,6 +343,13 @@
                         {
                             <div class="company-line">Email: @companyEmail</div>
                         }
+                        @if (hasReadingDoctor && false)
+                        {
+                            <div class="patient-doctor-block">
+                                <div class="section-label">แพทย์อ่านผล / Reading Doctor</div>
+                                <div class="party-value patient-value-compact">@Model.ReadingDoctor!.DoctorName</div>
+                            </div>
+                        }
                     </div>
                 </div>
                 <div class="document-block">
@@ -445,6 +452,13 @@
                                 <div class="party-value patient-value-compact">@Model.ReferringDoctor!.DoctorName</div>
                             </div>
                         }
+                        @if (hasReadingDoctor)
+                        {
+                            <div class="patient-doctor-block">
+                                <div class="section-label">แพทย์อ่านผล / Reading Doctor</div>
+                                <div class="party-value patient-value-compact">@Model.ReadingDoctor!.DoctorName</div>
+                            </div>
+                        }
                     </div>
                 </section>
             }
@@ -495,8 +509,8 @@
                             <tr><td class="summary-label">ยอดอ้างอิงตามรายการ / Reference Item Total</td><td>@referenceTotal.ToString("N2")</td></tr>
                             <tr class="summary-separator"><td colspan="2"></td></tr>
                         }
-                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
-                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@currentSummary.SubtotalBeforeVat.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@currentSummary.DiscountBeforeVat.ToString("N2")</td></tr>
                         <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
                         <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
                     </table>

@@ -2,6 +2,7 @@ using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
+using BizCore.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -92,7 +93,7 @@ public class CashSalesController : CrudControllerBase
             InvoiceDate = DateTime.Today,
             Status = "Draft",
             DiscountMode = "Line",
-            VatType = "VAT",
+            VatType = VatModeHelper.VatExclusive,
             BranchId = CurrentBranchId(),
             ShowPatientInfo = true
         };
@@ -768,8 +769,9 @@ public class CashSalesController : CrudControllerBase
 
         model.VatTypeOptions = new[]
         {
-            new SelectListItem("VAT", "VAT"),
-            new SelectListItem("No VAT", "NoVAT")
+            new SelectListItem("ราคายังไม่รวม VAT", VatModeHelper.VatExclusive),
+            new SelectListItem("ราคารวม VAT", VatModeHelper.VatInclusive),
+            new SelectListItem("No VAT", VatModeHelper.NoVat)
         };
 
         model.DiscountModeOptions = new[]
@@ -968,7 +970,7 @@ public class CashSalesController : CrudControllerBase
             TreatmentRightId = cashSale.TreatmentRightId,
             PatientWard = cashSale.PatientWard,
             ReferringDoctorId = cashSale.ReferringDoctorId,
-            VatType = cashSale.VatType,
+            VatType = VatModeHelper.Normalize(cashSale.VatType, VatModeHelper.VatExclusive),
             DiscountMode = useHeaderDiscount ? "Header" : "Line",
             HeaderDiscountAmount = useHeaderDiscount ? cashSale.DiscountAmount : 0m,
             Remark = cashSale.Remark,
@@ -1209,12 +1211,12 @@ public class CashSalesController : CrudControllerBase
             ModelState.AddModelError(nameof(model.HeaderDiscountAmount), "ส่วนลดท้ายเอกสารต้องไม่มากกว่ายอดก่อน VAT");
         }
 
+        model.VatType = VatModeHelper.Normalize(model.VatType, VatModeHelper.VatExclusive);
         var appliedDiscount = useLineDiscount ? lineDiscountTotal : model.HeaderDiscountAmount;
         var net = subtotal - appliedDiscount;
-        var vat = model.VatType == "VAT"
-            ? Math.Round(net * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        var total = net + vat;
+        var vatComputation = VatModeHelper.ComputeFromDocumentPricing(net, model.VatType);
+        var vat = vatComputation.VatAmount;
+        var total = vatComputation.TotalAmount;
 
         model.Subtotal = subtotal;
         model.DiscountAmount = useLineDiscount ? lineDiscountTotal : 0m;

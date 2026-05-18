@@ -494,18 +494,28 @@
                     }
                 }
 
-                const netBeforeVat = isLineMode ? subtotal : Math.max(subtotal - headerDiscount, 0);
-                const vat = vatTypeInput.value === "VAT" ? (netBeforeVat * 0.07) : 0;
-                document.getElementById("quotationHeaderSubtotal").textContent = subtotal.toFixed(2);
-                document.getElementById("quotationHeaderDiscount").textContent = (isLineMode ? discount : headerDiscount).toFixed(2);
+                const grossDiscount = isLineMode ? discount : headerDiscount;
+                const grossNet = isLineMode ? subtotal : Math.max(subtotal - headerDiscount, 0);
+                const vatMode = vatTypeInput.value;
+                const subtotalBeforeVat = vatMode === "VATInclusive" ? (subtotal / 1.07) : subtotal;
+                const netBeforeVat = vatMode === "VATInclusive" ? (grossNet / 1.07) : grossNet;
+                const discountBeforeVat = subtotalBeforeVat - netBeforeVat;
+                const vat = vatMode === "VATExclusive"
+                    ? (netBeforeVat * 0.07)
+                    : vatMode === "VATInclusive"
+                        ? (grossNet - netBeforeVat)
+                        : 0;
+                const total = vatMode === "VATExclusive" ? (netBeforeVat + vat) : grossNet;
+                document.getElementById("quotationHeaderSubtotal").textContent = subtotalBeforeVat.toFixed(2);
+                document.getElementById("quotationHeaderDiscount").textContent = discountBeforeVat.toFixed(2);
                 document.getElementById("quotationHeaderNet").textContent = netBeforeVat.toFixed(2);
                 document.getElementById("quotationHeaderVat").textContent = vat.toFixed(2);
-                document.getElementById("quotationHeaderTotal").textContent = (netBeforeVat + vat).toFixed(2);
-                document.getElementById("quotationSubtotal").textContent = subtotal.toFixed(2);
-                document.getElementById("quotationDiscount").textContent = (isLineMode ? discount : headerDiscount).toFixed(2);
+                document.getElementById("quotationHeaderTotal").textContent = total.toFixed(2);
+                document.getElementById("quotationSubtotal").textContent = subtotalBeforeVat.toFixed(2);
+                document.getElementById("quotationDiscount").textContent = discountBeforeVat.toFixed(2);
                 document.getElementById("quotationNet").textContent = netBeforeVat.toFixed(2);
                 document.getElementById("quotationVat").textContent = vat.toFixed(2);
-                document.getElementById("quotationTotal").textContent = (netBeforeVat + vat).toFixed(2);
+                document.getElementById("quotationTotal").textContent = total.toFixed(2);
             };
 
             const refreshAutoPricedRows = () => {

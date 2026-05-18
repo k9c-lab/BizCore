@@ -22,6 +22,7 @@ public class AccountingDbContext : DbContext
     public DbSet<Salesperson> Salespersons => Set<Salesperson>();
     public DbSet<TreatmentRight> TreatmentRights => Set<TreatmentRight>();
     public DbSet<ReferringDoctor> ReferringDoctors => Set<ReferringDoctor>();
+    public DbSet<ReadingDoctor> ReadingDoctors => Set<ReadingDoctor>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<PriceLevel> PriceLevels => Set<PriceLevel>();
     public DbSet<ItemPrice> ItemPrices => Set<ItemPrice>();
@@ -182,6 +183,14 @@ public class AccountingDbContext : DbContext
         modelBuilder.Entity<ReferringDoctor>(entity =>
         {
             entity.HasKey(x => x.ReferringDoctorId);
+            entity.Property(x => x.DoctorCode).HasMaxLength(30);
+            entity.Property(x => x.DoctorName).HasMaxLength(200);
+            entity.HasIndex(x => x.DoctorCode).IsUnique();
+        });
+
+        modelBuilder.Entity<ReadingDoctor>(entity =>
+        {
+            entity.HasKey(x => x.ReadingDoctorId);
             entity.Property(x => x.DoctorCode).HasMaxLength(30);
             entity.Property(x => x.DoctorName).HasMaxLength(200);
             entity.HasIndex(x => x.DoctorCode).IsUnique();
@@ -425,7 +434,7 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.HeaderDiscountPercent).HasPrecision(9, 4);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-            entity.Property(x => x.VatType).HasMaxLength(10);
+            entity.Property(x => x.VatType).HasMaxLength(20);
             entity.Property(x => x.VatAmount).HasPrecision(18, 2);
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
             entity.HasIndex(x => x.QuotationNumber).IsUnique();
@@ -486,13 +495,14 @@ public class AccountingDbContext : DbContext
             entity.HasKey(x => x.InvoiceId);
             entity.Property(x => x.ReferenceNo).HasMaxLength(50);
             entity.Property(x => x.PatientFullName).HasMaxLength(200);
+            entity.Property(x => x.PatientBirthDate).HasColumnType("date");
             entity.Property(x => x.PatientGender).HasMaxLength(20);
             entity.Property(x => x.PatientHn).HasMaxLength(50);
             entity.Property(x => x.PatientWard).HasMaxLength(100);
             entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-            entity.Property(x => x.VatType).HasMaxLength(10);
+            entity.Property(x => x.VatType).HasMaxLength(20);
             entity.Property(x => x.VatAmount).HasPrecision(18, 2);
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
             entity.Property(x => x.PaidAmount).HasPrecision(18, 2);
@@ -529,6 +539,10 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.ReferringDoctor)
                 .WithMany()
                 .HasForeignKey(x => x.ReferringDoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReadingDoctor)
+                .WithMany()
+                .HasForeignKey(x => x.ReadingDoctorId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CreatedByUser)
                 .WithMany()
@@ -662,7 +676,7 @@ public class AccountingDbContext : DbContext
             entity.Property(x => x.CancelReason).HasMaxLength(500);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-            entity.Property(x => x.VatType).HasMaxLength(10);
+            entity.Property(x => x.VatType).HasMaxLength(20);
             entity.Property(x => x.VatAmount).HasPrecision(18, 2);
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
             entity.HasIndex(x => x.CashSaleNo).IsUnique();
@@ -938,7 +952,7 @@ public class AccountingDbContext : DbContext
             entity.HasKey(x => x.PurchaseOrderId);
             entity.Property(x => x.Subtotal).HasPrecision(18, 2);
             entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-            entity.Property(x => x.VatType).HasMaxLength(10);
+            entity.Property(x => x.VatType).HasMaxLength(20);
             entity.Property(x => x.VatAmount).HasPrecision(18, 2);
             entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
             entity.Property(x => x.RejectReason).HasMaxLength(500);

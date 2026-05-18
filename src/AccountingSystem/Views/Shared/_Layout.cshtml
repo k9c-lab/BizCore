@@ -50,12 +50,13 @@
     var canUseSalespersons = CanUseMenu("MasterData.Salespersons.Menu");
     var canUseTreatmentRights = CanUseMenu("MasterData.TreatmentRights.Menu");
     var canUseReferringDoctors = CanUseMenu("MasterData.ReferringDoctors.Menu");
+    var canUseReadingDoctors = CanUseMenu("MasterData.ReadingDoctors.Menu");
     var canUseItems = CanUseMenu("MasterData.Items.Menu");
     var canUseUsers = CanUseMenu("MasterData.Users.Menu");
     var canUseRolePermissions = CanUseMenu("MasterData.RolePermissions.Menu");
     var canUsePriceLevels = CanUseMenu("MasterData.PriceLevels.Menu");
     var canUseSettings = CanUseMenu("MasterData.Settings.Menu");
-    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
+    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseReadingDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
         : User.FindFirst("BranchName")?.Value;
@@ -208,7 +209,7 @@
 
                 @if (showMasterDataSection)
                 {
-                    <div class="sidebar-section sidebar-section-master@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
+                    <div class="sidebar-section sidebar-section-master@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "ReadingDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
                         <div class="sidebar-section-title">ข้อมูลหลัก</div>
                         @if (canUseBranches)
                         {
@@ -232,7 +233,19 @@
                         }
                         @if (canUseReferringDoctors)
                         {
-                            <a class="sidebar-link@(ActiveLink("ReferringDoctors"))" asp-controller="ReferringDoctors" asp-action="Index" aria-current="@AriaCurrent("ReferringDoctors")">แพทย์</a>
+                            <a class="sidebar-link@(ActiveLink("ReferringDoctors"))" asp-controller="ReferringDoctors" asp-action="Index" aria-current="@AriaCurrent("ReferringDoctors")">แพทย์ส่ง</a>
+                        }
+                        @if (canUseReadingDoctors)
+                        {
+                            <a class="sidebar-link@(ActiveLink("ReadingDoctors"))" asp-controller="ReadingDoctors" asp-action="Index" aria-current="@AriaCurrent("ReadingDoctors")">
+                                <span class="sidebar-link-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                                        <circle cx="12" cy="12" r="3.2" />
+                                    </svg>
+                                </span>
+                                <span>แพทย์อ่านผล</span>
+                            </a>
                         }
                         @if (canUseItems)
                         {

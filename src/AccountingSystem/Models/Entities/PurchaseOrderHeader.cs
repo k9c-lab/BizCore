@@ -40,9 +40,9 @@ public class PurchaseOrderHeader
     public decimal DiscountAmount { get; set; }
 
     [Required]
-    [StringLength(10)]
+    [StringLength(20)]
     [Display(Name = "VAT Type")]
-    public string VatType { get; set; } = "VAT";
+    public string VatType { get; set; } = "VATExclusive";
 
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }

@@ -1,0 +1,40 @@
+@model BizCore.Models.Entities.ReadingDoctor
+
+@{
+    ViewData["Title"] = "รายละเอียดแพทย์อ่านผล";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Master Data</div>
+        <h1 class="page-title">รายละเอียดแพทย์อ่านผล</h1>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.ReadingDoctorId" class="btn btn-primary">แก้ไข</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับ</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <div class="form-shell">
+            <div class="form-section quotation-header-section">
+                <div class="form-section-title">ข้อมูลแพทย์อ่านผล</div>
+                <div class="row g-2 quotation-header-grid">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">รหัสแพทย์อ่านผล</div>
+                        <div class="form-control readonly-detail">@Model.DoctorCode</div>
+                    </div>
+                    <div class="col-lg-6 col-md-6">
+                        <div class="detail-label">ชื่อแพทย์อ่านผล</div>
+                        <div class="form-control readonly-detail">@Model.DoctorName</div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="detail-label">สถานะ</div>
+                        <div class="form-control readonly-detail">@(Model.IsActive ? "ใช้งานอยู่" : "ไม่ใช้งาน")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

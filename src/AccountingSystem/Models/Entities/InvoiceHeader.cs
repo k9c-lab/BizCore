@@ -40,6 +40,10 @@ public class InvoiceHeader
     [StringLength(200)]
     public string? PatientFullName { get; set; }
 
+    [Display(Name = "วันเกิด")]
+    [DataType(DataType.Date)]
+    public DateTime? PatientBirthDate { get; set; }
+
     [Display(Name = "อายุ (ปี)")]
     [Range(0, 150)]
     public int? PatientAge { get; set; }
@@ -62,6 +66,9 @@ public class InvoiceHeader
     [Display(Name = "แพทย์ส่ง")]
     public int? ReferringDoctorId { get; set; }
 
+    [Display(Name = "แพทย์อ่านผล")]
+    public int? ReadingDoctorId { get; set; }
+
     [StringLength(2000)]
     public string? Remark { get; set; }
 
@@ -69,8 +76,8 @@ public class InvoiceHeader
     public decimal DiscountAmount { get; set; }
 
     [Required]
-    [StringLength(10)]
-    public string VatType { get; set; } = "NoVAT";
+    [StringLength(20)]
+    public string VatType { get; set; } = "VATExclusive";
 
     public decimal VatAmount { get; set; }
     public decimal TotalAmount { get; set; }
@@ -104,6 +111,7 @@ public class InvoiceHeader
     public QuotationHeader? Quotation { get; set; }
     public TreatmentRight? TreatmentRight { get; set; }
     public ReferringDoctor? ReferringDoctor { get; set; }
+    public ReadingDoctor? ReadingDoctor { get; set; }
     public User? CreatedByUser { get; set; }
     public User? UpdatedByUser { get; set; }
     public User? IssuedByUser { get; set; }

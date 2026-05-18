@@ -2,6 +2,7 @@ using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
+using BizCore.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -233,12 +234,14 @@ public class InvoicesController : CrudControllerBase
         invoice.QuotationId = model.QuotationId;
         invoice.ReferenceNo = model.ReferenceNo?.Trim();
         invoice.PatientFullName = model.PatientFullName?.Trim();
-        invoice.PatientAge = model.PatientAge;
+        invoice.PatientBirthDate = model.PatientBirthDate?.Date;
+        invoice.PatientAge = CalculatePatientAge(model.PatientBirthDate, model.InvoiceDate);
         invoice.PatientGender = model.PatientGender?.Trim();
         invoice.PatientHn = model.PatientHn?.Trim();
         invoice.TreatmentRightId = model.TreatmentRightId;
         invoice.PatientWard = model.PatientWard?.Trim();
         invoice.ReferringDoctorId = model.ReferringDoctorId;
+        invoice.ReadingDoctorId = model.ReadingDoctorId;
         invoice.Remark = model.Remark?.Trim();
         invoice.Subtotal = model.Subtotal;
         invoice.DiscountAmount = model.DiscountMode == "Header" ? model.HeaderDiscountAmount : model.DiscountAmount;
@@ -409,12 +412,14 @@ public class InvoicesController : CrudControllerBase
                 QuotationId = model.QuotationId,
                 ReferenceNo = model.ReferenceNo?.Trim(),
                 PatientFullName = model.PatientFullName?.Trim(),
-                PatientAge = model.PatientAge,
+                PatientBirthDate = model.PatientBirthDate?.Date,
+                PatientAge = CalculatePatientAge(model.PatientBirthDate, model.InvoiceDate),
                 PatientGender = model.PatientGender?.Trim(),
                 PatientHn = model.PatientHn?.Trim(),
                 TreatmentRightId = model.TreatmentRightId,
                 PatientWard = model.PatientWard?.Trim(),
                 ReferringDoctorId = model.ReferringDoctorId,
+                ReadingDoctorId = model.ReadingDoctorId,
                 Remark = model.Remark?.Trim(),
                 Subtotal = model.Subtotal,
                 DiscountAmount = model.DiscountMode == "Header" ? model.HeaderDiscountAmount : model.DiscountAmount,
@@ -520,6 +525,7 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Quotation)
             .Include(x => x.TreatmentRight)
             .Include(x => x.ReferringDoctor)
+            .Include(x => x.ReadingDoctor)
             .Include(x => x.CreatedByUser)
             .Include(x => x.UpdatedByUser)
             .Include(x => x.IssuedByUser)
@@ -778,6 +784,7 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.Quotation)
             .Include(x => x.TreatmentRight)
             .Include(x => x.ReferringDoctor)
+            .Include(x => x.ReadingDoctor)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
@@ -976,10 +983,23 @@ public class InvoicesController : CrudControllerBase
             })
             .ToListAsync();
 
+        model.ReadingDoctorOptions = await _context.ReadingDoctors
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.ReadingDoctorId == model.ReadingDoctorId)
+            .OrderBy(x => x.DoctorCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.ReadingDoctorId.ToString(),
+                Text = x.DoctorName,
+                Selected = model.ReadingDoctorId.HasValue && x.ReadingDoctorId == model.ReadingDoctorId.Value
+            })
+            .ToListAsync();
+
         model.VatTypeOptions = new[]
         {
-            new SelectListItem("VAT", "VAT"),
-            new SelectListItem("No VAT", "NoVAT")
+            new SelectListItem("ราคายังไม่รวม VAT", VatModeHelper.VatExclusive),
+            new SelectListItem("ราคารวม VAT", VatModeHelper.VatInclusive),
+            new SelectListItem("No VAT", VatModeHelper.NoVat)
         };
 
         model.DiscountModeOptions = new[]
@@ -1181,13 +1201,15 @@ public class InvoicesController : CrudControllerBase
             QuotationNo = invoice.Quotation?.QuotationNumber,
             ReferenceNo = invoice.ReferenceNo,
             PatientFullName = invoice.PatientFullName,
+            PatientBirthDate = invoice.PatientBirthDate,
             PatientAge = invoice.PatientAge,
             PatientGender = invoice.PatientGender,
             PatientHn = invoice.PatientHn,
             TreatmentRightId = invoice.TreatmentRightId,
             PatientWard = invoice.PatientWard,
             ReferringDoctorId = invoice.ReferringDoctorId,
-            VatType = invoice.VatType,
+            ReadingDoctorId = invoice.ReadingDoctorId,
+            VatType = VatModeHelper.Normalize(invoice.VatType, VatModeHelper.VatExclusive),
             DiscountMode = invoice.QuotationId.HasValue ? "Line" : (useHeaderDiscount ? "Header" : "Line"),
             HeaderDiscountAmount = invoice.QuotationId.HasValue ? 0m : (useHeaderDiscount ? referenceDiscountTotal : 0m),
             AmountDueThisInvoice = invoice.TotalAmount,
@@ -1248,7 +1270,7 @@ public class InvoicesController : CrudControllerBase
         model.BranchName = quotation.Branch?.BranchName ?? model.BranchName;
         model.ReferenceNo = quotation.ReferenceNo;
         model.Remark = quotation.Remarks;
-        model.VatType = quotation.VatType;
+        model.VatType = VatModeHelper.Normalize(quotation.VatType, VatModeHelper.NoVat);
         model.DiscountMode = "Line";
         model.HeaderDiscountAmount = 0m;
         model.Subtotal = quotation.Subtotal;
@@ -1456,6 +1478,23 @@ public class InvoicesController : CrudControllerBase
             }
         }
 
+        if (model.ReadingDoctorId.HasValue)
+        {
+            var readingDoctorExists = await _context.ReadingDoctors
+                .AnyAsync(x => x.ReadingDoctorId == model.ReadingDoctorId.Value && x.IsActive);
+            if (!readingDoctorExists)
+            {
+                ModelState.AddModelError(nameof(model.ReadingDoctorId), "ไม่พบแพทย์อ่านผลที่เลือก");
+            }
+        }
+
+        if (model.PatientBirthDate.HasValue && model.PatientBirthDate.Value.Date > model.InvoiceDate.Date)
+        {
+            ModelState.AddModelError(nameof(model.PatientBirthDate), "วันเกิดต้องไม่มากกว่าวันที่เอกสาร");
+        }
+
+        model.PatientAge = CalculatePatientAge(model.PatientBirthDate, model.InvoiceDate);
+
         if (model.ShowPriceLevelSelector && !model.QuotationId.HasValue && model.PriceLevelId.HasValue)
         {
             var priceLevelExists = await _context.PriceLevels
@@ -1466,9 +1505,10 @@ public class InvoicesController : CrudControllerBase
             }
         }
 
-        if (model.VatType is not ("VAT" or "NoVAT"))
+        model.VatType = VatModeHelper.Normalize(model.VatType, VatModeHelper.VatExclusive);
+        if (!VatModeHelper.IsValid(model.VatType))
         {
-            ModelState.AddModelError(nameof(model.VatType), "ประเภทราคาภาษีต้องเป็น VAT หรือ NoVAT เท่านั้น");
+            ModelState.AddModelError(nameof(model.VatType), "ประเภทราคาภาษีต้องเป็น NoVAT, VATExclusive หรือ VATInclusive เท่านั้น");
         }
 
         if (model.DiscountMode is not ("Line" or "Header"))
@@ -1670,10 +1710,9 @@ public class InvoicesController : CrudControllerBase
 
         var referenceAppliedDiscount = useLineDiscount ? referenceDiscount : model.HeaderDiscountAmount;
         var referenceNet = referenceSubtotal - referenceAppliedDiscount;
-        var referenceVat = model.VatType == "VAT"
-            ? Math.Round(referenceNet * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        var referenceTotal = referenceNet + referenceVat;
+        var referenceVatComputation = VatModeHelper.ComputeFromDocumentPricing(referenceNet, model.VatType);
+        var referenceVat = referenceVatComputation.VatAmount;
+        var referenceTotal = referenceVatComputation.TotalAmount;
 
         model.DiscountAmount = useLineDiscount ? referenceDiscount : 0m;
 
@@ -1735,6 +1774,29 @@ public class InvoicesController : CrudControllerBase
         return details.Sum(x => x.QuotedQty * x.UnitPrice);
     }
 
+    private static int? CalculatePatientAge(DateTime? birthDate, DateTime referenceDate)
+    {
+        if (!birthDate.HasValue)
+        {
+            return null;
+        }
+
+        var birth = birthDate.Value.Date;
+        var reference = referenceDate.Date;
+        if (birth > reference)
+        {
+            return null;
+        }
+
+        var age = reference.Year - birth.Year;
+        if (birth > reference.AddYears(-age))
+        {
+            age--;
+        }
+
+        return age < 0 ? null : age;
+    }
+
     private static decimal CalculateReferenceLineDiscount(IEnumerable<InvoiceLineEditorViewModel> details)
     {
         return details.Sum(x => x.DiscountAmount);
@@ -1762,10 +1824,11 @@ public class InvoicesController : CrudControllerBase
         invoice.ReferenceLineDiscountAmount = model.DiscountMode == "Header"
             ? model.HeaderDiscountAmount
             : CalculateReferenceLineDiscount(model.Details);
-        invoice.ReferenceLineVatAmount = model.VatType == "VAT"
-            ? Math.Round(((invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m)) * 0.07m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        invoice.ReferenceLineTotalAmount = (invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m) + (invoice.ReferenceLineVatAmount ?? 0m);
+        var referenceComputation = VatModeHelper.ComputeFromDocumentPricing(
+            (invoice.ReferenceLineSubtotal ?? 0m) - (invoice.ReferenceLineDiscountAmount ?? 0m),
+            model.VatType);
+        invoice.ReferenceLineVatAmount = referenceComputation.VatAmount;
+        invoice.ReferenceLineTotalAmount = referenceComputation.TotalAmount;
     }
 
     private string BuildIssueValidationNotice()

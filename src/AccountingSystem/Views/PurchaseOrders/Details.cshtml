@@ -113,6 +113,7 @@
     var poPaidAmount = postedSupplierPayments.Sum(x => x.Amount);
     var poBalanceAmount = Math.Max(Model.TotalAmount - poPaidAmount, 0m);
     var paymentStatus = poPaidAmount <= 0m ? "Unpaid" : poBalanceAmount <= 0m ? "Paid" : "Partially Paid";
+    var poSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
 
     var canRecordPayment = canSupplierPaymentPermission &&
         Model.Status is "Approved" or "PartiallyReceived" or "FullyReceived" &&
@@ -296,7 +297,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">ประเภทภาษี</div>
-                        <div class="form-control readonly-detail">@Model.VatType</div>
+                        <div class="form-control readonly-detail">@BizCore.Utilities.VatModeHelper.GetDisplayLabel(Model.VatType)</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">สาขา</div>
@@ -458,11 +459,11 @@
                     <div class="quotation-summary-stack">
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">ยอดก่อนภาษี</span>
-                            <span class="quotation-summary-amount">@Model.Subtotal.ToString("N2")</span>
+                            <span class="quotation-summary-amount">@poSummary.SubtotalBeforeVat.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">ส่วนลด</span>
-                            <span class="quotation-summary-amount">@Model.DiscountAmount.ToString("N2")</span>
+                            <span class="quotation-summary-amount">@poSummary.DiscountBeforeVat.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row">
                             <span class="quotation-summary-name">VAT</span>

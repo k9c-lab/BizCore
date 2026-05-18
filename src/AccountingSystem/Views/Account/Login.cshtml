@@ -2,11 +2,11 @@
 
 @{
     Layout = null;
-    ViewData["Title"] = "Sign In";
+    ViewData["Title"] = "เข้าสู่ระบบ";
 }
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,7 +19,7 @@
         <section class="login-panel">
             <div class="login-brand">
                 <div class="login-brand-name">BizCore</div>
-                <div class="login-brand-caption">Accounting operations workspace</div>
+                <div class="login-brand-caption">ระบบงานบัญชีและปฏิบัติการ</div>
             </div>
 
             <form asp-action="Login" method="post" class="login-form">
@@ -40,10 +40,10 @@
 
                 <div class="form-check">
                     <input asp-for="RememberMe" class="form-check-input" />
-                    <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                    <label asp-for="RememberMe" class="form-check-label"></label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                <button type="submit" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
             </form>
         </section>
     </main>

@@ -218,13 +218,27 @@
                 headerDiscountInput.value = appliedDiscount.toFixed(2);
             }
 
-            const taxableAmount = subtotal - appliedDiscount;
-            const vat = vatTypeSelect.value === "VAT" ? taxableAmount * 0.07 : 0;
+            const grossNet = subtotal - appliedDiscount;
+            let subtotalBeforeVat = subtotal;
+            let discountBeforeVat = appliedDiscount;
+            let vat = 0;
+            let total = grossNet;
+
+            if (vatTypeSelect.value === "VATExclusive") {
+                vat = grossNet * 0.07;
+                total = grossNet + vat;
+            } else if (vatTypeSelect.value === "VATInclusive") {
+                subtotalBeforeVat = subtotal / 1.07;
+                const netBeforeVat = grossNet / 1.07;
+                discountBeforeVat = subtotalBeforeVat - netBeforeVat;
+                vat = grossNet - netBeforeVat;
+            }
+
             vatInput.value = vat.toFixed(2);
-            document.getElementById("poSubtotal").textContent = subtotal.toFixed(2);
-            document.getElementById("poDiscount").textContent = appliedDiscount.toFixed(2);
+            document.getElementById("poSubtotal").textContent = subtotalBeforeVat.toFixed(2);
+            document.getElementById("poDiscount").textContent = discountBeforeVat.toFixed(2);
             document.getElementById("poVatDisplay").textContent = vat.toFixed(2);
-            document.getElementById("poTotal").textContent = (taxableAmount + vat).toFixed(2);
+            document.getElementById("poTotal").textContent = total.toFixed(2);
         };
 
         supplierSearch.addEventListener("input", () => {

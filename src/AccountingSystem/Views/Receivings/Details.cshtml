@@ -144,7 +144,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">ประเภทภาษี</div>
-                        <div class="form-control readonly-detail">@Model.PurchaseOrderHeader?.VatType</div>
+                        <div class="form-control readonly-detail">@BizCore.Utilities.VatModeHelper.GetDisplayLabel(Model.PurchaseOrderHeader?.VatType)</div>
                     </div>
                     <div class="col-md-3">
                         <div class="detail-label">ยอดก่อนภาษี</div>
