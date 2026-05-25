@@ -3151,3 +3151,29 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - most items used unit `ครั้ง`
   - one source row used unit `50 ml`
   - current migration intentionally keeps the source unit exactly as provided
+## 2026-05-22 Reading Doctor Seed From Image
+
+- Added `ReadingDoctors` seed migration from the doctor-name image provided during session.
+
+- Current database state reviewed before seed:
+  - existing `ReadingDoctors` rows in live data:
+    - `2`
+  - existing rows were inactive:
+    - `RDR-0001`
+    - `RDR-0002`
+
+- New reading doctor names were seeded from the provided image:
+  - total names in this batch:
+    - `22`
+
+- New migration added:
+  - `069_seed_reading_doctors_from_image.sql`
+  - duplicated in:
+    - `database/`
+    - `database/system-migrations/`
+    - `src/AccountingSystem/DatabaseMigrations/`
+
+- Migration behavior:
+  - assigns `RDR-xxxx` codes by continuing from the current highest existing reading-doctor code
+  - inserts only missing names
+  - re-activates matching existing rows if they already exist but were inactive

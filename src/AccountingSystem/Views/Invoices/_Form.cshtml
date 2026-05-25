@@ -435,7 +435,7 @@
                             <input type="hidden" name="Details[@i].PreviouslyInvoicedQty" value="@Model.Details[i].PreviouslyInvoicedQty?.ToString("0.##")" class="js-previously-invoiced-qty-hidden" />
                             <input type="hidden" name="Details[@i].RemainingQuotedQty" value="@Model.Details[i].RemainingQuotedQty?.ToString("0.##")" class="js-remaining-quoted-qty-hidden" />
 
-                            <div class="fw-semibold js-item-display">@(string.IsNullOrWhiteSpace(Model.Details[i].ItemName) ? "-" : $"{Model.Details[i].ItemCode} - {Model.Details[i].ItemName}")</div>
+                            <div class="fw-semibold js-item-display">@(string.IsNullOrWhiteSpace(Model.Details[i].ItemName) ? "-" : $"{(string.IsNullOrWhiteSpace(Model.Details[i].PartNumber) ? Model.Details[i].ItemCode : Model.Details[i].PartNumber)} - {Model.Details[i].ItemName}")</div>
                             <div class="table-meta js-item-part-display">Part No.: @(string.IsNullOrWhiteSpace(Model.Details[i].PartNumber) ? "-" : Model.Details[i].PartNumber)</div>
                             <div class="table-meta js-quotation-progress-display" style="@(Model.Details[i].QuotationDetailId.HasValue ? null : "display:none;")">
                                 อ้างอิงจากใบเสนอราคา: @(Model.Details[i].QuotedQty.ToString("N2")) | ออกบิลแล้ว: @(Model.Details[i].PreviouslyInvoicedQty?.ToString("N2") ?? "0.00") | คงเหลือ: @(Model.Details[i].RemainingQuotedQty?.ToString("N2") ?? "-")

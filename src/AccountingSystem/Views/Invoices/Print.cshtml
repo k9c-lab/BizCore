@@ -479,7 +479,7 @@
                     @foreach (var line in Model.InvoiceDetails.OrderBy(x => x.LineNumber))
                     {
                         var description = string.IsNullOrWhiteSpace(line.Remark)
-                            ? $"{line.Item?.ItemCode} - {line.Item?.ItemName}"
+                            ? (string.IsNullOrWhiteSpace(line.Item?.ItemName) ? "-" : line.Item!.ItemName)
                             : line.Remark;
                         var quotedQty = line.QuotedQty > 0 ? line.QuotedQty : line.Qty;
                         var showsActualQty = Math.Abs(quotedQty - line.Qty) > 0.01m;
@@ -526,13 +526,13 @@
 
             <section class="signature-grid">
                 <div class="signature-box">
-                    <div class="signature-label">ผู้รับเอกสาร / Received By</div>
+                    <div class="signature-label">ผู้รับบริการ/ญาติ/พยาบาล / Patient / Relative / Nurse</div>
                     <div class="signature-line"></div>
                     <div>............................................................</div>
                     <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
                 </div>
                 <div class="signature-box">
-                    <div class="signature-label">ผู้มีอำนาจลงนาม / Authorized Signature</div>
+                    <div class="signature-label">เจ้าหน้าที่ / Staff</div>
                     <div class="signature-line"></div>
                     <div>............................................................</div>
                     <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>

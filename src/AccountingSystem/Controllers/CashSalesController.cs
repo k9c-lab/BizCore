@@ -848,7 +848,7 @@ public class CashSalesController : CrudControllerBase
                 .Select(x => new InvoiceItemLookupViewModel
                 {
                     ItemId = x.ItemId,
-                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
+                    DisplayText = $"{(string.IsNullOrWhiteSpace(x.PartNumber) ? x.ItemCode : x.PartNumber)} - {x.ItemName}",
                     ItemCode = x.ItemCode,
                     ItemName = x.ItemName,
                     PartNumber = x.PartNumber,
@@ -881,7 +881,7 @@ public class CashSalesController : CrudControllerBase
                 .Select(x => new InvoiceItemLookupViewModel
                 {
                     ItemId = x.ItemId,
-                    DisplayText = $"{x.ItemCode} - {x.ItemName}",
+                    DisplayText = $"{(string.IsNullOrWhiteSpace(x.PartNumber) ? x.ItemCode : x.PartNumber)} - {x.ItemName}",
                     ItemCode = x.ItemCode,
                     ItemName = x.ItemName,
                     PartNumber = x.PartNumber,

@@ -393,12 +393,16 @@
 
             const keyword = (query || "").trim().toLowerCase();
             const matches = itemLookup
-                .filter(item =>
-                    !keyword ||
-                    item.ItemCode.toLowerCase().includes(keyword) ||
-                    item.ItemName.toLowerCase().includes(keyword) ||
-                    (item.PartNumber || "").toLowerCase().includes(keyword))
-                .slice(0, keyword ? 12 : 20);
+                .filter(item => {
+                    if (!keyword) {
+                        return (item.ItemType || "").toLowerCase() === "service";
+                    }
+
+                    return item.ItemCode.toLowerCase().includes(keyword) ||
+                        item.ItemName.toLowerCase().includes(keyword) ||
+                        (item.PartNumber || "").toLowerCase().includes(keyword);
+                })
+                .slice(0, keyword ? 12 : itemLookup.length);
 
             if (matches.length === 0) {
                 entryItemResults.innerHTML = "<div class=\"search-dropdown-empty\">ไม่พบสินค้าที่ค้นหา</div>";
@@ -409,8 +413,8 @@
             entryItemResults.innerHTML = matches
                 .map(item => `
                     <button type="button" class="search-dropdown-option" data-item-id="${item.ItemId}">
-                        <span class="search-dropdown-title">${escapeHtml(item.ItemCode)} - ${escapeHtml(item.ItemName)}</span>
-                        <span class="search-dropdown-meta">${escapeHtml(item.PartNumber || "-")} | ${escapeHtml(item.ItemType || "Product")} | ${formatAmount(getResolvedUnitPrice(item))}</span>
+                        <span class="search-dropdown-title">${escapeHtml(item.PartNumber || item.ItemCode || "-")} - ${escapeHtml(item.ItemName)}</span>
+                        <span class="search-dropdown-meta">${escapeHtml(item.ItemCode || "-")} | ${escapeHtml(item.ItemType || "Product")} | ${formatAmount(getResolvedUnitPrice(item))}</span>
                     </button>`)
                 .join("");
             entryItemResults.style.display = "";
@@ -796,7 +800,7 @@
                     <input type="hidden" name="Details[${index}].QuotationDetailId" value="${escapeHtml(line.QuotationDetailId || "")}" class="js-quotation-detail-id-hidden" />
                     <input type="hidden" name="Details[${index}].PreviouslyInvoicedQty" value="${escapeHtml(line.PreviouslyInvoicedQty ?? "")}" class="js-previously-invoiced-qty-hidden" />
                     <input type="hidden" name="Details[${index}].RemainingQuotedQty" value="${escapeHtml(line.RemainingQuotedQty ?? "")}" class="js-remaining-quoted-qty-hidden" />
-                    <div class="fw-semibold js-item-display">${escapeHtml(line.ItemCode)} - ${escapeHtml(line.ItemName)}</div>
+                    <div class="fw-semibold js-item-display">${escapeHtml(line.PartNumber || line.ItemCode || "-")} - ${escapeHtml(line.ItemName)}</div>
                     <div class="table-meta js-item-part-display">Part No.: ${escapeHtml(line.PartNumber || "-")}</div>
                     <div class="table-meta js-quotation-progress-display" style="${line.QuotationDetailId ? "" : "display:none;"}">${escapeHtml(buildQuotationProgressText(line))}</div>
                     <span class="text-danger field-validation-valid" data-valmsg-for="Details[${index}].ItemId" data-valmsg-replace="true"></span>

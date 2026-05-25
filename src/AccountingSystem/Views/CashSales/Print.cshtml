@@ -25,7 +25,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cash Sale @Model.CashSaleNo</title>
+    <title>ใบขายเงินสด / Cash Sale @Model.CashSaleNo</title>
     <style>
         @@page { size: A4; margin: 14mm; }
         * { box-sizing: border-box; }
@@ -302,7 +302,7 @@
     <div class="print-page">
         <div class="print-shell">
             <div class="screen-actions">
-                <button type="button" onclick="window.print()">Print</button>
+                <button type="button" onclick="window.print()">พิมพ์ / Print</button>
             </div>
 
             <header class="print-header">
@@ -310,8 +310,8 @@
                     <h1 class="company-name">@companyName</h1>
                     <div class="company-meta-grid">
                         <div class="company-line">@companyAddress</div>
-                        <div class="company-line">Tax ID: @companyTaxId</div>
-                        <div class="company-line">Tel: @companyPhone</div>
+                        <div class="company-line">เลขประจำตัวผู้เสียภาษี / Tax ID: @companyTaxId</div>
+                        <div class="company-line">โทรศัพท์ / Tel: @companyPhone</div>
                         @if (!string.IsNullOrWhiteSpace(companyEmail))
                         {
                             <div class="company-line">Email: @companyEmail</div>
@@ -319,25 +319,25 @@
                     </div>
                 </div>
                 <div class="document-block">
-                    <h2 class="document-title-th">Cash Sale</h2>
+                    <h2 class="document-title-th">ใบขายเงินสด</h2>
                     <div class="document-title-en">CASH SALE</div>
                     <table class="document-meta">
-                        <tr><td class="meta-label">Doc No.</td><td class="meta-value-nowrap">@Model.CashSaleNo</td></tr>
-                        <tr><td class="meta-label">Date</td><td>@Model.CashSaleDate.ToString("dd/MM/yyyy")</td></tr>
-                        <tr><td class="meta-label">Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
-                        <tr><td class="meta-label">Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
-                        <tr><td class="meta-label">Status</td><td>@Model.Status</td></tr>
+                        <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.CashSaleNo</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.CashSaleDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
+                        <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
+                        <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>
                     </table>
                     @if (hasSalespersonInfo)
                     {
                         <div class="salesperson-meta">
                             @if (!string.IsNullOrWhiteSpace(Model.Salesperson?.SalespersonName))
                             {
-                                <div class="salesperson-row"><span class="meta-label">Salesperson</span><span>@Model.Salesperson!.SalespersonName</span></div>
+                                <div class="salesperson-row"><span class="meta-label">พนักงานขาย / Salesperson</span><span>@Model.Salesperson!.SalespersonName</span></div>
                             }
                             @if (!string.IsNullOrWhiteSpace(Model.Salesperson?.PhoneNumber))
                             {
-                                <div class="salesperson-row"><span class="meta-label">Tel</span><span>@Model.Salesperson!.PhoneNumber</span></div>
+                                <div class="salesperson-row"><span class="meta-label">โทรศัพท์ / Tel</span><span>@Model.Salesperson!.PhoneNumber</span></div>
                             }
                             @if (!string.IsNullOrWhiteSpace(Model.Salesperson?.Email))
                             {
@@ -351,15 +351,15 @@
             <section class="print-section party-section">
                 <div class="party-grid">
                     <div>
-                        <div class="section-label">Customer</div>
+                        <div class="section-label">ลูกค้า / Customer</div>
                         <div class="party-name">@(Model.Customer?.CustomerName ?? "-")</div>
                     </div>
                     <div>
-                        <div class="section-label">Tax ID</div>
+                        <div class="section-label">เลขประจำตัวผู้เสียภาษี / Tax ID</div>
                         <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.TaxId) ? "-" : Model.Customer!.TaxId)</div>
                     </div>
                     <div style="grid-column: 1 / -1;">
-                        <div class="section-label">Address</div>
+                        <div class="section-label">ที่อยู่ / Address</div>
                         <div class="party-value">@(string.IsNullOrWhiteSpace(Model.Customer?.Address) ? "-" : Model.Customer!.Address)</div>
                     </div>
                 </div>
@@ -372,49 +372,49 @@
                         @if (hasPatientName)
                         {
                             <div class="patient-name-block">
-                                <div class="section-label">Patient Name</div>
+                                <div class="section-label">ชื่อผู้ป่วย / Patient Name</div>
                                 <div class="party-value patient-value-compact">@Model.PatientFullName</div>
                             </div>
                         }
                         @if (hasPatientHn)
                         {
                             <div>
-                                <div class="section-label">HN</div>
+                                <div class="section-label">HN / HN</div>
                                 <div class="party-value patient-value-compact">@Model.PatientHn</div>
                             </div>
                         }
                         @if (hasPatientAge)
                         {
                             <div>
-                                <div class="section-label">Age</div>
+                                <div class="section-label">อายุ / Age</div>
                                 <div class="party-value patient-value-compact">@Model.PatientAge</div>
                             </div>
                         }
                         @if (hasPatientGender)
                         {
                             <div>
-                                <div class="section-label">Gender</div>
+                                <div class="section-label">เพศ / Gender</div>
                                 <div class="party-value patient-value-compact">@Model.PatientGender</div>
                             </div>
                         }
                         @if (hasTreatmentRight)
                         {
                             <div>
-                                <div class="section-label">Treatment Right</div>
+                                <div class="section-label">สิทธิการรักษา / Treatment Right</div>
                                 <div class="party-value patient-value-compact">@($"{Model.TreatmentRight!.TreatmentRightCode} - {Model.TreatmentRight.TreatmentRightName}")</div>
                             </div>
                         }
                         @if (hasPatientWard)
                         {
                             <div>
-                                <div class="section-label">Ward</div>
+                                <div class="section-label">วอร์ด / Ward</div>
                                 <div class="party-value patient-value-compact">@Model.PatientWard</div>
                             </div>
                         }
                         @if (hasReferringDoctor)
                         {
                             <div class="patient-doctor-block">
-                                <div class="section-label">Referring Doctor</div>
+                                <div class="section-label">แพทย์ส่ง / Referring Doctor</div>
                                 <div class="party-value patient-value-compact">@($"{Model.ReferringDoctor!.DoctorCode} - {Model.ReferringDoctor.DoctorName}")</div>
                             </div>
                         }
@@ -426,18 +426,18 @@
                 <table class="line-table">
                     <thead>
                         <tr>
-                            <th class="col-no"><span class="bi-label-th">No.</span><span class="bi-label-en">No.</span></th>
-                            <th class="col-description"><span class="bi-label-th">Description</span><span class="bi-label-en">Description</span></th>
-                            <th class="col-qty"><span class="bi-label-th">Qty</span><span class="bi-label-en">Qty</span></th>
-                            <th class="col-price"><span class="bi-label-th">Unit Price</span><span class="bi-label-en">Unit Price</span></th>
-                            <th class="col-discount"><span class="bi-label-th">Discount</span><span class="bi-label-en">Discount</span></th>
-                            <th class="col-total"><span class="bi-label-th">Amount</span><span class="bi-label-en">Amount</span></th>
+                            <th class="col-no"><span class="bi-label-th">ลำดับ</span><span class="bi-label-en">No.</span></th>
+                            <th class="col-description"><span class="bi-label-th">รายละเอียด</span><span class="bi-label-en">Description</span></th>
+                            <th class="col-qty"><span class="bi-label-th">จำนวน</span><span class="bi-label-en">Qty</span></th>
+                            <th class="col-price"><span class="bi-label-th">ราคาต่อหน่วย</span><span class="bi-label-en">Unit Price</span></th>
+                            <th class="col-discount"><span class="bi-label-th">ส่วนลด</span><span class="bi-label-en">Discount</span></th>
+                            <th class="col-total"><span class="bi-label-th">จำนวนเงิน</span><span class="bi-label-en">Amount</span></th>
                         </tr>
                     </thead>
                     <tbody>
                     @foreach (var line in Model.CashSaleDetails.OrderBy(x => x.LineNumber))
                     {
-                        var description = $"{line.Item?.ItemCode} - {line.Item?.ItemName}";
+                        var description = string.IsNullOrWhiteSpace(line.Item?.ItemName) ? "-" : line.Item!.ItemName;
                         var serialNumbers = line.CashSaleSerials
                             .Where(x => x.SerialNumber != null)
                             .Select(x => x.SerialNumber!.SerialNo)
@@ -453,7 +453,7 @@
                                 }
                                 @if (serialNumbers.Count > 0)
                                 {
-                                    <div class="line-description-extra">Serial: @string.Join(", ", serialNumbers)</div>
+                                    <div class="line-description-extra">Serial / หมายเลขเครื่อง: @string.Join(", ", serialNumbers)</div>
                                 }
                             </td>
                             <td class="col-qty">@line.Qty.ToString("N2")</td>
@@ -468,10 +468,10 @@
                 <div class="summary-wrap">
                     <div class="amount-text">@totalAmountText</div>
                     <table class="summary-table">
-                        <tr><td class="summary-label">Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
-                        <tr><td class="summary-label">Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ยอดก่อน VAT / Subtotal</td><td>@Model.Subtotal.ToString("N2")</td></tr>
+                        <tr><td class="summary-label">ส่วนลด / Discount</td><td>@Model.DiscountAmount.ToString("N2")</td></tr>
                         <tr><td class="summary-label">VAT</td><td>@Model.VatAmount.ToString("N2")</td></tr>
-                        <tr class="summary-total"><td>Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
+                        <tr class="summary-total"><td>ยอดรวมทั้งสิ้น / Total Amount</td><td>@Model.TotalAmount.ToString("N2")</td></tr>
                     </table>
                 </div>
             </section>
@@ -479,22 +479,23 @@
             @if (hasRemark)
             {
                 <section class="print-section">
+                    <div class="section-label">หมายเหตุ / Remark</div>
                     <div class="remark-box">@Model.Remark</div>
                 </section>
             }
 
             <section class="signature-grid">
                 <div class="signature-box">
-                    <div class="signature-label">Received By</div>
+                    <div class="signature-label">ผู้รับเอกสาร / Received By</div>
                     <div class="signature-line"></div>
                     <div>............................................................</div>
-                    <div class="signature-date">Date ........ / ........ / ........</div>
+                    <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
                 </div>
                 <div class="signature-box">
-                    <div class="signature-label">Authorized Signature</div>
+                    <div class="signature-label">ผู้มีอำนาจลงนาม / Authorized Signature</div>
                     <div class="signature-line"></div>
                     <div>............................................................</div>
-                    <div class="signature-date">Date ........ / ........ / ........</div>
+                    <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
                 </div>
             </section>
         </div>
