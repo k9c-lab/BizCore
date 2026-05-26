@@ -1,6 +1,8 @@
-@model BizCore.Models.Entities.InvoiceHeader
+﻿@model BizCore.Models.Entities.InvoiceHeader
 
 @{
+    var readingDoctorOptions = ViewData["ReadingDoctorOptions"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+        ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     ViewData["Title"] = "รายละเอียดใบแจ้งหนี้";
     var quotationAppliedDiscount = Model.Quotation is not null
         ? (string.Equals(Model.Quotation.DiscountMode, "Header", StringComparison.OrdinalIgnoreCase)
@@ -63,12 +65,13 @@
         }
     }
     var canIssue = Model.Status == "Draft" && issueBlockReasons.Count == 0;
+    var canEditReadingDoctor = !string.Equals(Model.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
 }
 
 @if (!(ViewData["EnablePatientInfo"] as bool? ?? true))
 {
     <style>
-        .form-shell > .form-section:nth-of-type(2) {
+        .invoice-patient-info-section {
             display: none;
         }
     </style>
@@ -86,6 +89,10 @@
         <p class="page-subtitle">ตรวจสอบหัวเอกสาร รายการสินค้า Serial ที่ออก และยอดทางการเงิน</p>
     </div>
     <div class="page-actions">
+        @if (canEditReadingDoctor)
+        {
+            <button type="button" class="btn btn-outline-primary" id="openReadingDoctorModal">แก้ไขแพทย์อ่าน</button>
+        }
         @if (Model.Status == "Draft")
         {
             <a asp-action="Edit" asp-route-id="@Model.InvoiceId" class="btn btn-primary">แก้ไขใบแจ้งหนี้</a>
@@ -139,10 +146,6 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ยกเลิก</button>
                         </div>
                     </div>
-                    <div class="col-lg-4 col-md-6 d-none">
-                        <div class="detail-label">แพทย์อ่านผล</div>
-                        <div class="form-control readonly-detail">@(Model.ReadingDoctor is null ? "-" : Model.ReadingDoctor.DoctorName)</div>
-                    </div>
                 </div>
             </form>
         }
@@ -162,6 +165,211 @@
         <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบแจ้งหนี้</a>
     </div>
 </div>
+
+
+@if (canEditReadingDoctor)
+{
+    <style>
+        .invoice-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1050;
+        }
+        .invoice-modal-backdrop.is-open {
+            display: flex;
+        }
+        .invoice-modal-card {
+            width: min(100%, 520px);
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 22px 48px rgba(15, 23, 42, 0.24);
+            padding: 20px;
+        }
+        .invoice-modal-title {
+            margin: 0 0 6px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .invoice-modal-text {
+            margin: 0 0 16px;
+            color: #475569;
+        }
+        .invoice-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+    </style>
+
+    <div class="invoice-modal-backdrop" id="readingDoctorModal" hidden>
+        <div class="invoice-modal-card" role="dialog" aria-modal="true" aria-labelledby="readingDoctorModalTitle">
+            <h2 class="invoice-modal-title" id="readingDoctorModalTitle">แก้ไขแพทย์อ่าน</h2>
+            <p class="invoice-modal-text">แก้ไขเฉพาะข้อมูลแพทย์อ่านของใบแจ้งหนี้นี้ โดยไม่กระทบรายการสินค้า ยอดเงิน หรือ workflow หลักของเอกสาร</p>
+            <form asp-action="UpdateReadingDoctor" asp-route-id="@Model.InvoiceId" method="post">
+                @Html.AntiForgeryToken()
+                <div>
+                    <label for="readingDoctorId" class="form-label">แพทย์อ่าน</label>
+                    <div class="search-dropdown">
+                        <input type="text"
+                               id="invoiceDetailsReadingDoctorSearch"
+                               class="form-control"
+                               autocomplete="off"
+                               placeholder="ค้นหาจากรหัสหรือชื่อแพทย์อ่านผล" />
+                        <div id="invoiceDetailsReadingDoctorResults" class="search-dropdown-menu" style="display:none;"></div>
+                    </div>
+                    <select id="readingDoctorId" name="readingDoctorId" class="form-select d-none" asp-items="readingDoctorOptions">
+                        <option value="">- ไม่ระบุ -</option>
+                    </select>
+                </div>
+                <div class="invoice-modal-actions">
+                    <button type="button" class="btn btn-outline-secondary" id="closeReadingDoctorModal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกแพทย์อ่าน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const openButton = document.getElementById("openReadingDoctorModal");
+            const closeButton = document.getElementById("closeReadingDoctorModal");
+            const modal = document.getElementById("readingDoctorModal");
+            const readingDoctorSelect = document.getElementById("readingDoctorId");
+            const readingDoctorSearch = document.getElementById("invoiceDetailsReadingDoctorSearch");
+            const readingDoctorResults = document.getElementById("invoiceDetailsReadingDoctorResults");
+
+            if (!openButton || !closeButton || !modal || !readingDoctorSelect || !readingDoctorSearch || !readingDoctorResults) {
+                return;
+            }
+
+            const readingDoctorOptions = [...readingDoctorSelect.options]
+                .filter(option => option.value)
+                .map(option => ({
+                    ReadingDoctorId: option.value,
+                    DisplayText: option.text,
+                    SearchText: option.text.toLowerCase()
+                }));
+
+            const escapeHtml = value => String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+
+            const hideReadingDoctorResults = () => {
+                readingDoctorResults.style.display = "none";
+                readingDoctorResults.innerHTML = "";
+            };
+
+            const renderReadingDoctorResults = query => {
+                const keyword = (query || "").trim().toLowerCase();
+                const matches = readingDoctorOptions
+                    .filter(option => !keyword || option.SearchText.includes(keyword))
+                    .slice(0, keyword ? 12 : 20);
+
+                if (matches.length === 0) {
+                    readingDoctorResults.innerHTML = "<div class=\"search-dropdown-empty\">ไม่พบแพทย์อ่านผลที่ค้นหา</div>";
+                    readingDoctorResults.style.display = "";
+                    return;
+                }
+
+                readingDoctorResults.innerHTML = matches
+                    .map(option => `
+                        <button type="button" class="search-dropdown-option" data-reading-doctor-id="${option.ReadingDoctorId}">
+                            <span class="search-dropdown-title">${escapeHtml(option.DisplayText)}</span>
+                        </button>`)
+                    .join("");
+                readingDoctorResults.style.display = "";
+            };
+
+            const selectReadingDoctor = option => {
+                readingDoctorSelect.value = option?.ReadingDoctorId ?? "";
+                readingDoctorSearch.value = option?.DisplayText ?? "";
+                if (option) {
+                    readingDoctorSearch.dataset.selectedReadingDoctorId = option.ReadingDoctorId;
+                } else {
+                    delete readingDoctorSearch.dataset.selectedReadingDoctorId;
+                }
+                hideReadingDoctorResults();
+            };
+
+            const openModal = () => {
+                modal.hidden = false;
+                modal.classList.add("is-open");
+            };
+
+            const closeModal = () => {
+                modal.classList.remove("is-open");
+                modal.hidden = true;
+                hideReadingDoctorResults();
+            };
+
+            openButton.addEventListener("click", openModal);
+            closeButton.addEventListener("click", closeModal);
+            readingDoctorSearch.addEventListener("input", () => {
+                delete readingDoctorSearch.dataset.selectedReadingDoctorId;
+                readingDoctorSelect.value = "";
+                renderReadingDoctorResults(readingDoctorSearch.value);
+            });
+            readingDoctorSearch.addEventListener("focus", () => renderReadingDoctorResults(readingDoctorSearch.value));
+            readingDoctorSearch.addEventListener("change", () => {
+                const selectedId = readingDoctorSearch.dataset.selectedReadingDoctorId;
+                if (selectedId) {
+                    const selected = readingDoctorOptions.find(option => option.ReadingDoctorId === selectedId);
+                    if (selected) {
+                        selectReadingDoctor(selected);
+                        return;
+                    }
+                }
+
+                const value = (readingDoctorSearch.value || "").trim().toLowerCase();
+                const match = readingDoctorOptions.find(option => option.DisplayText.toLowerCase() === value);
+                if (match) {
+                    selectReadingDoctor(match);
+                } else if (!value) {
+                    selectReadingDoctor(null);
+                } else {
+                    readingDoctorSelect.value = "";
+                    readingDoctorSearch.value = "";
+                    delete readingDoctorSearch.dataset.selectedReadingDoctorId;
+                    hideReadingDoctorResults();
+                }
+            });
+            readingDoctorResults.addEventListener("mousedown", event => {
+                event.preventDefault();
+                const optionElement = event.target.closest(".search-dropdown-option");
+                if (!optionElement) {
+                    return;
+                }
+
+                const option = readingDoctorOptions.find(item => item.ReadingDoctorId === optionElement.dataset.readingDoctorId);
+                if (option) {
+                    selectReadingDoctor(option);
+                }
+            });
+            document.addEventListener("mousedown", event => {
+                const clickedReadingDoctorSearch = event.target === readingDoctorSearch || readingDoctorResults.contains(event.target);
+                if (!clickedReadingDoctorSearch && !modal.hidden) {
+                    hideReadingDoctorResults();
+                }
+            });
+
+            if (readingDoctorSelect.value) {
+                const selected = readingDoctorOptions.find(option => option.ReadingDoctorId === readingDoctorSelect.value);
+                if (selected) {
+                    selectReadingDoctor(selected);
+                }
+            }
+        })();
+    </script>
+}
 
 @if (Model.Status == "Draft" && issueBlockReasons.Any())
 {
@@ -290,7 +498,7 @@
                 </div>
             </div>
 
-            <div class="form-section">
+            <div class="form-section invoice-patient-info-section">
                 <div class="form-section-title">ข้อมูลผู้ป่วย</div>
                 <div class="row g-2 quotation-header-grid">
                     <div class="col-lg-4 col-md-6">
@@ -506,3 +714,4 @@
         </div>
     </div>
 </div>
+

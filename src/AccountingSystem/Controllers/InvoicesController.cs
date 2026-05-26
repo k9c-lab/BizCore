@@ -545,7 +545,57 @@ public class InvoicesController : CrudControllerBase
         }
 
         ViewData["EnablePatientInfo"] = await _systemSettingService.GetEnablePatientInfoAsync();
+        ViewData["ReadingDoctorOptions"] = await _context.ReadingDoctors
+            .AsNoTracking()
+            .Where(x => x.IsActive || x.ReadingDoctorId == invoice.ReadingDoctorId)
+            .OrderBy(x => x.DoctorCode)
+            .Select(x => new SelectListItem
+            {
+                Value = x.ReadingDoctorId.ToString(),
+                Text = x.DoctorName,
+                Selected = invoice.ReadingDoctorId.HasValue && x.ReadingDoctorId == invoice.ReadingDoctorId.Value
+            })
+            .ToListAsync();
         return View(invoice);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateReadingDoctor(int id, int? readingDoctorId)
+    {
+        var invoice = await _context.InvoiceHeaders
+            .FirstOrDefaultAsync(x => x.InvoiceId == id);
+
+        if (invoice is null || !CanAccessBranch(invoice.BranchId))
+        {
+            return NotFound();
+        }
+
+        if (string.Equals(invoice.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["InvoiceNotice"] = "ไม่สามารถแก้ไขแพทย์อ่านของใบแจ้งหนี้ที่ยกเลิกแล้วได้";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (readingDoctorId.HasValue)
+        {
+            var readingDoctorExists = await _context.ReadingDoctors
+                .AnyAsync(x => x.ReadingDoctorId == readingDoctorId.Value && x.IsActive);
+
+            if (!readingDoctorExists)
+            {
+                TempData["InvoiceNotice"] = "ไม่พบแพทย์อ่านที่เลือก";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        invoice.ReadingDoctorId = readingDoctorId;
+        invoice.UpdatedDate = DateTime.UtcNow;
+        invoice.UpdatedByUserId = CurrentUserId();
+
+        await _context.SaveChangesAsync();
+        TempData["InvoiceNotice"] = "อัปเดตแพทย์อ่านเรียบร้อยแล้ว";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]

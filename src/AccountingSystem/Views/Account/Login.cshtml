@@ -1,7 +1,16 @@
+@using Microsoft.Extensions.Options
 @model BizCore.Models.ViewModels.LoginViewModel
+@inject IOptions<SiteBrandingSettings> SiteBrandingOptions
 
 @{
     Layout = null;
+    var branding = SiteBrandingOptions.Value ?? new SiteBrandingSettings();
+    var siteName = string.IsNullOrWhiteSpace(branding.SiteName) ? "BizCore" : branding.SiteName;
+    var loginTitle = string.IsNullOrWhiteSpace(branding.LoginTitle) ? siteName : branding.LoginTitle;
+    var loginSubtitle = string.IsNullOrWhiteSpace(branding.LoginSubtitle)
+        ? (string.IsNullOrWhiteSpace(branding.SiteSubtitle) ? siteName : branding.SiteSubtitle)
+        : branding.LoginSubtitle;
+    var environmentLabel = string.IsNullOrWhiteSpace(branding.EnvironmentLabel) ? null : branding.EnvironmentLabel;
     ViewData["Title"] = "เข้าสู่ระบบ";
 }
 
@@ -10,7 +19,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - BizCore</title>
+    <title>@ViewData["Title"] - @siteName</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
@@ -18,8 +27,12 @@
     <main class="login-shell">
         <section class="login-panel">
             <div class="login-brand">
-                <div class="login-brand-name">BizCore</div>
-                <div class="login-brand-caption">ระบบงานบัญชีและปฏิบัติการ</div>
+                <div class="login-brand-name">@loginTitle</div>
+                <div class="login-brand-caption">@loginSubtitle</div>
+                @if (!string.IsNullOrWhiteSpace(environmentLabel))
+                {
+                    <div class="login-brand-environment">@environmentLabel</div>
+                }
             </div>
 
             <form asp-action="Login" method="post" class="login-form">

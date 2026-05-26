@@ -2775,6 +2775,7 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
     - `103_keep_only_main_branch_and_admin.sql`
     - `104_seed_branches_khanu_khlongkhlung_kaoyoi_phonsawan_tharuea.sql`
     - `105_seed_branch_admin_and_central_admin_users.sql`
+    - `106_clear_new_site_keep_system_only.sql`
   - repaired import scripts for:
     - `Items`
     - `Customers`
@@ -3177,3 +3178,67 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - assigns `RDR-xxxx` codes by continuing from the current highest existing reading-doctor code
   - inserts only missing names
   - re-activates matching existing rows if they already exist but were inactive
+
+## 2026-05-26 Reading Doctor Name Corrections
+
+- Customer provided a corrected official list of `ReadingDoctors`.
+
+- Updated `069_seed_reading_doctors_from_image.sql` in all 3 locations so fresh databases use the corrected names directly.
+
+- Added `070_correct_reading_doctor_names.sql` in all 3 locations for databases that already ran `069`.
+
+- `070` behavior:
+  - renames previously seeded incorrect reading-doctor names to the corrected names
+  - preserves existing `DoctorCode` and referenced `ReadingDoctorId`
+  - re-activates corrected names if they already exist but are inactive
+  - inserts any missing corrected names that do not yet exist
+
+- Important scope note:
+  - corrected list now contains `23` names
+  - this is `1` more than the original `069` batch (`22` names)
+
+## 2026-05-25 Invoice Reading Doctor Quick Update
+
+- Added a separate `Invoice Details` action for updating only `ReadingDoctor`.
+
+- Scope and behavior:
+  - adds a `แก้ไขแพทย์อ่าน` button on `Invoice Details`
+  - opens a modal popup to choose from active `ReadingDoctors`
+  - modal uses its own searchable `ReadingDoctor` picker modeled after `Invoice/Create`
+  - updates only `ReadingDoctorId`
+  - does not unlock the normal invoice edit flow
+  - does not change item lines, totals, VAT, stock, or document workflow
+
+- Status rule:
+  - allowed for non-cancelled invoices
+  - cancelled invoices remain blocked from reading-doctor updates
+
+- Technical touchpoints:
+  - `src/AccountingSystem/Controllers/InvoicesController.cs`
+  - `src/AccountingSystem/Views/Invoices/Details.cshtml`
+
+## 2026-05-26 Site Branding Config For Sidebar And Login
+
+- Added `SiteBranding` config in `appsettings.json` for per-site identity:
+  - `SiteName`
+  - `SiteSubtitle`
+  - `LoginTitle`
+  - `LoginSubtitle`
+  - `EnvironmentLabel`
+
+- Added `SiteBrandingSettings` binding in `Program.cs`.
+
+- Updated shared layout and login screen to read site branding from config instead of hardcoded `BizCore` text.
+
+- Current scope:
+  - sidebar top shows site name and optional environment label
+  - sidebar bottom shows site name/subtitle context for signed-out state
+  - login page shows branded title, subtitle, and optional environment label
+
+- Technical touchpoints:
+  - `src/AccountingSystem/Services/SiteBrandingSettings.cs`
+  - `src/AccountingSystem/Program.cs`
+  - `src/AccountingSystem/appsettings.json`
+  - `src/AccountingSystem/Views/Shared/_Layout.cshtml`
+  - `src/AccountingSystem/Views/Account/Login.cshtml`
+  - `src/AccountingSystem/wwwroot/css/site.css`

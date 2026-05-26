@@ -1,4 +1,6 @@
+@using Microsoft.Extensions.Options
 @inject IUserPermissionService PermissionService
+@inject IOptions<SiteBrandingSettings> SiteBrandingOptions
 
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
@@ -60,13 +62,17 @@
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
         : User.FindFirst("BranchName")?.Value;
+    var branding = SiteBrandingOptions.Value ?? new SiteBrandingSettings();
+    var siteName = string.IsNullOrWhiteSpace(branding.SiteName) ? "BizCore" : branding.SiteName;
+    var siteSubtitle = string.IsNullOrWhiteSpace(branding.SiteSubtitle) ? "BizCore" : branding.SiteSubtitle;
+    var environmentLabel = string.IsNullOrWhiteSpace(branding.EnvironmentLabel) ? null : branding.EnvironmentLabel;
 }
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - BizCore</title>
+    <title>@ViewData["Title"] - @siteName</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BizCore.styles.css" asp-append-version="true" />
@@ -75,8 +81,12 @@
     <div class="app-layout">
         <aside class="app-sidebar">
             <div class="sidebar-brand">
-                <a class="sidebar-brand-link" asp-controller="Welcome" asp-action="Index">BizCore</a>
-                <div class="sidebar-caption">ระบบงานหลัก</div>
+                <a class="sidebar-brand-link" asp-controller="Welcome" asp-action="Index">@siteName</a>
+                @if (!string.IsNullOrWhiteSpace(environmentLabel))
+                {
+                    <div class="site-environment-label">@environmentLabel</div>
+                }
+                <div class="sidebar-caption">@siteSubtitle</div>
             </div>
 
             <nav class="sidebar-nav">
@@ -290,14 +300,15 @@
                 }
                 else
                 {
-                    <span>พื้นที่ทำงานระบบบัญชี</span>
+                    <div class="sidebar-footer-site">@siteName</div>
+                    <span>@siteSubtitle</span>
                 }
             </div>
         </aside>
 
         <div class="app-main">
             <header class="mobile-topbar">
-                <a class="sidebar-brand-link" asp-controller="Welcome" asp-action="Index">BizCore</a>
+                <a class="sidebar-brand-link" asp-controller="Welcome" asp-action="Index">@siteName</a>
             </header>
 
             <div class="page-shell">
