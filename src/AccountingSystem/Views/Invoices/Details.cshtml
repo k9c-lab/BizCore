@@ -507,7 +507,7 @@
                     </div>
                     <div class="col-lg-2 col-md-3">
                         <div class="detail-label">วันเกิด</div>
-                        <div class="form-control readonly-detail">@(Model.PatientBirthDate?.ToString("dd/MM/yyyy") ?? "-")</div>
+                        <div class="form-control readonly-detail">@(Model.PatientBirthDate.HasValue ? Model.PatientBirthDate.Value.ToString("dd/MM/") + (Model.PatientBirthDate.Value.Year + 543) : "-")</div>
                     </div>
                     <div class="col-lg-2 col-md-3">
                         <div class="detail-label">อายุ (ปี)</div>

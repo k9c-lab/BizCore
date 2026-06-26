@@ -3242,3 +3242,33 @@ Read docs/SESSION_NOTES.md, inspect the current BizCore codebase, and continue f
   - `src/AccountingSystem/Views/Shared/_Layout.cshtml`
   - `src/AccountingSystem/Views/Account/Login.cshtml`
   - `src/AccountingSystem/wwwroot/css/site.css`
+
+## 2026-05-27 Discussion Only: Claim In Smaller Unit Than Sales Unit
+
+- Discussed a future requirement where goods are received and sold as `ลัง`, but customers may want to claim in `ซอง`.
+
+- Current recommendation:
+  - do **not** redesign purchasing/sales/inventory into full multi-unit yet
+  - if this requirement is real, start with a `claim-only` solution first
+
+- Preferred minimal-impact direction:
+  - keep stock base unit as the current item unit, e.g. `ลัง`
+  - allow claim entry in a smaller unit, e.g. `ซอง`
+  - store a conversion rule such as `1 ลัง = 20 ซอง`
+  - save both:
+    - user-entered claim quantity/unit
+    - converted base quantity used by the system
+
+- Reason for this direction:
+  - avoids large impact to existing `Purchase`, `Invoice`, `Cash Sale`, `Stock`, pricing, and VAT flows
+  - keeps scope mainly inside claim/return logic plus item conversion metadata
+
+- Risks / open design questions if implemented later:
+  - how to handle fractional base quantities
+  - whether claim receiving should affect stock physically or only as accounting/reference quantity
+  - whether replacement fulfillment can also happen in the smaller unit
+  - how claim reports/prints should show transaction unit vs base unit
+
+- Important status:
+  - this was a design discussion only
+  - no schema change or code implementation was started yet

@@ -258,7 +258,9 @@
             </div>
             <div class="col-lg-2 col-md-3">
                 <label asp-for="PatientBirthDate" class="form-label"></label>
-                <input asp-for="PatientBirthDate" class="form-control" id="PatientBirthDate" />
+                <input type="text" class="form-control" id="PatientBirthDate_display" placeholder="--/--/----" maxlength="10" autocomplete="off" inputmode="numeric" />
+                <input type="hidden" name="PatientBirthDate" id="PatientBirthDate" value="@(Model.PatientBirthDate?.ToString("yyyy-MM-dd") ?? "")" />
+                <div class="form-text">วว/ดด/ปปปป พ.ศ.</div>
                 <span asp-validation-for="PatientBirthDate" class="text-danger"></span>
             </div>
             <div class="col-lg-2 col-md-3">

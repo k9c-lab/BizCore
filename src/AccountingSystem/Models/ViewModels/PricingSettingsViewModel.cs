@@ -11,5 +11,8 @@ public class PricingSettingsViewModel
 
     public IReadOnlyList<SelectListItem> PricingModeOptions { get; set; } = Array.Empty<SelectListItem>();
 
+    [Display(Name = "Show Patient Information")]
+    public bool EnablePatientInfo { get; set; } = true;
+
     public DatabaseMigrationStatusViewModel MigrationStatus { get; set; } = new();
 }

@@ -21,6 +21,7 @@
         const addButton = byId("addInvoiceLine");
         const invoiceDateInput = byId("InvoiceDate");
         const patientBirthDateInput = byId("PatientBirthDate");
+        const patientBirthDateDisplay = byId("PatientBirthDate_display");
         const patientAgeInput = byId("PatientAge");
         const vatTypeInput = byId("VatType");
         const discountModeInput = byId("DiscountMode");
@@ -94,6 +95,42 @@
         let readingDoctorResults = null;
 
         const formatAmount = value => Number(value || 0).toFixed(2);
+        const beDateToIso = (beStr) => {
+            if (!beStr) return "";
+            const parts = beStr.split("/");
+            if (parts.length !== 3) return "";
+            const day = parts[0].padStart(2, "0");
+            const month = parts[1].padStart(2, "0");
+            const beYear = parseInt(parts[2], 10);
+            if (Number.isNaN(beYear) || beYear < 543) return "";
+            return `${beYear - 543}-${month}-${day}`;
+        };
+        const isoToBeDateDisplay = (isoStr) => {
+            if (!isoStr) return "";
+            const parts = isoStr.split("-");
+            if (parts.length !== 3) return "";
+            return `${parts[2]}/${parts[1]}/${parseInt(parts[0], 10) + 543}`;
+        };
+        const syncBirthDateFromDisplay = () => {
+            if (patientBirthDateInput) {
+                patientBirthDateInput.value = beDateToIso(patientBirthDateDisplay?.value?.trim());
+            }
+            updatePatientAge();
+        };
+        const applyBirthDateMask = (input) => {
+            input.addEventListener("keydown", (e) => {
+                const allowedKeys = ["Backspace", "Delete", "Tab", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+                if (allowedKeys.includes(e.key)) return;
+                if (!/^\d$/.test(e.key)) e.preventDefault();
+            });
+            input.addEventListener("input", () => {
+                const digits = input.value.replace(/\D/g, "").substring(0, 8);
+                let result = digits.substring(0, 2);
+                if (digits.length >= 3) result += "/" + digits.substring(2, 4);
+                if (digits.length >= 5) result += "/" + digits.substring(4, 8);
+                input.value = result;
+            });
+        };
         const calculatePatientAge = (birthDateValue, referenceDateValue) => {
             if (!birthDateValue || !referenceDateValue) {
                 return "";
@@ -1286,8 +1323,14 @@
         salespersonSelect?.addEventListener("change", updateSalespersonInfo);
         priceLevelInput?.addEventListener("change", refreshLinePricesForPriceLevel);
         invoiceDateInput?.addEventListener("change", updatePatientAge);
-        patientBirthDateInput?.addEventListener("change", updatePatientAge);
-        patientBirthDateInput?.addEventListener("input", updatePatientAge);
+        if (patientBirthDateDisplay) {
+            applyBirthDateMask(patientBirthDateDisplay);
+            patientBirthDateDisplay.addEventListener("change", syncBirthDateFromDisplay);
+            patientBirthDateDisplay.addEventListener("input", syncBirthDateFromDisplay);
+            if (patientBirthDateInput?.value) {
+                patientBirthDateDisplay.value = isoToBeDateDisplay(patientBirthDateInput.value);
+            }
+        }
 
         invoiceForm?.addEventListener("submit", () => {
             const zeroIfBlankSelectors = [

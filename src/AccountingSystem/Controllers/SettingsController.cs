@@ -23,8 +23,9 @@ public class SettingsController : CrudControllerBase
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var pricingMode = await _systemSettingService.GetPricingModeAsync(cancellationToken);
+        var enablePatientInfo = await _systemSettingService.GetEnablePatientInfoAsync(cancellationToken);
         var migrationStatus = await _databaseMigrationService.GetStatusAsync(cancellationToken);
-        return View(await BuildModelAsync(pricingMode, migrationStatus));
+        return View(await BuildModelAsync(pricingMode, enablePatientInfo, migrationStatus));
     }
 
     [HttpPost]
@@ -44,7 +45,8 @@ public class SettingsController : CrudControllerBase
         }
 
         await _systemSettingService.SetPricingModeAsync(model.PricingMode, CurrentUserId(), cancellationToken);
-        TempData["SettingsNotice"] = "Pricing settings were updated successfully.";
+        await _systemSettingService.SetEnablePatientInfoAsync(model.EnablePatientInfo, CurrentUserId(), cancellationToken);
+        TempData["SettingsNotice"] = "Settings were updated successfully.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -61,12 +63,13 @@ public class SettingsController : CrudControllerBase
         return RedirectToAction(nameof(Index));
     }
 
-    private static Task<PricingSettingsViewModel> BuildModelAsync(string pricingMode, DatabaseMigrationStatusViewModel migrationStatus)
+    private static Task<PricingSettingsViewModel> BuildModelAsync(string pricingMode, bool enablePatientInfo, DatabaseMigrationStatusViewModel migrationStatus)
     {
         return Task.FromResult(new PricingSettingsViewModel
         {
             PricingMode = pricingMode,
             PricingModeOptions = BuildPricingModeOptions(pricingMode),
+            EnablePatientInfo = enablePatientInfo,
             MigrationStatus = migrationStatus
         });
     }
