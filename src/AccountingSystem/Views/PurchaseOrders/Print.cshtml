@@ -268,10 +268,10 @@
                     <div class="document-title-en">Purchase Order</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.PONo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.PODate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.PODate.ToString("dd/MM/") @(Model.PODate.Year + 543)</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
-                        <tr><td class="meta-label">กำหนดรับสินค้า / Expected Receipt</td><td>@(Model.ExpectedReceiveDate?.ToString("dd/MM/yyyy") ?? "-")</td></tr>
+                        <tr><td class="meta-label">กำหนดรับสินค้า / Expected Receipt</td><td>@(Model.ExpectedReceiveDate.HasValue ? Model.ExpectedReceiveDate.Value.ToString("dd/MM/") + (Model.ExpectedReceiveDate.Value.Year + 543) : "-")</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
                     </table>
                 </div>

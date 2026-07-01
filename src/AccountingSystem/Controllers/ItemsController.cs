@@ -2,6 +2,7 @@ using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
 using BizCore.Services;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -50,9 +51,86 @@ public class ItemsController : CrudControllerBase
             _ => query
         };
 
-        var items = await PaginatedList<Item>.CreateAsync(query.OrderBy(x => x.ItemCode), page, pageSize);
+        var items = await PaginatedList<Item>.CreateAsync(query.OrderByDescending(x => x.UpdatedDate ?? x.CreatedDate), page, pageSize);
         await PopulateStockBalanceTotalsAsync(items.Items);
         return View(items);
+    }
+
+    public async Task<IActionResult> Export(string? search, string? itemType, string? status)
+    {
+        var query = _context.Items.AsNoTracking();
+        var keyword = search?.Trim();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            query = query.Where(x =>
+                x.ItemCode.Contains(keyword) ||
+                x.ItemName.Contains(keyword) ||
+                x.PartNumber.Contains(keyword));
+        }
+
+        if (!string.IsNullOrWhiteSpace(itemType))
+        {
+            query = query.Where(x => x.ItemType == itemType);
+        }
+
+        query = status switch
+        {
+            "Active" => query.Where(x => x.IsActive),
+            "Inactive" => query.Where(x => !x.IsActive),
+            _ => query
+        };
+
+        var items = await query.OrderByDescending(x => x.UpdatedDate ?? x.CreatedDate).ToListAsync();
+        await PopulateStockBalanceTotalsAsync(items);
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("สินค้าและบริการ");
+
+        ws.Cell(1, 1).Value = "รหัสสินค้า";
+        ws.Cell(1, 2).Value = "ชื่อสินค้า";
+        ws.Cell(1, 3).Value = "Part Number";
+        ws.Cell(1, 4).Value = "ประเภท";
+        ws.Cell(1, 5).Value = "หน่วย";
+        ws.Cell(1, 6).Value = "ราคาต่อหน่วย";
+        ws.Cell(1, 7).Value = "สต็อกรวม";
+        ws.Cell(1, 8).Value = "ควบคุม Serial";
+        ws.Cell(1, 9).Value = "สถานะ";
+
+        var headerRow = ws.Row(1);
+        headerRow.Style.Font.Bold = true;
+        headerRow.Style.Fill.BackgroundColor = XLColor.FromHtml("#F0F4F8");
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var row = i + 2;
+            var itemTypeLabel = item.ItemType switch
+            {
+                "Product" => "สินค้า",
+                "Service" => "บริการ",
+                "Spare Part" => "อะไหล่",
+                _ => item.ItemType
+            };
+
+            ws.Cell(row, 1).Value = item.ItemCode;
+            ws.Cell(row, 2).Value = item.ItemName;
+            ws.Cell(row, 3).Value = item.PartNumber;
+            ws.Cell(row, 4).Value = itemTypeLabel;
+            ws.Cell(row, 5).Value = item.Unit;
+            ws.Cell(row, 6).Value = item.UnitPrice;
+            ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 7).Value = item.TrackStock ? item.CurrentStock : (decimal?)null;
+            ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 8).Value = item.IsSerialControlled ? "ใช่" : "ไม่";
+            ws.Cell(row, 9).Value = item.IsActive ? "ใช้งาน" : "ปิดใช้งาน";
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var filename = $"items_{DateTime.Today:yyyyMMdd}.xlsx";
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
     }
 
     public async Task<IActionResult> Create()
@@ -84,6 +162,7 @@ public class ItemsController : CrudControllerBase
             return View(item);
         }
 
+        item.CreatedDate = DateTime.UtcNow;
         _context.Items.Add(item);
         if (!await TrySaveAsync("Item code and part number must be unique."))
         {
@@ -125,6 +204,7 @@ public class ItemsController : CrudControllerBase
             return View(item);
         }
 
+        item.UpdatedDate = DateTime.UtcNow;
         _context.Update(item);
         if (!await TrySaveAsync("Item code and part number must be unique."))
         {
@@ -403,7 +483,7 @@ public class ItemsController : CrudControllerBase
         {
             "Service" => "SRV",
             "Spare Part" => "SPP",
-            _ => "PRD"
+            _ => "ITEM"
         };
     }
 }

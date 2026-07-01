@@ -40,6 +40,7 @@
     var hasPatientWard = !string.IsNullOrWhiteSpace(Model.PatientWard);
     var hasReferringDoctor = Model.ReferringDoctor is not null;
     var hasReadingDoctor = Model.ReadingDoctor is not null;
+    var printVariant = ViewData["PrintVariant"] as string ?? "1";
 }
 <!DOCTYPE html>
 <html lang="th">
@@ -304,6 +305,14 @@
             width: 88%;
             border-bottom: 1px solid #111827;
         }
+        .formal-sig-wrap { display: flex; justify-content: flex-end; margin-top: auto; padding-top: 28px; }
+        .formal-sig-box { text-align: center; min-width: 260px; color: #111827; }
+        .formal-sig-company { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+        .formal-sig-sincerely { font-size: 12px; margin-bottom: 2px; }
+        .formal-sig-auth { font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0; }
+        .formal-sig-line { margin: 36px auto 8px; width: 88%; border-bottom: 1px solid #111827; }
+        .formal-sig-name { font-size: 12px; }
+        .formal-sig-title { font-size: 12px; color: #374151; }
         @@media print {
             body {
                 -webkit-print-color-adjust: exact;
@@ -357,7 +366,7 @@
                     <div class="document-title-en">Invoice</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.InvoiceNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.InvoiceDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.InvoiceDate.ToString("dd/MM/") @(Model.InvoiceDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">เลขที่ใบเสนอราคา / Quotation No.</td><td>@(string.IsNullOrWhiteSpace(Model.Quotation?.QuotationNumber) ? "-" : Model.Quotation!.QuotationNumber)</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
@@ -452,13 +461,6 @@
                                 <div class="party-value patient-value-compact">@Model.ReferringDoctor!.DoctorName</div>
                             </div>
                         }
-                        @if (hasReadingDoctor)
-                        {
-                            <div class="patient-doctor-block">
-                                <div class="section-label">แพทย์อ่านผล / Reading Doctor</div>
-                                <div class="party-value patient-value-compact">@Model.ReadingDoctor!.DoctorName</div>
-                            </div>
-                        }
                     </div>
                 </section>
             }
@@ -524,20 +526,36 @@
                 </section>
             }
 
-            <section class="signature-grid">
-                <div class="signature-box">
-                    <div class="signature-label">ผู้รับบริการ/ญาติ/พยาบาล / Patient / Relative / Nurse</div>
-                    <div class="signature-line"></div>
-                    <div>............................................................</div>
-                    <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
+            @if (printVariant == "2")
+            {
+                <div class="formal-sig-wrap">
+                    <div class="formal-sig-box">
+                        <div class="formal-sig-company">Neura Medical Imaging Co., Ltd.</div>
+                        <div class="formal-sig-sincerely">Sincerely</div>
+                        <div class="formal-sig-auth">Authorised Signature</div>
+                        <div class="formal-sig-line"></div>
+                        <div class="formal-sig-name">( Phawaran Suwansantisuk )</div>
+                        <div class="formal-sig-title">General Manager</div>
+                    </div>
                 </div>
-                <div class="signature-box">
-                    <div class="signature-label">เจ้าหน้าที่ / Staff</div>
-                    <div class="signature-line"></div>
-                    <div>............................................................</div>
-                    <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
-                </div>
-            </section>
+            }
+            else
+            {
+                <section class="signature-grid">
+                    <div class="signature-box">
+                        <div class="signature-label">ผู้รับบริการ/ญาติ/พยาบาล / Patient / Relative / Nurse</div>
+                        <div class="signature-line"></div>
+                        <div>............................................................</div>
+                        <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
+                    </div>
+                    <div class="signature-box">
+                        <div class="signature-label">เจ้าหน้าที่ / Staff</div>
+                        <div class="signature-line"></div>
+                        <div>............................................................</div>
+                        <div class="signature-date">วันที่ / Date ........ / ........ / ........</div>
+                    </div>
+                </section>
+            }
         </div>
     </div>
     <script>

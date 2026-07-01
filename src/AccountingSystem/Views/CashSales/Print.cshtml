@@ -323,7 +323,7 @@
                     <div class="document-title-en">CASH SALE</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.CashSaleNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.CashSaleDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.CashSaleDate.ToString("dd/MM/") @(Model.CashSaleDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>

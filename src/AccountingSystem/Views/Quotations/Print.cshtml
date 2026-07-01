@@ -297,9 +297,9 @@
                     <div class="document-title-en">Quotation</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.QuotationNumber</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.QuotationDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.QuotationDate.ToString("dd/MM/") @(Model.QuotationDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>
-                        <tr><td class="meta-label">วันหมดอายุ / Expiry Date</td><td>@(Model.ExpiryDate?.ToString("dd/MM/yyyy") ?? "No expiry")</td></tr>
+                        <tr><td class="meta-label">วันหมดอายุ / Expiry Date</td><td>@(Model.ExpiryDate.HasValue ? Model.ExpiryDate.Value.ToString("dd/MM/") + (Model.ExpiryDate.Value.Year + 543) : "No expiry")</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
                     </table>
                     <div class="salesperson-meta">

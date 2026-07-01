@@ -95,7 +95,7 @@
                     <div class="document-title-en">Supplier Payment</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.PaymentNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.PaymentDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.PaymentDate.ToString("dd/MM/") @(Model.PaymentDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>
                         <tr><td class="meta-label">วิธีชำระเงิน / Payment Method</td><td>@Model.PaymentMethod</td></tr>
                         <tr><td class="meta-label">เลขอ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(Model.ReferenceNo) ? "-" : Model.ReferenceNo)</td></tr>

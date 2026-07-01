@@ -111,9 +111,38 @@
             if (parts.length !== 3) return "";
             return `${parts[2]}/${parts[1]}/${parseInt(parts[0], 10) + 543}`;
         };
+        const isValidBeDate = (beStr) => {
+            if (!beStr || beStr.length !== 10) return false;
+            const parts = beStr.split("/");
+            if (parts.length !== 3) return false;
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const beYear = parseInt(parts[2], 10);
+            if (isNaN(day) || isNaN(month) || isNaN(beYear) || beYear < 543) return false;
+            const ceYear = beYear - 543;
+            const d = new Date(ceYear, month - 1, day);
+            return d.getFullYear() === ceYear && d.getMonth() === month - 1 && d.getDate() === day;
+        };
         const syncBirthDateFromDisplay = () => {
+            const displayVal = patientBirthDateDisplay?.value?.trim() ?? "";
+            const errorEl = document.getElementById("PatientBirthDate_error");
+            if (!displayVal) {
+                if (patientBirthDateInput) patientBirthDateInput.value = "";
+                if (errorEl) errorEl.textContent = "";
+                updatePatientAge();
+                return;
+            }
+            if (displayVal.length === 10) {
+                if (!isValidBeDate(displayVal)) {
+                    if (patientBirthDateInput) patientBirthDateInput.value = "";
+                    if (errorEl) errorEl.textContent = "วันที่ไม่ถูกต้อง";
+                    updatePatientAge();
+                    return;
+                }
+            }
+            if (errorEl) errorEl.textContent = "";
             if (patientBirthDateInput) {
-                patientBirthDateInput.value = beDateToIso(patientBirthDateDisplay?.value?.trim());
+                patientBirthDateInput.value = displayVal.length === 10 ? beDateToIso(displayVal) : "";
             }
             updatePatientAge();
         };

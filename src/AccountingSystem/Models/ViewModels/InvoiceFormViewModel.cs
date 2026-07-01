@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BizCore.Models.ViewModels;
 
-public class InvoiceFormViewModel
+public class InvoiceFormViewModel : IValidatableObject
 {
     public int? InvoiceId { get; set; }
     public int? QuotationId { get; set; }
@@ -79,7 +79,7 @@ public class InvoiceFormViewModel
     [Required(ErrorMessage = "กรุณาเลือกประเภทภาษี")]
     [Display(Name = "ประเภทภาษี")]
     [StringLength(20)]
-    public string VatType { get; set; } = "VATExclusive";
+    public string VatType { get; set; } = "";
 
     [Required(ErrorMessage = "กรุณาเลือกรูปแบบส่วนลด")]
     [Display(Name = "รูปแบบส่วนลด")]
@@ -126,4 +126,12 @@ public class InvoiceFormViewModel
     public IReadOnlyList<InvoiceSerialLookupViewModel> SerialLookup { get; set; } = Array.Empty<InvoiceSerialLookupViewModel>();
     public IReadOnlyList<QuotationCustomerLookupViewModel> CustomerLookup { get; set; } = Array.Empty<QuotationCustomerLookupViewModel>();
     public IReadOnlyList<QuotationSalespersonLookupViewModel> SalespersonLookup { get; set; } = Array.Empty<QuotationSalespersonLookupViewModel>();
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!string.IsNullOrWhiteSpace(PatientFullName) && !ReferringDoctorId.HasValue)
+            yield return new ValidationResult(
+                "กรุณาเลือกแพทย์ส่ง เมื่อระบุชื่อผู้ป่วย",
+                new[] { nameof(ReferringDoctorId) });
+    }
 }

@@ -819,7 +819,7 @@ public class InvoicesController : CrudControllerBase
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    public async Task<IActionResult> Print(int? id)
+    public async Task<IActionResult> Print(int? id, string? variant = "1")
     {
         if (id is null)
         {
@@ -849,6 +849,13 @@ public class InvoicesController : CrudControllerBase
 
         PopulatePrintCompanyViewData(_companyProfile);
         ViewData["EnablePatientInfo"] = await _systemSettingService.GetEnablePatientInfoAsync();
+        ViewData["PrintVariant"] = variant == "2" ? "2" : "1";
+        if (variant == "2")
+        {
+            var (authorisedName, authorisedTitle) = await _systemSettingService.GetAuthorisedSignatureAsync();
+            ViewData["PrintAuthorisedName"] = authorisedName;
+            ViewData["PrintAuthorisedTitle"] = authorisedTitle;
+        }
         return View(invoice);
     }
 
@@ -1047,6 +1054,7 @@ public class InvoicesController : CrudControllerBase
 
         model.VatTypeOptions = new[]
         {
+            new SelectListItem("-- กรุณาเลือกประเภทภาษี --", ""),
             new SelectListItem("ราคายังไม่รวม VAT", VatModeHelper.VatExclusive),
             new SelectListItem("ราคารวม VAT", VatModeHelper.VatInclusive),
             new SelectListItem("No VAT", VatModeHelper.NoVat)
@@ -1555,10 +1563,10 @@ public class InvoicesController : CrudControllerBase
             }
         }
 
-        model.VatType = VatModeHelper.Normalize(model.VatType, VatModeHelper.VatExclusive);
+        model.VatType = VatModeHelper.Normalize(model.VatType, string.Empty);
         if (!VatModeHelper.IsValid(model.VatType))
         {
-            ModelState.AddModelError(nameof(model.VatType), "ประเภทราคาภาษีต้องเป็น NoVAT, VATExclusive หรือ VATInclusive เท่านั้น");
+            ModelState.AddModelError(nameof(model.VatType), "กรุณาเลือกประเภทภาษี");
         }
 
         if (model.DiscountMode is not ("Line" or "Header"))

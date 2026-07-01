@@ -24,8 +24,9 @@ public class SettingsController : CrudControllerBase
     {
         var pricingMode = await _systemSettingService.GetPricingModeAsync(cancellationToken);
         var enablePatientInfo = await _systemSettingService.GetEnablePatientInfoAsync(cancellationToken);
+        var (authorisedName, authorisedTitle) = await _systemSettingService.GetAuthorisedSignatureAsync(cancellationToken);
         var migrationStatus = await _databaseMigrationService.GetStatusAsync(cancellationToken);
-        return View(await BuildModelAsync(pricingMode, enablePatientInfo, migrationStatus));
+        return View(await BuildModelAsync(pricingMode, enablePatientInfo, authorisedName, authorisedTitle, migrationStatus));
     }
 
     [HttpPost]
@@ -46,6 +47,7 @@ public class SettingsController : CrudControllerBase
 
         await _systemSettingService.SetPricingModeAsync(model.PricingMode, CurrentUserId(), cancellationToken);
         await _systemSettingService.SetEnablePatientInfoAsync(model.EnablePatientInfo, CurrentUserId(), cancellationToken);
+        await _systemSettingService.SetAuthorisedSignatureAsync(model.AuthorisedName ?? string.Empty, model.AuthorisedTitle ?? string.Empty, CurrentUserId(), cancellationToken);
         TempData["SettingsNotice"] = "Settings were updated successfully.";
 
         return RedirectToAction(nameof(Index));
@@ -63,13 +65,15 @@ public class SettingsController : CrudControllerBase
         return RedirectToAction(nameof(Index));
     }
 
-    private static Task<PricingSettingsViewModel> BuildModelAsync(string pricingMode, bool enablePatientInfo, DatabaseMigrationStatusViewModel migrationStatus)
+    private static Task<PricingSettingsViewModel> BuildModelAsync(string pricingMode, bool enablePatientInfo, string authorisedName, string authorisedTitle, DatabaseMigrationStatusViewModel migrationStatus)
     {
         return Task.FromResult(new PricingSettingsViewModel
         {
             PricingMode = pricingMode,
             PricingModeOptions = BuildPricingModeOptions(pricingMode),
             EnablePatientInfo = enablePatientInfo,
+            AuthorisedName = authorisedName,
+            AuthorisedTitle = authorisedTitle,
             MigrationStatus = migrationStatus
         });
     }

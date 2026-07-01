@@ -326,7 +326,7 @@
                     <div class="document-title-en">Receipt</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.ReceiptNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.ReceiptDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.ReceiptDate.ToString("dd/MM/") @(Model.ReceiptDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">เลขที่รับชำระ / Payment No.</td><td>@(payment?.PaymentNo ?? "-")</td></tr>
                         <tr><td class="meta-label">เลขที่อ้างอิง / Reference No.</td><td>@(string.IsNullOrWhiteSpace(payment?.ReferenceNo) ? "-" : payment!.ReferenceNo)</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
@@ -411,7 +411,7 @@
                             }
 
                             <tr class="invoice-row">
-                                <td colspan="5">ใบแจ้งหนี้ / Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/yyyy"))</td>
+                                <td colspan="5">ใบแจ้งหนี้ / Invoice: @invoice.InvoiceNo (@invoice.InvoiceDate.ToString("dd/MM/")@(invoice.InvoiceDate.Year + 543))</td>
                             </tr>
                             foreach (var line in invoice.InvoiceDetails.OrderBy(x => x.LineNumber))
                             {

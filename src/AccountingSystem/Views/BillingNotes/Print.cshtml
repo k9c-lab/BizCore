@@ -286,7 +286,7 @@
                     <div class="document-title-en">Billing Note</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.BillingNoteNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.BillingNoteDate.ToString("dd/MM/yyyy")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.BillingNoteDate.ToString("dd/MM/") @(Model.BillingNoteDate.Year + 543)</td></tr>
                         <tr><td class="meta-label">รูปแบบสรุป / Summary Mode</td><td>@summaryModeLabelTh / @summaryModeLabelEn</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>

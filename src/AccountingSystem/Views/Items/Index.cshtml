@@ -13,6 +13,7 @@
         <h1 class="page-title">สินค้าและบริการ</h1>
         </div>
     <div class="page-actions">
+        <a asp-action="Export" asp-route-search="@search" asp-route-itemType="@itemType" asp-route-status="@status" class="btn btn-outline-secondary">Export Excel</a>
         <a asp-action="Create" class="btn btn-primary px-4">เพิ่มรายการ</a>
     </div>
 </div>

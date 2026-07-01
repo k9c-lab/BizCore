@@ -161,7 +161,27 @@
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@receivePaymentBlockedReason">รับชำระเงิน</button>
         }
-        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.InvoiceId })', '_blank', 'noopener');">พิมพ์</button>
+        <div class="confirm-popover-shell">
+            <button type="button"
+                    class="btn btn-outline-secondary js-confirm-popover-toggle"
+                    data-confirm-target="printVariantPicker"
+                    aria-expanded="false">
+                พิมพ์
+            </button>
+            <div class="confirm-popover" id="printVariantPicker" hidden>
+                <div class="confirm-popover-title">เลือกรูปแบบการพิมพ์</div>
+                <div class="confirm-popover-actions" style="flex-direction:column; gap:8px;">
+                    <button type="button" class="btn btn-sm btn-primary"
+                            onclick="window.open('@Url.Action("Print", new { id = Model.InvoiceId, variant = 1 })', '_blank', 'noopener');">
+                        สำหรับศูนย์
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            onclick="window.open('@Url.Action("Print", new { id = Model.InvoiceId, variant = 2 })', '_blank', 'noopener');">
+                        สำหรับส่วนกลาง
+                    </button>
+                </div>
+            </div>
+        </div>
         <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบแจ้งหนี้</a>
     </div>
 </div>

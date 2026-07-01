@@ -42,6 +42,8 @@
     #PriceLevelId + .form-text {
         display: none;
     }
+    .req { color: #dc2626; margin-left: 2px; font-size: 13px; }
+    .req-legend { color: #6b7280; font-size: 11px; font-weight: 400; margin-left: 8px; }
 </style>
 
 <div asp-validation-summary="All" class="form-alert"></div>
@@ -62,7 +64,7 @@
 
 <div class="form-shell">
     <div class="form-section quotation-header-section">
-        <div class="form-section-title">ข้อมูลหัวเอกสาร</div>
+        <div class="form-section-title">ข้อมูลหัวเอกสาร <span class="req-legend">* จำเป็นต้องกรอก</span></div>
         <div class="workflow-info workflow-info-info mb-3">
             @if (Model.ShowPriceLevelSelector && !hasQuotationReference)
             {
@@ -85,7 +87,7 @@
                 <span asp-validation-for="InvoiceNo" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
-                <label asp-for="InvoiceDate" class="form-label"></label>
+                <label asp-for="InvoiceDate" class="form-label">วันที่ใบแจ้งหนี้ <span class="req">*</span></label>
                 <input asp-for="InvoiceDate" class="form-control" />
                 <span asp-validation-for="InvoiceDate" class="text-danger"></span>
             </div>
@@ -126,7 +128,7 @@
                 <span asp-validation-for="DiscountMode" class="text-danger"></span>
             </div>
             <div class="col-md-2">
-                <label asp-for="VatType" class="form-label"></label>
+                <label asp-for="VatType" class="form-label">ประเภทภาษี <span class="req">*</span></label>
                 <select asp-for="VatType" asp-items="Model.VatTypeOptions" class="form-select" id="VatType"></select>
                 <span asp-validation-for="VatType" class="text-danger"></span>
             </div>
@@ -175,7 +177,7 @@
 
     <div class="quotation-party-grid">
         <div class="quotation-party-column">
-            <label asp-for="CustomerId" class="form-label"></label>
+            <label asp-for="CustomerId" class="form-label">ลูกค้า <span class="req">*</span></label>
             <input asp-for="CustomerId" type="hidden" id="CustomerId" />
             <div class="search-dropdown">
                 <input type="text"
@@ -261,6 +263,7 @@
                 <input type="text" class="form-control" id="PatientBirthDate_display" placeholder="--/--/----" maxlength="10" autocomplete="off" inputmode="numeric" />
                 <input type="hidden" name="PatientBirthDate" id="PatientBirthDate" value="@(Model.PatientBirthDate?.ToString("yyyy-MM-dd") ?? "")" />
                 <div class="form-text">วว/ดด/ปปปป พ.ศ.</div>
+                <div id="PatientBirthDate_error" class="text-danger small"></div>
                 <span asp-validation-for="PatientBirthDate" class="text-danger"></span>
             </div>
             <div class="col-lg-2 col-md-3">
@@ -291,7 +294,7 @@
                 <span asp-validation-for="PatientWard" class="text-danger"></span>
             </div>
             <div class="col-lg-4 col-md-6">
-                <label asp-for="ReferringDoctorId" class="form-label"></label>
+                <label asp-for="ReferringDoctorId" class="form-label">แพทย์ส่ง <span class="req" id="js-referring-req" style="display:none;">*</span></label>
                 <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions" class="form-select" id="ReferringDoctorId">
                     <option value="">เลือกแพทย์ส่ง</option>
                 </select>
@@ -600,6 +603,40 @@
         }
     </div>
 </div>
+
+<script>
+(function () {
+    var patientInput = document.getElementById('PatientFullName');
+    var referringSelect = document.getElementById('ReferringDoctorId');
+    var reqSpan = document.getElementById('js-referring-req');
+    var errorEl = document.querySelector('[data-valmsg-for="ReferringDoctorId"]');
+
+    function needsReferring() {
+        return patientInput && patientInput.value.trim().length > 0;
+    }
+    function syncLabel() {
+        if (reqSpan) reqSpan.style.display = needsReferring() ? 'inline' : 'none';
+    }
+
+    if (patientInput) patientInput.addEventListener('input', syncLabel);
+    if (referringSelect) referringSelect.addEventListener('change', function () {
+        if (errorEl && referringSelect.value) errorEl.textContent = '';
+    });
+    syncLabel();
+
+    var form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (needsReferring() && referringSelect && !referringSelect.value) {
+                e.preventDefault();
+                if (errorEl) errorEl.textContent = 'กรุณาเลือกแพทย์ส่ง เมื่อระบุชื่อผู้ป่วย';
+                referringSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                referringSelect.focus();
+            }
+        }, true);
+    }
+})();
+</script>
 
 <script type="application/json" id="invoiceItemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>
 <script type="application/json" id="invoiceSerialLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SerialLookup))</script>

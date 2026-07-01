@@ -46,6 +46,9 @@ public class Item : IValidatableObject
 
     public bool IsActive { get; set; } = true;
 
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedDate { get; set; }
+
     public ICollection<SerialNumber> SerialNumbers { get; set; } = new List<SerialNumber>();
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

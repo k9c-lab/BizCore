@@ -122,4 +122,47 @@ public class SystemSettingService : ISystemSettingService
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<(string Name, string Title)> GetAuthorisedSignatureAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var settings = await _context.SystemSettings
+                .AsNoTracking()
+                .Where(x => x.SettingKey == SettingKeys.PrintAuthorisedName || x.SettingKey == SettingKeys.PrintAuthorisedTitle)
+                .ToListAsync(cancellationToken);
+
+            var name = settings.FirstOrDefault(x => x.SettingKey == SettingKeys.PrintAuthorisedName)?.SettingValue ?? string.Empty;
+            var title = settings.FirstOrDefault(x => x.SettingKey == SettingKeys.PrintAuthorisedTitle)?.SettingValue ?? string.Empty;
+            return (name, title);
+        }
+        catch (Exception ex) when (ex is DbUpdateException || ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException)
+        {
+            return (string.Empty, string.Empty);
+        }
+    }
+
+    public async Task SetAuthorisedSignatureAsync(string name, string title, int? updatedByUserId, CancellationToken cancellationToken = default)
+    {
+        await _context.Database.ExecuteSqlRawAsync(EnsureSystemSettingsSql, cancellationToken);
+
+        await UpsertSettingAsync(SettingKeys.PrintAuthorisedName, name.Trim(), "ชื่อผู้มีอำนาจลงนาม สำหรับพิมพ์ใบแจ้งหนี้แบบส่วนกลาง", updatedByUserId, cancellationToken);
+        await UpsertSettingAsync(SettingKeys.PrintAuthorisedTitle, title.Trim(), "ตำแหน่งผู้มีอำนาจลงนาม สำหรับพิมพ์ใบแจ้งหนี้แบบส่วนกลาง", updatedByUserId, cancellationToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertSettingAsync(string key, string value, string description, int? updatedByUserId, CancellationToken cancellationToken)
+    {
+        var setting = await _context.SystemSettings.FirstOrDefaultAsync(x => x.SettingKey == key, cancellationToken);
+        if (setting is null)
+        {
+            setting = new SystemSetting { SettingKey = key, Description = description };
+            _context.SystemSettings.Add(setting);
+        }
+
+        setting.SettingValue = value;
+        setting.UpdatedByUserId = updatedByUserId;
+        setting.UpdatedAtUtc = DateTime.UtcNow;
+    }
 }

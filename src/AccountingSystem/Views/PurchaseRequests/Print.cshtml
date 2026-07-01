@@ -235,8 +235,8 @@
                     <div class="document-title-en">Purchase Request</div>
                     <table class="document-meta">
                         <tr><td class="meta-label">เลขที่เอกสาร / Doc No.</td><td class="meta-value-nowrap">@Model.PRNo</td></tr>
-                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.RequestDate.ToString("dd/MM/yyyy")</td></tr>
-                        <tr><td class="meta-label">วันที่ต้องการใช้ / Required Date</td><td>@(Model.RequiredDate?.ToString("dd/MM/yyyy") ?? "-")</td></tr>
+                        <tr><td class="meta-label">วันที่เอกสาร / Date</td><td>@Model.RequestDate.ToString("dd/MM/") @(Model.RequestDate.Year + 543)</td></tr>
+                        <tr><td class="meta-label">วันที่ต้องการใช้ / Required Date</td><td>@(Model.RequiredDate.HasValue ? Model.RequiredDate.Value.ToString("dd/MM/") + (Model.RequiredDate.Value.Year + 543) : "-")</td></tr>
                         <tr><td class="meta-label">สถานะ / Status</td><td>@Model.Status</td></tr>
                         <tr><td class="meta-label">สาขา / Branch</td><td>@(Model.Branch?.BranchName ?? "-")</td></tr>
                     </table>

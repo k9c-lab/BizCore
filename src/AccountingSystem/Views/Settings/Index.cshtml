@@ -45,6 +45,29 @@
                 </div>
 
                 <div class="form-section">
+                    <div class="form-section-title">ลายเซ็นผู้มีอำนาจ (สำหรับส่วนกลาง)</div>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-5">
+                            <div class="mb-3">
+                                <label asp-for="AuthorisedName" class="form-label"></label>
+                                <input asp-for="AuthorisedName" class="form-control" placeholder="เช่น Phawaran Suwansantisuk" />
+                                <span asp-validation-for="AuthorisedName" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="AuthorisedTitle" class="form-label"></label>
+                                <input asp-for="AuthorisedTitle" class="form-control" placeholder="เช่น General Manager" />
+                                <span asp-validation-for="AuthorisedTitle" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="workflow-info workflow-info-info mb-0">
+                                แสดงในหน้าพิมพ์ใบแจ้งหนี้แบบ <strong>สำหรับส่วนกลาง</strong> แทนช่องลายเซ็นผู้รับบริการ
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <div class="form-section-title">Patient Information</div>
                     <div class="row g-4 align-items-start">
                         <div class="col-lg-5">
