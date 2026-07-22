@@ -38,7 +38,8 @@
     var canUseStockAudit = CanUseMenu("Inventory.StockAudit.Menu");
     var canUseStockTransfers = CanUseMenu("Inventory.StockTransfers.Menu");
     var canUseStockIssues = CanUseMenu("Inventory.StockIssues.Menu");
-    var showInventorySection = canUseInventory || canUseStockInquiry || canUseSerialInquiry || canUseStockLedger || canUseStockAudit || canUseStockTransfers || canUseStockIssues;
+    var canUseStockAdjustments = CanUseMenu("Inventory.StockAdjustments.Menu");
+    var showInventorySection = canUseInventory || canUseStockInquiry || canUseSerialInquiry || canUseStockLedger || canUseStockAudit || canUseStockTransfers || canUseStockIssues || canUseStockAdjustments;
 
     var canUseWarranty = CanUseMenu("Warranty.Menu");
     var canUseCustomerClaims = CanUseMenu("Warranty.CustomerClaims.Menu");
@@ -173,7 +174,7 @@
 
                 @if (showInventorySection)
                 {
-                    <div class="sidebar-section sidebar-section-inventory@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues"))">
+                    <div class="sidebar-section sidebar-section-inventory@(ActiveSection("StockInquiry", "SerialInquiry", "StockLedger", "StockAudit", "StockTransfers", "StockIssues", "StockAdjustments"))">
                         <div class="sidebar-section-title">คลังสินค้า</div>
                         @if (canUseStockInquiry)
                         {
@@ -198,6 +199,20 @@
                         @if (canUseStockIssues)
                         {
                             <a class="sidebar-link@(ActiveLink("StockIssues"))" asp-controller="StockIssues" asp-action="Index" aria-current="@AriaCurrent("StockIssues")">เบิกสต็อก</a>
+                        }
+                        @if (canUseStockAdjustments)
+                        {
+                            <a class="sidebar-link@(ActiveLink("StockAdjustments"))" asp-controller="StockAdjustments" asp-action="Index" aria-current="@AriaCurrent("StockAdjustments")">
+                                <span class="sidebar-link-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+                                        <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+                                        <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+                                        <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+                                    </svg>
+                                </span>
+                                ปรับสต็อก
+                            </a>
                         }
                     </div>
                 }

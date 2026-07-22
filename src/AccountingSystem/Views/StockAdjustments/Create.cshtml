@@ -1,0 +1,232 @@
+@model BizCore.Models.ViewModels.StockAdjustmentFormViewModel
+
+@{
+    ViewData["Title"] = "ปรับสต็อก";
+    var itemOptions = Model.ItemLookup
+        .Select(x => new { x.ItemId, x.DisplayText })
+        .ToList();
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">โมดูลคลังสินค้า</div>
+        <h1 class="page-title">ปรับสต็อก</h1>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการ</a>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All" class="form-alert"></div>
+
+            <div class="form-shell">
+                <div class="form-section quotation-header-section">
+                    <div class="form-section-title">ข้อมูลเอกสาร</div>
+                    <div class="row g-3 quotation-header-grid">
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="AdjustmentNo" class="form-label"></label>
+                            <input asp-for="AdjustmentNo" class="form-control" readonly />
+                            <span asp-validation-for="AdjustmentNo" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="AdjustmentDate" class="form-label"></label>
+                            <input asp-for="AdjustmentDate" type="date" class="form-control" />
+                            <span asp-validation-for="AdjustmentDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="BranchId" class="form-label"></label>
+                            @if (Model.CanAccessAllBranches)
+                            {
+                                <select asp-for="BranchId" asp-items="Model.BranchOptions" class="form-select" id="BranchId">
+                                    <option value="">เลือกสาขา</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="hidden" asp-for="BranchId" />
+                                <div class="form-control readonly-detail">@Model.BranchName</div>
+                            }
+                            <span asp-validation-for="BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label asp-for="AdjustmentType" class="form-label"></label>
+                            <select asp-for="AdjustmentType" asp-items="Model.AdjustmentTypeOptions" class="form-select"></select>
+                            <span asp-validation-for="AdjustmentType" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Remark" class="form-label"></label>
+                            <input asp-for="Remark" class="form-control" maxlength="500" placeholder="หมายเหตุสำหรับเอกสารนี้ (ไม่บังคับ)" />
+                            <span asp-validation-for="Remark" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                        <div>
+                            <div class="form-section-title mb-1">รายการสินค้า</div>
+                            <div class="table-meta">ระบุจำนวนสต็อกที่ต้องการให้มีหลังปรับ ระบบจะคำนวณส่วนต่างให้อัตโนมัติ</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addAdjLine">เพิ่มรายการ</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table entity-table quote-editor-table align-middle" id="adjLinesTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 4%;">#</th>
+                                    <th style="width: 35%;">สินค้า</th>
+                                    <th style="width: 15%;">สต็อกปัจจุบัน</th>
+                                    <th style="width: 15%;">จำนวนใหม่</th>
+                                    <th style="width: 10%;">ส่วนต่าง</th>
+                                    <th style="width: 21%;">หมายเหตุรายการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @for (var i = 0; i < Model.Lines.Count; i++)
+                            {
+                                <tr>
+                                    <td class="line-number">@(i + 1)</td>
+                                    <td>
+                                        <input type="hidden" name="Lines[@i].LineNumber" value="@(i + 1)" />
+                                        <select name="Lines[@i].ItemId" class="form-select adj-item-select">
+                                            <option value="">เลือกสินค้า</option>
+                                            @foreach (var item in Model.ItemLookup)
+                                            {
+                                                <option value="@item.ItemId" selected="@(Model.Lines[i].ItemId == item.ItemId)">@item.DisplayText</option>
+                                            }
+                                        </select>
+                                        <span class="text-danger field-validation-valid" data-valmsg-for="Lines[@i].ItemId" data-valmsg-replace="true"></span>
+                                    </td>
+                                    <td>
+                                        <div class="form-control readonly-detail text-end adj-current-qty">-</div>
+                                    </td>
+                                    <td>
+                                        <input name="Lines[@i].NewQty" class="form-control text-end adj-new-qty" type="number" step="0.01" min="0" value="@Model.Lines[i].NewQty.ToString("0.##")" />
+                                        <span class="text-danger field-validation-valid" data-valmsg-for="Lines[@i].NewQty" data-valmsg-replace="true"></span>
+                                    </td>
+                                    <td>
+                                        <div class="form-control readonly-detail text-end adj-delta">-</div>
+                                    </td>
+                                    <td>
+                                        <input name="Lines[@i].Remark" class="form-control" maxlength="500" value="@Model.Lines[i].Remark" />
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success">บันทึกการปรับสต็อก</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const adjItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(itemOptions));
+        const buildItemOptions = () => ['<option value="">เลือกสินค้า</option>']
+            .concat(adjItems.map(x => `<option value="${x.ItemId}">${x.DisplayText}</option>`))
+            .join('');
+
+        const getBranchId = () =>
+            document.getElementById('BranchId')?.value
+            || document.querySelector('input[name="BranchId"]')?.value
+            || '';
+
+        const fmtQty = (n) => isNaN(n) ? '-' : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const loadCurrentStock = async (row) => {
+            const itemId = row.querySelector('.adj-item-select')?.value;
+            const branchId = getBranchId();
+            const currentEl = row.querySelector('.adj-current-qty');
+            const deltaEl = row.querySelector('.adj-delta');
+            const newQtyInput = row.querySelector('.adj-new-qty');
+
+            if (!itemId || !branchId) {
+                if (currentEl) currentEl.textContent = '-';
+                if (deltaEl) deltaEl.textContent = '-';
+                return;
+            }
+
+            const resp = await fetch(`@Url.Action("CurrentStock", "StockAdjustments")?itemId=${itemId}&branchId=${branchId}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const current = parseFloat(data.qtyOnHand ?? 0);
+            row.dataset.currentQty = current;
+            if (currentEl) currentEl.textContent = fmtQty(current);
+            updateDelta(row);
+        };
+
+        const updateDelta = (row) => {
+            const deltaEl = row.querySelector('.adj-delta');
+            const newQtyInput = row.querySelector('.adj-new-qty');
+            const current = parseFloat(row.dataset.currentQty ?? 'NaN');
+            const newQty = parseFloat(newQtyInput?.value ?? 'NaN');
+            if (!deltaEl) return;
+            if (isNaN(current) || isNaN(newQty)) { deltaEl.textContent = '-'; return; }
+            const delta = newQty - current;
+            deltaEl.textContent = (delta >= 0 ? '+' : '') + fmtQty(delta);
+            deltaEl.style.color = delta > 0 ? '#16a34a' : delta < 0 ? '#dc2626' : '';
+        };
+
+        const renumberLines = () => {
+            document.querySelectorAll('#adjLinesTable tbody tr').forEach((row, i) => {
+                row.querySelector('.line-number').textContent = i + 1;
+                row.querySelectorAll('input, select').forEach(field => {
+                    field.name = field.name?.replace(/Lines\[\d+\]/, `Lines[${i}]`);
+                    if (field.id) field.id = field.id.replace(/Lines_\d+__/, `Lines_${i}__`);
+                });
+                const lineInput = row.querySelector(`input[name="Lines[${i}].LineNumber"]`);
+                if (lineInput) lineInput.value = i + 1;
+            });
+        };
+
+        document.getElementById('addAdjLine')?.addEventListener('click', () => {
+            const tbody = document.querySelector('#adjLinesTable tbody');
+            const i = tbody.querySelectorAll('tr').length;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="line-number">${i + 1}</td>
+                <td>
+                    <input type="hidden" name="Lines[${i}].LineNumber" value="${i + 1}" />
+                    <select name="Lines[${i}].ItemId" class="form-select adj-item-select">${buildItemOptions()}</select>
+                </td>
+                <td><div class="form-control readonly-detail text-end adj-current-qty">-</div></td>
+                <td><input name="Lines[${i}].NewQty" class="form-control text-end adj-new-qty" type="number" step="0.01" min="0" value="0" /></td>
+                <td><div class="form-control readonly-detail text-end adj-delta">-</div></td>
+                <td><input name="Lines[${i}].Remark" class="form-control" maxlength="500" /></td>`;
+            tbody.appendChild(row);
+            renumberLines();
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('adj-item-select')) {
+                const row = e.target.closest('tr');
+                loadCurrentStock(row);
+            }
+            if (e.target.id === 'BranchId') {
+                document.querySelectorAll('#adjLinesTable tbody tr').forEach(row => loadCurrentStock(row));
+            }
+        });
+
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('adj-new-qty')) {
+                updateDelta(e.target.closest('tr'));
+            }
+        });
+
+        document.querySelectorAll('#adjLinesTable tbody tr').forEach(row => loadCurrentStock(row));
+    </script>
+}

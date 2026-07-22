@@ -1,0 +1,119 @@
+@model BizCore.Models.Entities.StockAdjustmentHeader
+
+@{
+    ViewData["Title"] = "รายละเอียดการปรับสต็อก";
+    var typeLabel = Model.AdjustmentType == "OpeningBalance" ? "สต็อกเปิดบัญชี" : "ปรับสต็อก";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">โมดูลคลังสินค้า</div>
+        <h1 class="page-title">รายละเอียดการปรับสต็อก</h1>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการ</a>
+        <a asp-action="Create" class="btn btn-primary">ปรับสต็อกใหม่</a>
+    </div>
+</div>
+
+<div class="card content-card mb-3">
+    <div class="card-body">
+        <div class="quotation-party-grid">
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">ข้อมูลเอกสาร</div>
+                    <div class="quotation-info-grid">
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">เลขที่เอกสาร</span>
+                            <span class="quotation-info-value"><span class="code-chip">@Model.AdjustmentNo</span></span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">วันที่</span>
+                            <span class="quotation-info-value">@Model.AdjustmentDate.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">สาขา</span>
+                            <span class="quotation-info-value">@(Model.Branch?.BranchName ?? "-")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">ประเภท</span>
+                            <span class="quotation-info-value">@typeLabel</span>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Remark))
+                    {
+                        <div class="quotation-info-field mt-2">
+                            <span class="quotation-info-label">หมายเหตุ</span>
+                            <span class="quotation-info-value">@Model.Remark</span>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">ข้อมูลการบันทึก</div>
+                    <div class="quotation-info-grid">
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">บันทึกโดย</span>
+                            <span class="quotation-info-value">@(Model.CreatedByUser?.Username ?? "-")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">วันที่บันทึก</span>
+                            <span class="quotation-info-value">@Model.CreatedDate.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">จำนวนรายการ</span>
+                            <span class="quotation-info-value">@Model.StockAdjustmentDetails.Count รายการ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <h2 class="section-title mb-3">รายการสินค้าที่ปรับ</h2>
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>สินค้า</th>
+                        <th class="text-end">สต็อกก่อนปรับ</th>
+                        <th class="text-end">สต็อกหลังปรับ</th>
+                        <th class="text-end">ส่วนต่าง</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var detail in Model.StockAdjustmentDetails)
+                {
+                    var delta = detail.QtyAfter - detail.QtyBefore;
+                    var deltaSign = delta >= 0 ? "+" : "";
+                    var deltaColor = delta > 0 ? "color:#16a34a" : delta < 0 ? "color:#dc2626" : "";
+                    <tr>
+                        <td>@detail.LineNumber</td>
+                        <td>
+                            @if (detail.Item is not null)
+                            {
+                                <div>@detail.Item.ItemName</div>
+                                <div class="table-meta">@detail.Item.ItemCode</div>
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                        <td class="text-end">@detail.QtyBefore.ToString("N2")</td>
+                        <td class="text-end">@detail.QtyAfter.ToString("N2")</td>
+                        <td class="text-end" style="@deltaColor">@deltaSign@delta.ToString("N2")</td>
+                        <td>@(detail.Remark ?? "-")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

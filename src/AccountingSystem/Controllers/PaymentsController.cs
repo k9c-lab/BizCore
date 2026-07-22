@@ -517,6 +517,7 @@ public class PaymentsController : CrudControllerBase
             PaymentMethod = payment.PaymentMethod,
             ReferenceNo = payment.ReferenceNo,
             Amount = payment.Amount,
+            WhtAmount = payment.WhtAmount,
             Remark = payment.Remark,
             TotalAppliedAmount = payment.PaymentAllocations.Sum(x => x.AppliedAmount),
             UnappliedAmount = payment.Amount - payment.PaymentAllocations.Sum(x => x.AppliedAmount),
@@ -583,6 +584,7 @@ public class PaymentsController : CrudControllerBase
         payment.PaymentMethod = model.PaymentMethod;
         payment.ReferenceNo = model.ReferenceNo?.Trim();
         payment.Amount = model.Amount;
+        payment.WhtAmount = model.WhtAmount;
         payment.Remark = model.Remark?.Trim();
         payment.Status = "Draft";
         payment.PostedByUserId = null;
@@ -663,6 +665,7 @@ public class PaymentsController : CrudControllerBase
             payment.PaymentMethod = model.PaymentMethod;
             payment.ReferenceNo = model.ReferenceNo?.Trim();
             payment.Amount = model.Amount;
+            payment.WhtAmount = model.WhtAmount;
             payment.Remark = model.Remark?.Trim();
             payment.Status = "Posted";
             payment.PostedByUserId = userId;

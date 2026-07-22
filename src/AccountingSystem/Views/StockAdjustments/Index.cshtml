@@ -1,0 +1,99 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.StockAdjustmentHeader>
+
+@{
+    ViewData["Title"] = "ปรับสต็อก";
+    var search = ViewData["Search"] as string;
+    var adjustmentType = ViewData["AdjustmentType"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">โมดูลคลังสินค้า</div>
+        <h1 class="page-title">ปรับสต็อก</h1>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">ปรับสต็อกใหม่</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">ประวัติการปรับสต็อก</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="เลขที่เอกสาร, สาขา, สินค้า หรือหมายเหตุ" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="adjustmentType">ประเภท</label>
+                <select id="adjustmentType" name="adjustmentType" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="Adjustment" selected="@(adjustmentType == "Adjustment")">ปรับสต็อก</option>
+                    <option value="OpeningBalance" selected="@(adjustmentType == "OpeningBalance")">สต็อกเปิดบัญชี</option>
+                </select>
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">ตั้งแต่วันที่</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">ถึงวันที่</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>เลขที่เอกสาร</th>
+                        <th>วันที่</th>
+                        <th>สาขา</th>
+                        <th>ประเภท</th>
+                        <th>จำนวนรายการ</th>
+                        <th>ผู้บันทึก</th>
+                        <th class="text-end">การทำงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var adj in Model)
+                    {
+                        var typeLabel = adj.AdjustmentType == "OpeningBalance" ? "สต็อกเปิดบัญชี" : "ปรับสต็อก";
+                        <tr>
+                            <td><span class="code-chip">@adj.AdjustmentNo</span></td>
+                            <td>@adj.AdjustmentDate.ToString("dd MMM yyyy")</td>
+                            <td>@(adj.Branch?.BranchName ?? "-")</td>
+                            <td>@typeLabel</td>
+                            <td>@adj.StockAdjustmentDetails.Count</td>
+                            <td>@(adj.CreatedByUser?.Username ?? "-")</td>
+                            <td class="text-end">
+                                <div class="table-actions">
+                                    <a asp-action="Details" asp-route-id="@adj.StockAdjustmentId" class="btn btn-sm btn-outline-secondary">ดูรายละเอียด</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7" class="table-empty">ยังไม่มีประวัติการปรับสต็อก</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

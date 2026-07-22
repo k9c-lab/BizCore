@@ -19,6 +19,9 @@
     var summarySubtotal = hasAllocations ? invoiceSubtotal : Model.TotalReceivedAmount;
     var summaryVat = hasAllocations ? invoiceVatTotal : 0m;
     var summaryTotal = hasAllocations ? invoiceTotal : Model.TotalReceivedAmount;
+    var whtAmount = Model.PaymentHeader?.WhtAmount ?? 0m;
+    var hasWht = whtAmount > 0;
+    var netReceived = Model.TotalReceivedAmount - whtAmount;
     var cancelBlockedReason = canCancel
         ? string.Empty
         : $"ยกเลิกใบเสร็จได้เฉพาะเอกสารที่ออกแล้วเท่านั้น สถานะปัจจุบันคือ {Model.Status}";
@@ -40,7 +43,31 @@
         {
             <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentHeader.PaymentId" class="btn btn-primary">ดูรายการรับชำระ</a>
         }
-        <button type="button" class="btn btn-outline-secondary" onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId })', '_blank', 'noopener');">พิมพ์</button>
+        <div class="confirm-popover-shell">
+            <button type="button"
+                    class="btn btn-outline-secondary js-confirm-popover-toggle"
+                    data-confirm-target="receiptTitlePicker"
+                    aria-expanded="false">
+                พิมพ์
+            </button>
+            <div class="confirm-popover" id="receiptTitlePicker" hidden>
+                <div class="confirm-popover-title">เลือกชื่อเอกสาร</div>
+                <div class="confirm-popover-actions" style="flex-direction:column; gap:8px;">
+                    <button type="button" class="btn btn-sm btn-primary"
+                            onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId, title = 1 })', '_blank', 'noopener');">
+                        ใบเสร็จรับเงิน
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId, title = 2 })', '_blank', 'noopener');">
+                        ใบกำกับภาษี
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            onclick="window.open('@Url.Action("Print", new { id = Model.ReceiptId, title = 3 })', '_blank', 'noopener');">
+                        ใบเสร็จรับเงิน/ใบกำกับภาษี
+                    </button>
+                </div>
+            </div>
+        </div>
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.ReceiptId" method="post" class="d-inline confirm-popover-form">
@@ -104,7 +131,14 @@
                     </div>
                     <div class="col-12">
                         <div class="detail-label">หมายเหตุ</div>
-                        <div class="form-control readonly-detail readonly-detail-multiline">@(string.IsNullOrWhiteSpace(Model.Remark) ? "-" : Model.Remark)</div>
+                        <form asp-action="UpdateRemark" asp-route-id="@Model.ReceiptId" method="post" class="d-flex gap-2 align-items-start">
+                            @Html.AntiForgeryToken()
+                            <textarea name="remark" class="form-control" rows="2" maxlength="1000" @(canEditPrintLines ? "" : "disabled")>@Model.Remark</textarea>
+                            @if (canEditPrintLines)
+                            {
+                                <button type="submit" class="btn btn-primary" style="white-space:nowrap;">บันทึก</button>
+                            }
+                        </form>
                     </div>
                 </div>
             </div>
@@ -321,6 +355,17 @@
                                 <span class="quotation-summary-name">ยอดรวม</span>
                                 <span class="quotation-summary-amount">@summaryTotal.ToString("N2")</span>
                             </div>
+                            @if (hasWht)
+                            {
+                                <div class="quotation-summary-row">
+                                    <span class="quotation-summary-name">หัก ณ ที่จ่าย 3%</span>
+                                    <span class="quotation-summary-amount">(@whtAmount.ToString("N2"))</span>
+                                </div>
+                                <div class="quotation-summary-row total">
+                                    <span class="quotation-summary-name">ยอดรับชำระสุทธิ / Net Received</span>
+                                    <span class="quotation-summary-amount">@netReceived.ToString("N2")</span>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>

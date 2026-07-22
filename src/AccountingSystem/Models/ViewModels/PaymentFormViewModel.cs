@@ -47,6 +47,10 @@ public class PaymentFormViewModel
     [Range(typeof(decimal), "0.01", "9999999999999999.99", ErrorMessage = "จำนวนเงินต้องมากกว่า 0")]
     public decimal Amount { get; set; }
 
+    [Display(Name = "หัก ณ ที่จ่าย 3%")]
+    [Range(typeof(decimal), "0", "9999999999999999.99", ErrorMessage = "ยอดหัก ณ ที่จ่ายต้องไม่ติดลบ")]
+    public decimal WhtAmount { get; set; }
+
     [StringLength(500)]
     public string? Remark { get; set; }
 

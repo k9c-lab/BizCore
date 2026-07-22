@@ -1617,6 +1617,7 @@ public class InvoicesController : CrudControllerBase
 
         decimal referenceSubtotal = 0m;
         decimal referenceDiscount = 0m;
+        decimal lineTotalSum = 0m;
         var useLineDiscount = model.DiscountMode == "Line";
 
         for (var i = 0; i < model.Details.Count; i++)
@@ -1744,15 +1745,12 @@ public class InvoicesController : CrudControllerBase
                 detail.CustomerWarrantyEndDate = null;
             }
 
-            detail.LineTotal = gross - detail.DiscountAmount;
+            detail.LineTotal = Math.Max(detail.LineTotal, 0m);
+            lineTotalSum += detail.LineTotal;
+            referenceSubtotal += gross;
             if (useLineDiscount)
             {
-                referenceSubtotal += gross;
-                referenceDiscount += detail.DiscountAmount;
-            }
-            else
-            {
-                referenceSubtotal += gross;
+                referenceDiscount += gross - detail.LineTotal;
             }
         }
 
@@ -1767,12 +1765,12 @@ public class InvoicesController : CrudControllerBase
         }
 
         var referenceAppliedDiscount = useLineDiscount ? referenceDiscount : model.HeaderDiscountAmount;
-        var referenceNet = referenceSubtotal - referenceAppliedDiscount;
+        var referenceNet = Math.Max(lineTotalSum - (useLineDiscount ? 0m : model.HeaderDiscountAmount), 0m);
         var referenceVatComputation = VatModeHelper.ComputeFromDocumentPricing(referenceNet, model.VatType);
         var referenceVat = referenceVatComputation.VatAmount;
         var referenceTotal = referenceVatComputation.TotalAmount;
 
-        model.DiscountAmount = useLineDiscount ? referenceDiscount : 0m;
+        model.DiscountAmount = useLineDiscount ? Math.Max(referenceDiscount, 0m) : 0m;
 
         if (model.QuotationId.HasValue && model.AmountDueThisInvoice.HasValue && quotationRemainingAmount.HasValue)
         {
@@ -1784,7 +1782,7 @@ public class InvoicesController : CrudControllerBase
 
         if (!ModelState.IsValid)
         {
-            model.Subtotal = referenceSubtotal;
+            model.Subtotal = Math.Max(lineTotalSum, referenceSubtotal);
             model.VatAmount = referenceVat;
             model.TotalAmount = referenceTotal;
             model.PaidAmount = 0m;
@@ -1814,8 +1812,8 @@ public class InvoicesController : CrudControllerBase
         }
         else
         {
-            model.Subtotal = referenceSubtotal;
-            model.DiscountAmount = useLineDiscount ? referenceDiscount : 0m;
+            model.Subtotal = Math.Max(lineTotalSum, referenceSubtotal);
+            model.DiscountAmount = useLineDiscount ? Math.Max(referenceDiscount, 0m) : 0m;
             model.VatAmount = referenceVat;
             model.TotalAmount = referenceTotal;
             model.AmountDueThisInvoice = referenceTotal;

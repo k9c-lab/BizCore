@@ -117,6 +117,12 @@
                         <input asp-for="Amount" class="form-control" />
                         <span asp-validation-for="Amount" class="text-danger"></span>
                     </div>
+                    <div class="col-md-6">
+                        <label asp-for="WhtAmount" class="form-label"></label>
+                        <input asp-for="WhtAmount" class="form-control" id="paymentWhtAmount" />
+                        <div class="form-text">กรอก 0 ถ้าไม่มีหัก ณ ที่จ่าย</div>
+                        <span asp-validation-for="WhtAmount" class="text-danger"></span>
+                    </div>
                 </div>
                 @if (Model.BillingNoteId.HasValue)
                 {
@@ -200,8 +206,12 @@
     <div class="quotation-summary-wrap">
         <div class="quotation-summary-stack">
             <div class="quotation-summary-row total">
-                <span class="quotation-summary-name">จำนวนเงินรับชำระ</span>
+                <span class="quotation-summary-name">จำนวนเงินรับชำระ (สุทธิ)</span>
                 <span class="quotation-summary-amount" id="paymentAmountSummary">@Model.Amount.ToString("N2")</span>
+            </div>
+            <div class="quotation-summary-row" id="paymentWhtRow" style="@(Model.WhtAmount > 0 ? null : "display:none;")">
+                <span class="quotation-summary-name">หัก ณ ที่จ่าย 3%</span>
+                <span class="quotation-summary-amount" id="paymentWhtSummary">@Model.WhtAmount.ToString("N2")</span>
             </div>
             <div class="quotation-summary-row">
                 <span class="quotation-summary-name">ยอดที่จัดสรรแล้ว</span>
@@ -213,6 +223,20 @@
             </div>
         </div>
     </div>
+    <script>
+    (function () {
+        var whtInput = document.getElementById('paymentWhtAmount');
+        var whtRow = document.getElementById('paymentWhtRow');
+        var whtSummary = document.getElementById('paymentWhtSummary');
+        if (whtInput && whtRow && whtSummary) {
+            whtInput.addEventListener('input', function () {
+                var val = parseFloat(whtInput.value) || 0;
+                whtSummary.textContent = val.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                whtRow.style.display = val > 0 ? '' : 'none';
+            });
+        }
+    })();
+    </script>
 </div>
 
 <script type="application/json" id="paymentCustomerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>

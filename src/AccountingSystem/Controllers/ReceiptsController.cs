@@ -104,7 +104,7 @@ public class ReceiptsController : CrudControllerBase
         return receipt is null || !CanAccessBranch(receipt.BranchId) ? NotFound() : View(receipt);
     }
 
-    public async Task<IActionResult> Print(int? id)
+    public async Task<IActionResult> Print(int? id, string? title = "1")
     {
         if (id is null)
         {
@@ -133,6 +133,7 @@ public class ReceiptsController : CrudControllerBase
         }
 
         PopulatePrintCompanyViewData(_companyProfile);
+        ViewData["PrintTitle"] = title is "2" or "3" ? title : "1";
         return View(receipt);
     }
 
@@ -209,6 +210,33 @@ public class ReceiptsController : CrudControllerBase
         await _context.SaveChangesAsync();
 
         TempData["ReceiptNotice"] = "Receipt print lines were updated.";
+        return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateRemark(int id, string? remark)
+    {
+        var receipt = await _context.ReceiptHeaders.FirstOrDefaultAsync(x => x.ReceiptId == id);
+
+        if (receipt is null || !CanAccessBranch(receipt.BranchId))
+        {
+            return NotFound();
+        }
+
+        if (receipt.Status == "Cancelled")
+        {
+            TempData["ReceiptNotice"] = "Cancelled receipts cannot be updated.";
+            return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
+        }
+
+        receipt.Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
+        receipt.UpdatedDate = DateTime.UtcNow;
+        receipt.UpdatedByUserId = CurrentUserId();
+
+        await _context.SaveChangesAsync();
+
+        TempData["ReceiptNotice"] = "บันทึกหมายเหตุเรียบร้อยแล้ว";
         return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
     }
 

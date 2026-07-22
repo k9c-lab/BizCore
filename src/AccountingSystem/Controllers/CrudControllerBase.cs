@@ -34,6 +34,7 @@ public abstract class CrudControllerBase : Controller
         ["StockAudit"] = "Inventory.StockAudit.Menu",
         ["StockTransfers"] = "Inventory.StockTransfers.Menu",
         ["StockIssues"] = "Inventory.StockIssues.Menu",
+        ["StockAdjustments"] = "Inventory.StockAdjustments.Menu",
         ["CustomerClaims"] = "Warranty.CustomerClaims.Menu",
         ["SupplierClaims"] = "Warranty.SupplierClaims.Menu",
         ["Branches"] = "MasterData.Branches.Menu",

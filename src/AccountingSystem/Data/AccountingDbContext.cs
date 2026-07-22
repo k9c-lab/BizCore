@@ -35,6 +35,8 @@ public class AccountingDbContext : DbContext
     public DbSet<StockIssueHeader> StockIssueHeaders => Set<StockIssueHeader>();
     public DbSet<StockIssueDetail> StockIssueDetails => Set<StockIssueDetail>();
     public DbSet<StockIssueSerial> StockIssueSerials => Set<StockIssueSerial>();
+    public DbSet<StockAdjustmentHeader> StockAdjustmentHeaders => Set<StockAdjustmentHeader>();
+    public DbSet<StockAdjustmentDetail> StockAdjustmentDetails => Set<StockAdjustmentDetail>();
     public DbSet<QuotationHeader> QuotationHeaders => Set<QuotationHeader>();
     public DbSet<QuotationDetail> QuotationDetails => Set<QuotationDetail>();
     public DbSet<InvoiceHeader> InvoiceHeaders => Set<InvoiceHeader>();
@@ -422,6 +424,39 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.SerialNumber)
                 .WithMany()
                 .HasForeignKey(x => x.SerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockAdjustmentHeader>(entity =>
+        {
+            entity.HasKey(x => x.StockAdjustmentId);
+            entity.Property(x => x.AdjustmentNo).HasMaxLength(30);
+            entity.Property(x => x.AdjustmentType).HasMaxLength(30);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasIndex(x => x.AdjustmentNo).IsUnique();
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockAdjustmentDetail>(entity =>
+        {
+            entity.HasKey(x => x.StockAdjustmentDetailId);
+            entity.Property(x => x.QtyBefore).HasPrecision(18, 2);
+            entity.Property(x => x.QtyAfter).HasPrecision(18, 2);
+            entity.Property(x => x.Remark).HasMaxLength(500);
+            entity.HasOne(x => x.StockAdjustmentHeader)
+                .WithMany(x => x.StockAdjustmentDetails)
+                .HasForeignKey(x => x.StockAdjustmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
