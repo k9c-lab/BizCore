@@ -434,6 +434,39 @@ public class QuotationsController : CrudControllerBase
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var quotation = await _context.QuotationHeaders
+            .FirstOrDefaultAsync(x => x.QuotationHeaderId == id);
+
+        if (quotation is null || !CanAccessBranch(quotation.BranchId))
+        {
+            return NotFound();
+        }
+
+        if (quotation.Status == "Converted")
+        {
+            TempData["QuotationNotice"] = "ไม่สามารถยกเลิกใบเสนอราคาที่แปลงเป็นใบแจ้งหนี้ไปแล้ว";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (quotation.Status == "Cancelled")
+        {
+            TempData["QuotationNotice"] = "ใบเสนอราคานี้ถูกยกเลิกไปแล้ว";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        quotation.Status = "Cancelled";
+        quotation.UpdatedDate = DateTime.UtcNow;
+        quotation.UpdatedByUserId = CurrentUserId();
+        await _context.SaveChangesAsync();
+
+        TempData["QuotationNotice"] = "ยกเลิกใบเสนอราคาเรียบร้อยแล้ว";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     private async Task PopulateLookupsAsync(QuotationFormViewModel model)
     {
         var pricingMode = await _systemSettingService.GetPricingModeAsync();

@@ -188,15 +188,6 @@ public class ReceiptsController : CrudControllerBase
             });
         }
 
-        if (lines.Any())
-        {
-            var total = lines.Sum(x => x.Amount);
-            if (total != decimal.Round(receipt.TotalReceivedAmount, 2, MidpointRounding.AwayFromZero))
-            {
-                TempData["ReceiptNotice"] = $"Receipt print lines must total {receipt.TotalReceivedAmount:N2}.";
-                return RedirectToAction(nameof(Details), new { id = receipt.ReceiptId });
-            }
-        }
 
         _context.ReceiptPrintLines.RemoveRange(receipt.PrintLines);
         receipt.PrintItemDescription = null;

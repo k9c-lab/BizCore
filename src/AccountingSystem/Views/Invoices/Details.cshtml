@@ -26,14 +26,14 @@
     var currentSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(Model.Subtotal, Model.DiscountAmount, Model.VatType);
     var referenceVatType = Model.QuotationId.HasValue && Model.Quotation is not null ? Model.Quotation.VatType : Model.VatType;
     var referenceSummary = BizCore.Utilities.VatModeHelper.ComputeSummaryBreakdown(referenceSubtotal, referenceDiscount, referenceVatType);
-    var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") &&
-        Model.PaidAmount <= 0 &&
-        !Model.PaymentAllocations.Any();
+    var hasActivePayment = Model.PaidAmount > 0 ||
+        Model.PaymentAllocations.Any(a => a.PaymentHeader?.Status != "Cancelled");
+    var canCancel = (Model.Status == "Draft" || Model.Status == "Issued") && !hasActivePayment;
     var cancelBlockedReason = canCancel
         ? string.Empty
         : Model.Status == "Cancelled"
             ? "เอกสารที่ยกเลิกแล้วจะเป็นแบบอ่านอย่างเดียว"
-            : Model.PaidAmount > 0 || Model.PaymentAllocations.Any()
+            : hasActivePayment
                 ? "ไม่สามารถยกเลิกใบแจ้งหนี้ได้ เพราะมีการรับชำระแล้ว"
                 : "ยกเลิกได้เฉพาะใบแจ้งหนี้สถานะฉบับร่างหรือออกเอกสารแล้ว";
     var canReceivePayment = Model.BalanceAmount > 0 &&

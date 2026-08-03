@@ -531,6 +531,7 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.IssuedByUser)
             .Include(x => x.CancelledByUser)
             .Include(x => x.PaymentAllocations)
+                .ThenInclude(x => x.PaymentHeader)
             .Include(x => x.Branch)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
@@ -720,6 +721,7 @@ public class InvoicesController : CrudControllerBase
     {
         var invoice = await _context.InvoiceHeaders
             .Include(x => x.PaymentAllocations)
+                .ThenInclude(x => x.PaymentHeader)
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.Item)
             .Include(x => x.InvoiceDetails)
@@ -739,7 +741,11 @@ public class InvoicesController : CrudControllerBase
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        if (invoice.PaidAmount > 0 || invoice.PaymentAllocations.Any())
+        var allocationPaymentIds = invoice.PaymentAllocations.Select(a => a.PaymentId).Distinct().ToList();
+        var hasActivePayment = invoice.PaidAmount > 0 ||
+            (allocationPaymentIds.Any() && await _context.PaymentHeaders
+                .AnyAsync(p => allocationPaymentIds.Contains(p.PaymentId) && p.Status != "Cancelled"));
+        if (hasActivePayment)
         {
             TempData["InvoiceNotice"] = "Cannot cancel invoice with payment. Cancel payment first.";
             return RedirectToAction(nameof(Details), new { id });
@@ -1801,7 +1807,11 @@ public class InvoicesController : CrudControllerBase
             var computedSubtotal = Math.Round(referenceSubtotal * ratio, 2, MidpointRounding.AwayFromZero);
             var computedDiscount = Math.Round(referenceAppliedDiscount * ratio, 2, MidpointRounding.AwayFromZero);
             var computedVat = Math.Round(referenceVat * ratio, 2, MidpointRounding.AwayFromZero);
-            var computedTotal = computedSubtotal - computedDiscount + computedVat;
+            // VATInclusive: subtotal already contains VAT, so don't add it again
+            var vatIsInclusive = string.Equals(model.VatType, VatModeHelper.VatInclusive, StringComparison.OrdinalIgnoreCase);
+            var computedTotal = vatIsInclusive
+                ? computedSubtotal - computedDiscount
+                : computedSubtotal - computedDiscount + computedVat;
             var roundingDifference = dueAmount - computedTotal;
 
             model.Subtotal = computedSubtotal;

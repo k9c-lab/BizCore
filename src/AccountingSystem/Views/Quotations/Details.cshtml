@@ -43,6 +43,7 @@
     var approveBlockedReason = Model.Status == "Draft" ? string.Empty : $"อนุมัติได้เฉพาะใบเสนอราคาฉบับร่าง สถานะปัจจุบันคือ {statusLabel}";
     var canConvert = Model.Status == "Approved" || Model.Status == "Converted";
     var convertBlockedReason = canConvert ? string.Empty : $"จะสร้างใบแจ้งหนี้ได้หลังจากอนุมัติแล้วเท่านั้น สถานะปัจจุบันคือ {statusLabel}";
+    var canCancel = Model.Status == "Draft" || Model.Status == "Approved";
 }
 
 @if (TempData["QuotationNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
@@ -110,6 +111,28 @@
         else
         {
             <button type="button" class="btn btn-outline-secondary" disabled title="@convertBlockedReason">สร้างใบแจ้งหนี้</button>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.QuotationHeaderId" method="post" class="d-inline confirm-popover-form">
+                @Html.AntiForgeryToken()
+                <div class="confirm-popover-shell">
+                    <button type="button"
+                            class="btn btn-outline-secondary js-confirm-popover-toggle"
+                            data-confirm-target="cancelQuotationConfirm_@Model.QuotationHeaderId"
+                            aria-expanded="false">
+                        ยกเลิกใบเสนอราคา
+                    </button>
+                    <div class="confirm-popover" id="cancelQuotationConfirm_@Model.QuotationHeaderId" hidden>
+                        <div class="confirm-popover-title">ยกเลิกใบเสนอราคานี้หรือไม่?</div>
+                        <div class="confirm-popover-text">เมื่อยกเลิกแล้วจะไม่สามารถแก้ไขหรืออนุมัติได้อีก</div>
+                        <div class="confirm-popover-actions">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">ยืนยันยกเลิก</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-popover-cancel">ปิด</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         }
         <a asp-action="Index" class="btn btn-outline-secondary">กลับไปรายการใบเสนอราคา</a>
     </div>
