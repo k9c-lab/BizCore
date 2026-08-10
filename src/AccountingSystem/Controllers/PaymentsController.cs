@@ -78,6 +78,13 @@ public class PaymentsController : CrudControllerBase
         return View(payments);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> NextPaymentNo(DateTime? date)
+    {
+        var paymentNo = await GetNextPaymentNumberAsync(date ?? DateTime.Today);
+        return Json(new { paymentNo });
+    }
+
     public async Task<IActionResult> Create(int? customerId, int? invoiceId, int? billingNoteId)
     {
         var model = new PaymentFormViewModel
@@ -377,8 +384,8 @@ public class PaymentsController : CrudControllerBase
         var userId = CurrentUserId();
         var receipt = new ReceiptHeader
         {
-            ReceiptNo = await GetNextReceiptNumberAsync(DateTime.Today),
-            ReceiptDate = DateTime.Today,
+            ReceiptNo = await GetNextReceiptNumberAsync(payment.PaymentDate),
+            ReceiptDate = payment.PaymentDate,
             CustomerId = payment.CustomerId,
             PaymentId = payment.PaymentId,
             BranchId = payment.BranchId,

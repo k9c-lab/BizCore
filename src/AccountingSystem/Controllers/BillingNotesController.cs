@@ -80,7 +80,7 @@ public class BillingNotesController : CrudControllerBase
         return View(notes);
     }
 
-    public async Task<IActionResult> Create(int? customerId, string? summaryMode, string? search, DateTime? dateFrom, DateTime? dateTo)
+    public async Task<IActionResult> Create(int? customerId, string? summaryMode, string? search, DateTime? dateFrom, DateTime? dateTo, int? treatmentRightId)
     {
         var model = new BillingNoteCreateViewModel
         {
@@ -93,6 +93,7 @@ public class BillingNotesController : CrudControllerBase
             Search = search,
             DateFrom = dateFrom,
             DateTo = dateTo,
+            TreatmentRightId = treatmentRightId,
             SubmitAction = "Issue"
         };
 
@@ -172,7 +173,7 @@ public class BillingNotesController : CrudControllerBase
         }
     }
 
-    public async Task<IActionResult> Edit(int? id, int? customerId, string? summaryMode, string? search, DateTime? dateFrom, DateTime? dateTo)
+    public async Task<IActionResult> Edit(int? id, int? customerId, string? summaryMode, string? search, DateTime? dateFrom, DateTime? dateTo, int? treatmentRightId)
     {
         if (id is null)
         {
@@ -208,6 +209,7 @@ public class BillingNotesController : CrudControllerBase
             Search = search,
             DateFrom = dateFrom,
             DateTo = dateTo,
+            TreatmentRightId = treatmentRightId,
             SelectedInvoiceIds = note.BillingNoteInvoices.Select(x => x.InvoiceId).ToList(),
             IsEditMode = true,
             SubmitAction = "SaveDraft"
@@ -512,6 +514,17 @@ public class BillingNotesController : CrudControllerBase
             new SelectListItem("สรุปตามสิทธิการรักษา", SummaryModeTreatmentRight, string.Equals(model.SummaryMode, SummaryModeTreatmentRight, StringComparison.OrdinalIgnoreCase)),
             new SelectListItem("สรุปตามรายการสินค้า", SummaryModeItem, string.Equals(model.SummaryMode, SummaryModeItem, StringComparison.OrdinalIgnoreCase))
         };
+
+        var treatmentRights = await _context.TreatmentRights
+            .AsNoTracking()
+            .OrderBy(x => x.TreatmentRightCode)
+            .ToListAsync();
+        model.TreatmentRightOptions = treatmentRights
+            .Select(x => new SelectListItem(
+                $"{x.TreatmentRightCode} - {x.TreatmentRightName}",
+                x.TreatmentRightId.ToString(),
+                x.TreatmentRightId == model.TreatmentRightId))
+            .ToList();
     }
 
     private async Task LoadAvailableInvoicesAsync(BillingNoteCreateViewModel model)
@@ -570,6 +583,11 @@ public class BillingNotesController : CrudControllerBase
         {
             var endDate = model.DateTo.Value.Date.AddDays(1);
             query = query.Where(x => x.InvoiceDate < endDate);
+        }
+
+        if (model.TreatmentRightId.HasValue)
+        {
+            query = query.Where(x => x.TreatmentRightId == model.TreatmentRightId.Value);
         }
 
         var invoices = await query

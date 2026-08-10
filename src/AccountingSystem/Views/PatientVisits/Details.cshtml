@@ -223,19 +223,19 @@
             const keyword = this.value.trim().toLowerCase();
             if (keyword.length < 1) { dropdown.style.display = 'none'; return; }
             const results = customers.filter(c =>
-                c.customerCode.toLowerCase().includes(keyword) ||
-                c.customerName.toLowerCase().includes(keyword)
+                c.CustomerCode.toLowerCase().includes(keyword) ||
+                c.CustomerName.toLowerCase().includes(keyword)
             ).slice(0, 10);
             if (!results.length) { dropdown.style.display = 'none'; return; }
             dropdown.innerHTML = results.map((c, i) =>
-                `<div class="search-dropdown-item" data-index="${i}">${c.customerCode} - ${c.customerName}</div>`
+                `<div class="search-dropdown-item" data-index="${i}">${c.CustomerCode} - ${c.CustomerName}</div>`
             ).join('');
             dropdown.style.display = '';
             dropdown.querySelectorAll('.search-dropdown-item').forEach((el, i) => {
                 el.addEventListener('mousedown', e => {
                     e.preventDefault();
-                    hiddenInput.value = results[i].customerId;
-                    searchInput.value = `${results[i].customerCode} - ${results[i].customerName}`;
+                    hiddenInput.value = results[i].CustomerId;
+                    searchInput.value = `${results[i].CustomerCode} - ${results[i].CustomerName}`;
                     dropdown.style.display = 'none';
                 });
             });

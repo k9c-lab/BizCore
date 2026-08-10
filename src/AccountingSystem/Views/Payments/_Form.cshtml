@@ -240,3 +240,25 @@
 </div>
 
 <script type="application/json" id="paymentCustomerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
+
+@if (!Model.PaymentId.HasValue)
+{
+    <script>
+        (function () {
+            const paymentDateInput = document.getElementById('PaymentDate');
+            const paymentNoInput = document.getElementById('PaymentNo');
+            if (!paymentDateInput || !paymentNoInput) return;
+
+            paymentDateInput.addEventListener('change', async function () {
+                const date = this.value;
+                if (!date) return;
+                try {
+                    const res = await fetch(`/Payments/NextPaymentNo?date=${encodeURIComponent(date)}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.paymentNo) paymentNoInput.value = data.paymentNo;
+                } catch { }
+            });
+        })();
+    </script>
+}

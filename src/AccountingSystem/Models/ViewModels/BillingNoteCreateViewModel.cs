@@ -35,6 +35,7 @@ public class BillingNoteCreateViewModel
     public string? Remark { get; set; }
 
     public string? Search { get; set; }
+    public int? TreatmentRightId { get; set; }
     public string SubmitAction { get; set; } = "Issue";
 
     [DataType(DataType.Date)]
@@ -57,4 +58,5 @@ public class BillingNoteCreateViewModel
     public IEnumerable<SelectListItem> CustomerOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> BranchOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> SummaryModeOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> TreatmentRightOptions { get; set; } = Enumerable.Empty<SelectListItem>();
 }

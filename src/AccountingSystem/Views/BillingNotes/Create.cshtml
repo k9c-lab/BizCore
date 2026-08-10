@@ -167,6 +167,16 @@
                                 <input id="filterSearch" value="@Model.Search" class="form-control" placeholder="เลขที่ใบแจ้งหนี้ ชื่อคนไข้ หรือ HN" />
                             </div>
                             <div class="list-filter-field">
+                                <label class="form-label" for="filterTreatmentRightId">สิทธิการรักษา</label>
+                                <select id="filterTreatmentRightId" class="form-select">
+                                    <option value="">ทั้งหมด</option>
+                                    @foreach (var item in Model.TreatmentRightOptions)
+                                    {
+                                        <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="list-filter-field">
                                 <label class="form-label" for="filterDateFrom">จากวันที่</label>
                                 <input id="filterDateFrom" type="date" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
                             </div>
@@ -341,6 +351,7 @@
             const filterCustomerSearch = document.getElementById('filterCustomerSearch');
             const filterCustomerResults = document.getElementById('filterCustomerResults');
             const filterSearch = document.getElementById('filterSearch');
+            const filterTreatmentRightId = document.getElementById('filterTreatmentRightId');
             const filterDateFrom = document.getElementById('filterDateFrom');
             const filterDateTo = document.getElementById('filterDateTo');
             const summaryModeSelect = document.getElementById('summaryModeSelect');
@@ -414,6 +425,10 @@
 
                 if (filterSearch?.value.trim()) {
                     url.searchParams.set('search', filterSearch.value.trim());
+                }
+
+                if (filterTreatmentRightId?.value) {
+                    url.searchParams.set('treatmentRightId', filterTreatmentRightId.value);
                 }
 
                 if (filterDateFrom?.value) {

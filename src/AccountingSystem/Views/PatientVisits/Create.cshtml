@@ -144,7 +144,7 @@
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <label asp-for="ReferringDoctorId" class="form-label"></label>
-                    <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions" class="form-select">
+                    <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions" class="form-select" id="visitReferringDoctorSelect">
                         <option value="">เลือกแพทย์ส่ง</option>
                     </select>
                     <span asp-validation-for="ReferringDoctorId" class="text-danger"></span>
@@ -163,11 +163,11 @@
                     <h2 class="section-title">รายการตรวจ</h2>
                     <p class="section-subtitle">เพิ่มรายการบริการที่คนไข้ต้องการตรวจ</p>
                 </div>
-                <div>
-                    <div class="search-dropdown" style="width:320px;">
-                        <input type="text" class="form-control" id="itemSearchInput" placeholder="ค้นหารายการตรวจ (รหัสหรือชื่อ)" autocomplete="off" />
-                        <div id="itemSearchResults" class="search-dropdown-menu" style="display:none;"></div>
-                    </div>
+            </div>
+            <div class="mb-2">
+                <div class="search-dropdown">
+                    <input type="text" class="form-control" id="itemSearchInput" placeholder="ค้นหารายการตรวจ (รหัสหรือชื่อ)" autocomplete="off" />
+                    <div id="itemSearchResults" class="search-dropdown-menu" style="display:none;"></div>
                 </div>
             </div>
 
@@ -216,19 +216,19 @@
             document.getElementById('visitPatientSearch'),
             document.getElementById('visitPatientResults'),
             patients,
-            (p) => `${p.hN} - ${p.fullName}`,
+            (p) => `${p.HN} - ${p.FullName}`,
             (p) => {
-                document.getElementById('visitPatientId').value = p.patientId;
-                document.getElementById('patientHN').textContent = p.hN;
-                document.getElementById('patientFullName').textContent = p.fullName || '-';
-                document.getElementById('patientGender').textContent = p.gender === 'M' ? 'ชาย' : p.gender === 'F' ? 'หญิง' : '-';
-                document.getElementById('patientDOB').textContent = p.dateOfBirth || '-';
-                document.getElementById('patientPhone').textContent = p.phone || '-';
+                document.getElementById('visitPatientId').value = p.PatientId;
+                document.getElementById('patientHN').textContent = p.HN;
+                document.getElementById('patientFullName').textContent = p.FullName || '-';
+                document.getElementById('patientGender').textContent = p.Gender === 'M' ? 'ชาย' : p.Gender === 'F' ? 'หญิง' : '-';
+                document.getElementById('patientDOB').textContent = p.DateOfBirth || '-';
+                document.getElementById('patientPhone').textContent = p.Phone || '-';
             },
             (keyword) => patients.filter(p =>
-                p.hN.toLowerCase().includes(keyword) ||
-                p.fullName.toLowerCase().includes(keyword) ||
-                (p.nationalId && p.nationalId.includes(keyword))
+                p.HN.toLowerCase().includes(keyword) ||
+                p.FullName.toLowerCase().includes(keyword) ||
+                (p.NationalId && p.NationalId.includes(keyword))
             )
         );
 
@@ -237,16 +237,16 @@
             document.getElementById('visitCustomerSearch'),
             document.getElementById('visitCustomerResults'),
             customers,
-            (c) => `${c.customerCode} - ${c.customerName}`,
+            (c) => `${c.CustomerCode} - ${c.CustomerName}`,
             (c) => {
-                document.getElementById('visitCustomerId').value = c.customerId;
-                document.getElementById('customerName').textContent = c.customerName || '-';
-                document.getElementById('customerPhone').textContent = c.phone || '-';
+                document.getElementById('visitCustomerId').value = c.CustomerId;
+                document.getElementById('customerName').textContent = c.CustomerName || '-';
+                document.getElementById('customerPhone').textContent = c.Phone || '-';
             },
             (keyword) => customers.filter(c =>
-                c.customerCode.toLowerCase().includes(keyword) ||
-                c.customerName.toLowerCase().includes(keyword) ||
-                (c.taxId && c.taxId.includes(keyword))
+                c.CustomerCode.toLowerCase().includes(keyword) ||
+                c.CustomerName.toLowerCase().includes(keyword) ||
+                (c.TaxId && c.TaxId.includes(keyword))
             )
         );
 
@@ -255,20 +255,20 @@
             document.getElementById('itemSearchInput'),
             document.getElementById('itemSearchResults'),
             items,
-            (i) => `${i.itemCode} - ${i.itemName}`,
+            (i) => `${i.ItemCode} - ${i.ItemName}`,
             (i) => {
                 addItem(i);
                 document.getElementById('itemSearchInput').value = '';
             },
             (keyword) => items.filter(i =>
-                i.itemCode.toLowerCase().includes(keyword) ||
-                i.itemName.toLowerCase().includes(keyword)
+                i.ItemCode.toLowerCase().includes(keyword) ||
+                i.ItemName.toLowerCase().includes(keyword)
             )
         );
 
         // ---- Items Table ----
         function addItem(item) {
-            visitItems.push({ itemId: item.itemId, itemCode: item.itemCode, itemName: item.itemName, unit: item.unit, quantity: 1 });
+            visitItems.push({ ItemId: item.ItemId, ItemCode: item.ItemCode, ItemName: item.ItemName, Unit: item.Unit, Quantity: 1 });
             renderItems();
         }
 
@@ -294,10 +294,10 @@
             visitItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><input type="hidden" name="Items[${index}].ItemId" value="${item.itemId}" /><span class="code-chip">${esc(item.itemCode)}</span></td>
-                    <td>${esc(item.itemName)}</td>
-                    <td>${esc(item.unit)}</td>
-                    <td><input type="number" name="Items[${index}].Quantity" value="${item.quantity}" min="0.01" step="0.01" class="form-control form-control-sm" onchange="updateQty(${index}, this.value)" /></td>
+                    <td><input type="hidden" name="Items[${index}].ItemId" value="${item.ItemId}" /><span class="code-chip">${esc(item.ItemCode)}</span></td>
+                    <td>${esc(item.ItemName)}</td>
+                    <td>${esc(item.Unit)}</td>
+                    <td><input type="number" name="Items[${index}].Quantity" value="${item.Quantity}" min="0.01" step="0.01" class="form-control form-control-sm" onchange="updateQty(${index}, this.value)" /></td>
                     <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemAt(${index})">ลบ</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -306,7 +306,7 @@
 
         window.removeItemAt = removeItem;
         window.updateQty = function (index, val) {
-            visitItems[index].quantity = parseFloat(val) || 1;
+            visitItems[index].Quantity = parseFloat(val) || 1;
         };
 
         function esc(str) {
@@ -349,6 +349,69 @@
         });
 
         renderItems();
+
+        // ---- Referring Doctor Search ----
+        (function () {
+            const select = document.getElementById('visitReferringDoctorSelect');
+            if (!select) return;
+
+            const options = [...select.options]
+                .filter(o => o.value)
+                .map(o => ({ id: o.value, text: o.text, search: o.text.toLowerCase() }));
+
+            select.classList.add('d-none');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'search-dropdown';
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'form-control';
+            searchInput.placeholder = 'ค้นหาจากรหัสหรือชื่อแพทย์ส่ง';
+            searchInput.autocomplete = 'off';
+
+            const resultsEl = document.createElement('div');
+            resultsEl.className = 'search-dropdown-menu';
+            resultsEl.style.display = 'none';
+
+            wrapper.appendChild(searchInput);
+            wrapper.appendChild(resultsEl);
+            select.insertAdjacentElement('afterend', wrapper);
+
+            if (select.value) {
+                const current = options.find(o => o.id === select.value);
+                if (current) searchInput.value = current.text;
+            }
+
+            function renderResults(keyword) {
+                const kw = (keyword || '').trim().toLowerCase();
+                const matches = options.filter(o => !kw || o.search.includes(kw)).slice(0, 15);
+                if (!matches.length) { resultsEl.style.display = 'none'; return; }
+                resultsEl.innerHTML = matches.map(o =>
+                    `<div class="search-dropdown-item" data-id="${o.id}">${esc(o.text)}</div>`
+                ).join('');
+                resultsEl.style.display = '';
+                resultsEl.querySelectorAll('.search-dropdown-item').forEach(el => {
+                    el.addEventListener('mousedown', e => {
+                        e.preventDefault();
+                        const opt = options.find(o => o.id === el.dataset.id);
+                        if (!opt) return;
+                        select.value = opt.id;
+                        searchInput.value = opt.text;
+                        resultsEl.style.display = 'none';
+                    });
+                });
+            }
+
+            searchInput.addEventListener('focus', () => renderResults(searchInput.value));
+            searchInput.addEventListener('input', () => { select.value = ''; renderResults(searchInput.value); });
+            searchInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    resultsEl.style.display = 'none';
+                    if (!select.value) searchInput.value = '';
+                }, 150);
+            });
+        })();
     })();
     </script>
 }
