@@ -65,6 +65,9 @@ public class AccountingDbContext : DbContext
     public DbSet<SerialClaimLog> SerialClaimLogs => Set<SerialClaimLog>();
     public DbSet<CustomerClaimHeader> CustomerClaimHeaders => Set<CustomerClaimHeader>();
     public DbSet<CustomerClaimDetail> CustomerClaimDetails => Set<CustomerClaimDetail>();
+    public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<PatientVisit> PatientVisits => Set<PatientVisit>();
+    public DbSet<PatientVisitItem> PatientVisitItems => Set<PatientVisitItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1254,6 +1257,74 @@ public class AccountingDbContext : DbContext
             entity.HasOne(x => x.ReplacementSerialNumber)
                 .WithMany()
                 .HasForeignKey(x => x.ReplacementSerialId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Patient>(entity =>
+        {
+            entity.HasKey(x => x.PatientId);
+            entity.Property(x => x.HN).HasMaxLength(30);
+            entity.Property(x => x.NationalId).HasMaxLength(20);
+            entity.Property(x => x.FirstName).HasMaxLength(100);
+            entity.Property(x => x.LastName).HasMaxLength(100);
+            entity.Property(x => x.Gender).HasMaxLength(10);
+            entity.Property(x => x.Phone).HasMaxLength(20);
+            entity.Property(x => x.Address).HasMaxLength(500);
+            entity.HasIndex(x => x.HN).IsUnique();
+        });
+
+        modelBuilder.Entity<PatientVisit>(entity =>
+        {
+            entity.HasKey(x => x.PatientVisitId);
+            entity.Property(x => x.VN).HasMaxLength(30);
+            entity.Property(x => x.Ward).HasMaxLength(100);
+            entity.Property(x => x.ReferringHospital).HasMaxLength(200);
+            entity.Property(x => x.Remark).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Weight).HasPrecision(6, 2);
+            entity.Property(x => x.Height).HasPrecision(6, 2);
+            entity.HasIndex(x => x.VN).IsUnique();
+            entity.HasOne(x => x.Patient)
+                .WithMany(x => x.PatientVisits)
+                .HasForeignKey(x => x.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Customer)
+                .WithMany()
+                .HasForeignKey(x => x.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.TreatmentRight)
+                .WithMany()
+                .HasForeignKey(x => x.TreatmentRightId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ReferringDoctor)
+                .WithMany()
+                .HasForeignKey(x => x.ReferringDoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Invoice)
+                .WithMany()
+                .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch)
+                .WithMany()
+                .HasForeignKey(x => x.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PatientVisitItem>(entity =>
+        {
+            entity.HasKey(x => x.PatientVisitItemId);
+            entity.Property(x => x.Quantity).HasPrecision(18, 4);
+            entity.HasOne(x => x.PatientVisit)
+                .WithMany(x => x.PatientVisitItems)
+                .HasForeignKey(x => x.PatientVisitId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Item)
+                .WithMany()
+                .HasForeignKey(x => x.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

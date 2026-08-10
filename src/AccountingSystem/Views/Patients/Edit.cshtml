@@ -1,0 +1,31 @@
+@model BizCore.Models.Entities.Patient
+
+@{
+    ViewData["Title"] = "แก้ไขข้อมูลคนไข้";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow"><a asp-action="Index">คนไข้</a> / <a asp-action="Details" asp-route-id="@Model.PatientId">@Model.HN</a></div>
+        <h1 class="page-title">แก้ไขข้อมูลคนไข้</h1>
+    </div>
+</div>
+
+<div class="card content-card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.PatientId" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="PatientId" type="hidden" />
+            <input asp-for="CreatedAt" type="hidden" />
+            <partial name="_Form" model="Model" />
+            <div class="form-actions mt-3">
+                <a asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">ยกเลิก</a>
+                <button type="submit" class="btn btn-primary">บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

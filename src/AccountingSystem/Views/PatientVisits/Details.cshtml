@@ -1,0 +1,255 @@
+@model BizCore.Models.Entities.PatientVisit
+
+@{
+    ViewData["Title"] = $"VN {Model.VN}";
+    var canCreateInvoice = Model.Status == "Registered";
+    var canCancel = Model.Status == "Registered";
+    var customerLookup = ViewData["CustomerLookup"] as string ?? "[]";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow"><a asp-action="Index">ลงทะเบียนคนไข้</a></div>
+        <h1 class="page-title">@Model.VN</h1>
+        <p class="page-subtitle">
+            <span class="status-pill @(Model.Status == "Registered" ? "draft" : Model.Status == "Invoiced" ? "active" : "inactive")">
+                @(Model.Status == "Registered" ? "ลงทะเบียนแล้ว" : Model.Status == "Invoiced" ? "ออกใบแจ้งหนี้แล้ว" : "ยกเลิก")
+            </span>
+        </p>
+    </div>
+    <div class="page-actions">
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.PatientVisitId" method="post" id="cancelForm">
+                @Html.AntiForgeryToken()
+                <button type="button" class="btn btn-outline-danger"
+                        data-bs-toggle="popover"
+                        data-bs-trigger="focus"
+                        data-bs-placement="bottom"
+                        data-bs-html="true"
+                        data-bs-content="<div class='d-flex gap-2 mt-1'><button class='btn btn-sm btn-danger' onclick=&quot;document.getElementById('cancelForm').submit()&quot;>ยืนยันยกเลิก</button><button class='btn btn-sm btn-secondary' onclick=&quot;bootstrap.Popover.getInstance(this.closest('[data-bs-toggle=popover]')).hide()&quot;>ปิด</button></div>"
+                        data-bs-title="ยืนยันการยกเลิก?">
+                    ยกเลิกการลงทะเบียน
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (TempData["VisitError"] is string visitError)
+{
+    <div class="alert alert-danger mb-3">@visitError</div>
+}
+
+<div class="quotation-party-grid mb-4">
+    <div class="quotation-party-column">
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">ข้อมูลคนไข้</div>
+            @if (Model.Patient != null)
+            {
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">HN</span>
+                        <span class="quotation-info-value"><a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="code-chip">@Model.Patient.HN</a></span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">เพศ</span>
+                        <span class="quotation-info-value">@(Model.Patient.Gender == "M" ? "ชาย" : Model.Patient.Gender == "F" ? "หญิง" : "-")</span>
+                    </div>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">ชื่อ-นามสกุล</span>
+                    <span class="quotation-info-value fw-semibold">@Model.Patient.FirstName @Model.Patient.LastName</span>
+                </div>
+                <div class="quotation-info-grid">
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">วันเกิด</span>
+                        <span class="quotation-info-value">@(Model.Patient.DateOfBirth?.ToString("dd MMM yyyy") ?? "-")</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">โทรศัพท์</span>
+                        <span class="quotation-info-value">@(Model.Patient.Phone ?? "-")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="quotation-party-column">
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">ข้อมูลการเยี่ยม</div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">วันที่ลงทะเบียน</span>
+                    <span class="quotation-info-value">@Model.VisitDate.ToString("dd MMM yyyy")</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">Ward</span>
+                    <span class="quotation-info-value">@(Model.Ward ?? "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">น้ำหนัก</span>
+                    <span class="quotation-info-value">@(Model.Weight.HasValue ? $"{Model.Weight:N1} กก." : "-")</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">ส่วนสูง</span>
+                    <span class="quotation-info-value">@(Model.Height.HasValue ? $"{Model.Height:N1} ซม." : "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">สิทธิการรักษา</span>
+                    <span class="quotation-info-value">@(Model.TreatmentRight?.TreatmentRightName ?? "-")</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">แพทย์ส่ง</span>
+                    <span class="quotation-info-value">@(Model.ReferringDoctor?.DoctorName ?? "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-field">
+                <span class="quotation-info-label">โรงพยาบาลส่งตัว</span>
+                <span class="quotation-info-value">@(Model.ReferringHospital ?? "-")</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.Remark))
+            {
+                <div class="quotation-info-field mt-2">
+                    <span class="quotation-info-label">หมายเหตุ</span>
+                    <span class="quotation-info-value">@Model.Remark</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card mb-4">
+    <div class="table-card-header">
+        <h2 class="section-title">รายการตรวจ</h2>
+        <div class="table-meta">@Model.PatientVisitItems.Count รายการ</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th>ชื่อรายการ</th>
+                        <th>หน่วย</th>
+                        <th class="text-end">จำนวน</th>
+                        <th class="text-end">ราคา/หน่วย</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.PatientVisitItems.Any())
+                {
+                    @foreach (var item in Model.PatientVisitItems)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@item.Item?.ItemCode</span></td>
+                            <td>@item.Item?.ItemName</td>
+                            <td>@item.Item?.Unit</td>
+                            <td class="text-end">@item.Quantity.ToString("N2")</td>
+                            <td class="text-end">@item.Item?.UnitPrice.ToString("N2")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="5" class="table-empty">ยังไม่มีรายการตรวจ</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.Status == "Invoiced" && Model.Invoice != null)
+{
+    <div class="card content-card mb-4">
+        <div class="card-body">
+            <div class="workflow-info workflow-info-info">
+                <span>ใบแจ้งหนี้ที่เกี่ยวข้อง: <a asp-controller="Invoices" asp-action="Details" asp-route-id="@Model.InvoiceId" class="code-chip">@Model.Invoice.InvoiceNo</a></span>
+            </div>
+        </div>
+    </div>
+}
+
+@if (canCreateInvoice)
+{
+    <div class="card content-card">
+        <div class="card-body">
+            <h2 class="section-title mb-3">สร้างใบแจ้งหนี้</h2>
+            @if (Model.Customer != null)
+            {
+                <div class="workflow-info workflow-info-info mb-3">
+                    <span>ลูกค้า (ผู้ชำระ): <strong>@Model.Customer.CustomerCode - @Model.Customer.CustomerName</strong></span>
+                </div>
+                <form asp-action="CreateInvoice" asp-route-id="@Model.PatientVisitId" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">สร้างใบแจ้งหนี้ (Draft)</button>
+                </form>
+            }
+            else
+            {
+                <p class="text-muted mb-3">เลือกลูกค้า (ผู้ชำระเงิน) ก่อนสร้างใบแจ้งหนี้</p>
+                <form asp-action="CreateInvoice" asp-route-id="@Model.PatientVisitId" method="post" class="d-flex gap-2 align-items-end flex-wrap">
+                    @Html.AntiForgeryToken()
+                    <div style="min-width:300px;">
+                        <label class="form-label">ลูกค้า (ผู้ชำระ)</label>
+                        <input type="hidden" name="customerId" id="invoiceCustomerId" />
+                        <div class="search-dropdown">
+                            <input type="text" class="form-control" id="invoiceCustomerSearch"
+                                   placeholder="ค้นหาลูกค้า" autocomplete="off" />
+                            <div id="invoiceCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">สร้างใบแจ้งหนี้ (Draft)</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <script type="application/json" id="detailCustomerData">@Html.Raw(customerLookup)</script>
+    <script>
+    (function () {
+        const customers = JSON.parse(document.getElementById('detailCustomerData').textContent);
+        const searchInput = document.getElementById('invoiceCustomerSearch');
+        const dropdown = document.getElementById('invoiceCustomerResults');
+        const hiddenInput = document.getElementById('invoiceCustomerId');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', function () {
+            const keyword = this.value.trim().toLowerCase();
+            if (keyword.length < 1) { dropdown.style.display = 'none'; return; }
+            const results = customers.filter(c =>
+                c.customerCode.toLowerCase().includes(keyword) ||
+                c.customerName.toLowerCase().includes(keyword)
+            ).slice(0, 10);
+            if (!results.length) { dropdown.style.display = 'none'; return; }
+            dropdown.innerHTML = results.map((c, i) =>
+                `<div class="search-dropdown-item" data-index="${i}">${c.customerCode} - ${c.customerName}</div>`
+            ).join('');
+            dropdown.style.display = '';
+            dropdown.querySelectorAll('.search-dropdown-item').forEach((el, i) => {
+                el.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    hiddenInput.value = results[i].customerId;
+                    searchInput.value = `${results[i].customerCode} - ${results[i].customerName}`;
+                    dropdown.style.display = 'none';
+                });
+            });
+        });
+        searchInput.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
+
+        // init popovers
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+    })();
+    </script>
+}
+else
+{
+    <script>
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+    </script>
+}

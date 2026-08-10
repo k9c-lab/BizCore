@@ -1,0 +1,115 @@
+@model BizCore.Models.ViewModels.PaginatedList<BizCore.Models.Entities.PatientVisit>
+
+@{
+    ViewData["Title"] = "ลงทะเบียนคนไข้";
+    var search = ViewData["Search"] as string;
+    var status = ViewData["Status"] as string;
+    var dateFrom = ViewData["DateFrom"] as string;
+    var dateTo = ViewData["DateTo"] as string;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">งานคนไข้</div>
+        <h1 class="page-title">ลงทะเบียนคนไข้</h1>
+        <p class="page-subtitle">รายการลงทะเบียนผู้มารับบริการ</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary px-4">ลงทะเบียนใหม่</a>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <div>
+            <h2 class="section-title">รายการลงทะเบียน</h2>
+        </div>
+        <div class="table-meta">@Model.TotalCount รายการ</div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="list-filter-bar">
+            <div class="list-filter-field grow">
+                <label class="form-label" for="search">ค้นหา</label>
+                <input id="search" name="search" value="@search" class="form-control" placeholder="VN, HN, ชื่อคนไข้, โรงพยาบาลส่งตัว" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateFrom">วันที่ลงทะเบียน จาก</label>
+                <input id="dateFrom" name="dateFrom" value="@dateFrom" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="dateTo">ถึง</label>
+                <input id="dateTo" name="dateTo" value="@dateTo" type="date" class="form-control" />
+            </div>
+            <div class="list-filter-field">
+                <label class="form-label" for="status">สถานะ</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="">ทั้งหมด</option>
+                    <option value="Registered" selected="@(status == "Registered")">ลงทะเบียนแล้ว</option>
+                    <option value="Invoiced" selected="@(status == "Invoiced")">ออกใบแจ้งหนี้แล้ว</option>
+                    <option value="Cancelled" selected="@(status == "Cancelled")">ยกเลิก</option>
+                </select>
+            </div>
+            <div class="list-filter-actions">
+                <a asp-action="Index" class="btn btn-outline-secondary">ล้างค่า</a>
+                <button type="submit" class="btn btn-primary">ค้นหา</button>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>VN</th>
+                        <th>วันที่</th>
+                        <th>คนไข้ (HN)</th>
+                        <th>สิทธิการรักษา</th>
+                        <th>ใบแจ้งหนี้</th>
+                        <th>สถานะ</th>
+                        <th class="text-end">การทำงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><span class="code-chip">@item.VN</span></td>
+                            <td>@item.VisitDate.ToString("dd MMM yyyy")</td>
+                            <td>
+                                @if (item.Patient != null)
+                                {
+                                    <div class="fw-semibold">@item.Patient.FirstName @item.Patient.LastName</div>
+                                    <div class="text-muted small">@item.Patient.HN</div>
+                                }
+                            </td>
+                            <td>@(item.TreatmentRight?.TreatmentRightName ?? "-")</td>
+                            <td>
+                                @if (item.Invoice != null)
+                                {
+                                    <a asp-controller="Invoices" asp-action="Details" asp-route-id="@item.InvoiceId" class="code-chip">@item.Invoice.InvoiceNo</a>
+                                }
+                                else { <span class="text-muted">-</span> }
+                            </td>
+                            <td>
+                                <span class="status-pill @(item.Status == "Registered" ? "draft" : item.Status == "Invoiced" ? "active" : "inactive")">
+                                    @(item.Status == "Registered" ? "ลงทะเบียนแล้ว" : item.Status == "Invoiced" ? "ออกใบแจ้งหนี้แล้ว" : "ยกเลิก")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@item.PatientVisitId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="table-empty">ยังไม่มีรายการลงทะเบียน</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model.Pagination" />
+    </div>
+</div>

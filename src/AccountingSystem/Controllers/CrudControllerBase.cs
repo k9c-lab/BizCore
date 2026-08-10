@@ -48,7 +48,9 @@ public abstract class CrudControllerBase : Controller
         ["Users"] = "MasterData.Users.Menu",
         ["RolePermissions"] = "MasterData.RolePermissions.Menu",
         ["PriceLevels"] = "MasterData.PriceLevels.Menu",
-        ["Settings"] = "MasterData.Settings.Menu"
+        ["Settings"] = "MasterData.Settings.Menu",
+        ["Patients"] = "MasterData.Patients.Menu",
+        ["PatientVisits"] = "Patient.Visits.Menu"
     };
 
     public override void OnActionExecuting(ActionExecutingContext context)

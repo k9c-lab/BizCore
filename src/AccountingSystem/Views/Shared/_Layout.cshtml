@@ -46,8 +46,12 @@
     var canUseSupplierClaims = CanUseMenu("Warranty.SupplierClaims.Menu");
     var showWarrantySection = canUseWarranty || canUseCustomerClaims || canUseSupplierClaims;
 
+    var canUsePatientVisits = CanUseMenu("Patient.Visits.Menu");
+    var showPatientSection = canUsePatientVisits;
+
     var canUseMasterData = CanUseMenu("MasterData.Menu");
     var canUseBranches = CanUseMenu("MasterData.Branches.Menu");
+    var canUsePatients = CanUseMenu("MasterData.Patients.Menu");
     var canUseCustomers = CanUseMenu("MasterData.Customers.Menu");
     var canUseSuppliers = CanUseMenu("MasterData.Suppliers.Menu");
     var canUseSalespersons = CanUseMenu("MasterData.Salespersons.Menu");
@@ -59,7 +63,7 @@
     var canUseRolePermissions = CanUseMenu("MasterData.RolePermissions.Menu");
     var canUsePriceLevels = CanUseMenu("MasterData.PriceLevels.Menu");
     var canUseSettings = CanUseMenu("MasterData.Settings.Menu");
-    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseReadingDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings;
+    var showMasterDataSection = canUseMasterData || canUseBranches || canUseCustomers || canUseSuppliers || canUseSalespersons || canUseTreatmentRights || canUseReferringDoctors || canUseReadingDoctors || canUseItems || canUseUsers || canUseRolePermissions || canUsePriceLevels || canUseSettings || canUsePatients;
     var branchName = User.FindFirst("CanAccessAllBranches")?.Value == "true" && !User.IsInRole("BranchAdmin")
         ? "All Branches"
         : User.FindFirst("BranchName")?.Value;
@@ -114,6 +118,17 @@
                         @if (canUseReports)
                         {
                             <a class="sidebar-link@(ActiveLink("Reports"))" asp-controller="Reports" asp-action="Index" aria-current="@AriaCurrent("Reports")">รายงาน</a>
+                        }
+                    </div>
+                }
+
+                @if (showPatientSection)
+                {
+                    <div class="sidebar-section sidebar-section-patient@(ActiveSection("PatientVisits"))">
+                        <div class="sidebar-section-title">งานคนไข้</div>
+                        @if (canUsePatientVisits)
+                        {
+                            <a class="sidebar-link@(ActiveLink("PatientVisits"))" asp-controller="PatientVisits" asp-action="Index" aria-current="@AriaCurrent("PatientVisits")">ลงทะเบียน</a>
                         }
                     </div>
                 }
@@ -234,7 +249,7 @@
 
                 @if (showMasterDataSection)
                 {
-                    <div class="sidebar-section sidebar-section-master@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "ReadingDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings"))">
+                    <div class="sidebar-section sidebar-section-master@(ActiveSection("Branches", "Customers", "Suppliers", "Salespersons", "TreatmentRights", "ReferringDoctors", "ReadingDoctors", "Items", "Users", "RolePermissions", "PriceLevels", "Settings", "Patients"))">
                         <div class="sidebar-section-title">ข้อมูลหลัก</div>
                         @if (canUseBranches)
                         {
@@ -251,6 +266,10 @@
                         @if (canUseSalespersons)
                         {
                             <a class="sidebar-link@(ActiveLink("Salespersons"))" asp-controller="Salespersons" asp-action="Index" aria-current="@AriaCurrent("Salespersons")">พนักงานขาย</a>
+                        }
+                        @if (canUsePatients)
+                        {
+                            <a class="sidebar-link@(ActiveLink("Patients"))" asp-controller="Patients" asp-action="Index" aria-current="@AriaCurrent("Patients")">คนไข้</a>
                         }
                         @if (canUseTreatmentRights)
                         {

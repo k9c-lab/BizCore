@@ -1,0 +1,354 @@
+@model BizCore.Models.ViewModels.PatientVisitFormViewModel
+
+@{
+    ViewData["Title"] = "ลงทะเบียนคนไข้";
+    var selectedPatient = Model.PatientLookup.FirstOrDefault(x => x.PatientId == Model.PatientId);
+    var selectedPatientDisplay = selectedPatient is null ? string.Empty : $"{selectedPatient.HN} - {selectedPatient.FullName}";
+    var selectedCustomer = Model.CustomerLookup.FirstOrDefault(x => x.CustomerId == Model.CustomerId);
+    var selectedCustomerDisplay = selectedCustomer is null ? string.Empty : $"{selectedCustomer.CustomerCode} - {selectedCustomer.CustomerName}";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow"><a asp-action="Index">ลงทะเบียนคนไข้</a></div>
+        <h1 class="page-title">ลงทะเบียนใหม่</h1>
+    </div>
+</div>
+
+<form asp-action="Create" method="post" id="visitForm">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="form-alert"></div>
+    <input asp-for="BranchId" type="hidden" />
+
+    <div class="form-shell">
+        <div class="form-section quotation-header-section">
+            <div class="form-section-title">ข้อมูลเอกสาร</div>
+            <div class="row g-2 quotation-header-grid">
+                <div class="col-lg-3 col-md-6">
+                    <label asp-for="VN" class="form-label"></label>
+                    <input asp-for="VN" class="form-control" readonly />
+                    <div class="form-text">ระบบสร้างเลขที่ให้อัตโนมัติรายเดือน</div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label asp-for="VisitDate" class="form-label"></label>
+                    <input asp-for="VisitDate" class="form-control" type="date" id="visitDateInput" />
+                    <span asp-validation-for="VisitDate" class="text-danger"></span>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">สาขา</label>
+                    <div class="form-control readonly-detail">@Model.BranchName</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quotation-party-grid">
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">ข้อมูลคนไข้ <span class="text-danger">*</span></div>
+                    <div class="mb-2">
+                        <input asp-for="PatientId" type="hidden" id="visitPatientId" />
+                        <div class="search-dropdown">
+                            <input type="text" class="form-control" id="visitPatientSearch"
+                                   placeholder="ค้นหาจาก HN หรือชื่อ-นามสกุล"
+                                   value="@selectedPatientDisplay"
+                                   autocomplete="off" />
+                            <div id="visitPatientResults" class="search-dropdown-menu" style="display:none;"></div>
+                        </div>
+                        <span asp-validation-for="PatientId" class="text-danger"></span>
+                    </div>
+                    <div class="quotation-info-grid">
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">HN</span>
+                            <span class="quotation-info-value" id="patientHN">@(selectedPatient?.HN ?? "-")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">เพศ</span>
+                            <span class="quotation-info-value" id="patientGender">@(selectedPatient?.Gender == "M" ? "ชาย" : selectedPatient?.Gender == "F" ? "หญิง" : "-")</span>
+                        </div>
+                    </div>
+                    <div class="quotation-info-grid">
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">ชื่อ-นามสกุล</span>
+                            <span class="quotation-info-value" id="patientFullName">@(selectedPatient?.FullName ?? "-")</span>
+                        </div>
+                        <div class="quotation-info-field">
+                            <span class="quotation-info-label">วันเกิด</span>
+                            <span class="quotation-info-value" id="patientDOB">@(selectedPatient?.DateOfBirth ?? "-")</span>
+                        </div>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">โทรศัพท์</span>
+                        <span class="quotation-info-value" id="patientPhone">@(selectedPatient?.Phone ?? "-")</span>
+                    </div>
+                    <div class="mt-2">
+                        <a asp-controller="Patients" asp-action="Create" target="_blank" class="btn btn-sm btn-outline-secondary">+ เพิ่มคนไข้ใหม่</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">ลูกค้า (ผู้ชำระเงิน)</div>
+                    <div class="mb-2">
+                        <input asp-for="CustomerId" type="hidden" id="visitCustomerId" />
+                        <div class="search-dropdown">
+                            <input type="text" class="form-control" id="visitCustomerSearch"
+                                   placeholder="ค้นหาลูกค้า (ถ้ามี)"
+                                   value="@selectedCustomerDisplay"
+                                   autocomplete="off" />
+                            <div id="visitCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">ชื่อลูกค้า</span>
+                        <span class="quotation-info-value" id="customerName">@(selectedCustomer?.CustomerName ?? "-")</span>
+                    </div>
+                    <div class="quotation-info-field">
+                        <span class="quotation-info-label">โทรศัพท์</span>
+                        <span class="quotation-info-value" id="customerPhone">@(selectedCustomer?.Phone ?? "-")</span>
+                    </div>
+                    <div class="form-text mt-1">สามารถระบุภายหลังตอนสร้างใบแจ้งหนี้ได้</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-title">ข้อมูลการเยี่ยม</div>
+            <div class="row g-2">
+                <div class="col-lg-2 col-md-4">
+                    <label asp-for="Weight" class="form-label"></label>
+                    <input asp-for="Weight" class="form-control" type="number" step="0.01" min="0" />
+                    <span asp-validation-for="Weight" class="text-danger"></span>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label asp-for="Height" class="form-label"></label>
+                    <input asp-for="Height" class="form-control" type="number" step="0.01" min="0" />
+                    <span asp-validation-for="Height" class="text-danger"></span>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <label asp-for="Ward" class="form-label"></label>
+                    <input asp-for="Ward" class="form-control" />
+                    <span asp-validation-for="Ward" class="text-danger"></span>
+                </div>
+                <div class="col-lg-5 col-md-6">
+                    <label asp-for="ReferringHospital" class="form-label"></label>
+                    <input asp-for="ReferringHospital" class="form-control" />
+                    <span asp-validation-for="ReferringHospital" class="text-danger"></span>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <label asp-for="TreatmentRightId" class="form-label"></label>
+                    <select asp-for="TreatmentRightId" asp-items="Model.TreatmentRightOptions" class="form-select">
+                        <option value="">เลือกสิทธิการรักษา</option>
+                    </select>
+                    <span asp-validation-for="TreatmentRightId" class="text-danger"></span>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <label asp-for="ReferringDoctorId" class="form-label"></label>
+                    <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions" class="form-select">
+                        <option value="">เลือกแพทย์ส่ง</option>
+                    </select>
+                    <span asp-validation-for="ReferringDoctorId" class="text-danger"></span>
+                </div>
+                <div class="col-lg-8">
+                    <label asp-for="Remark" class="form-label"></label>
+                    <textarea asp-for="Remark" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="Remark" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="table-card-header px-0 pt-0">
+                <div>
+                    <h2 class="section-title">รายการตรวจ</h2>
+                    <p class="section-subtitle">เพิ่มรายการบริการที่คนไข้ต้องการตรวจ</p>
+                </div>
+                <div>
+                    <div class="search-dropdown" style="width:320px;">
+                        <input type="text" class="form-control" id="itemSearchInput" placeholder="ค้นหารายการตรวจ (รหัสหรือชื่อ)" autocomplete="off" />
+                        <div id="itemSearchResults" class="search-dropdown-menu" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table entity-table align-middle" id="visitItemsTable">
+                    <thead>
+                        <tr>
+                            <th>รหัส</th>
+                            <th>ชื่อรายการ</th>
+                            <th>หน่วย</th>
+                            <th style="width:130px;">จำนวน</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="visitItemsBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="visitItemsEmpty" class="table-empty text-center py-3">ยังไม่มีรายการตรวจ — ค้นหาและเลือกรายการด้านบน</div>
+        </div>
+    </div>
+
+    <div class="form-actions mt-3">
+        <a asp-action="Index" class="btn btn-outline-secondary">ยกเลิก</a>
+        <button type="submit" class="btn btn-primary">บันทึกการลงทะเบียน</button>
+    </div>
+</form>
+
+<script type="application/json" id="patientLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PatientLookup))</script>
+<script type="application/json" id="customerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
+<script type="application/json" id="itemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>
+<script type="application/json" id="existingItemsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items.Select(x => new { x.ItemId, x.ItemCode, x.ItemName, x.Unit, x.Quantity })))</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        // ---- Data ----
+        const patients = JSON.parse(document.getElementById('patientLookupData').textContent);
+        const customers = JSON.parse(document.getElementById('customerLookupData').textContent);
+        const items = JSON.parse(document.getElementById('itemLookupData').textContent);
+        let visitItems = JSON.parse(document.getElementById('existingItemsData').textContent) || [];
+
+        // ---- Patient Search ----
+        setupSearch(
+            document.getElementById('visitPatientSearch'),
+            document.getElementById('visitPatientResults'),
+            patients,
+            (p) => `${p.hN} - ${p.fullName}`,
+            (p) => {
+                document.getElementById('visitPatientId').value = p.patientId;
+                document.getElementById('patientHN').textContent = p.hN;
+                document.getElementById('patientFullName').textContent = p.fullName || '-';
+                document.getElementById('patientGender').textContent = p.gender === 'M' ? 'ชาย' : p.gender === 'F' ? 'หญิง' : '-';
+                document.getElementById('patientDOB').textContent = p.dateOfBirth || '-';
+                document.getElementById('patientPhone').textContent = p.phone || '-';
+            },
+            (keyword) => patients.filter(p =>
+                p.hN.toLowerCase().includes(keyword) ||
+                p.fullName.toLowerCase().includes(keyword) ||
+                (p.nationalId && p.nationalId.includes(keyword))
+            )
+        );
+
+        // ---- Customer Search ----
+        setupSearch(
+            document.getElementById('visitCustomerSearch'),
+            document.getElementById('visitCustomerResults'),
+            customers,
+            (c) => `${c.customerCode} - ${c.customerName}`,
+            (c) => {
+                document.getElementById('visitCustomerId').value = c.customerId;
+                document.getElementById('customerName').textContent = c.customerName || '-';
+                document.getElementById('customerPhone').textContent = c.phone || '-';
+            },
+            (keyword) => customers.filter(c =>
+                c.customerCode.toLowerCase().includes(keyword) ||
+                c.customerName.toLowerCase().includes(keyword) ||
+                (c.taxId && c.taxId.includes(keyword))
+            )
+        );
+
+        // ---- Item Search ----
+        setupSearch(
+            document.getElementById('itemSearchInput'),
+            document.getElementById('itemSearchResults'),
+            items,
+            (i) => `${i.itemCode} - ${i.itemName}`,
+            (i) => {
+                addItem(i);
+                document.getElementById('itemSearchInput').value = '';
+            },
+            (keyword) => items.filter(i =>
+                i.itemCode.toLowerCase().includes(keyword) ||
+                i.itemName.toLowerCase().includes(keyword)
+            )
+        );
+
+        // ---- Items Table ----
+        function addItem(item) {
+            visitItems.push({ itemId: item.itemId, itemCode: item.itemCode, itemName: item.itemName, unit: item.unit, quantity: 1 });
+            renderItems();
+        }
+
+        function removeItem(index) {
+            visitItems.splice(index, 1);
+            renderItems();
+        }
+
+        function renderItems() {
+            const tbody = document.getElementById('visitItemsBody');
+            const empty = document.getElementById('visitItemsEmpty');
+            tbody.innerHTML = '';
+
+            if (visitItems.length === 0) {
+                empty.style.display = '';
+                document.getElementById('visitItemsTable').style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            document.getElementById('visitItemsTable').style.display = '';
+
+            visitItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="hidden" name="Items[${index}].ItemId" value="${item.itemId}" /><span class="code-chip">${esc(item.itemCode)}</span></td>
+                    <td>${esc(item.itemName)}</td>
+                    <td>${esc(item.unit)}</td>
+                    <td><input type="number" name="Items[${index}].Quantity" value="${item.quantity}" min="0.01" step="0.01" class="form-control form-control-sm" onchange="updateQty(${index}, this.value)" /></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemAt(${index})">ลบ</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.removeItemAt = removeItem;
+        window.updateQty = function (index, val) {
+            visitItems[index].quantity = parseFloat(val) || 1;
+        };
+
+        function esc(str) {
+            return (str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ---- Generic Search Dropdown ----
+        function setupSearch(input, dropdown, data, labelFn, onSelect, filterFn) {
+            input.addEventListener('input', function () {
+                const keyword = this.value.trim().toLowerCase();
+                if (keyword.length < 1) { dropdown.style.display = 'none'; return; }
+                const results = filterFn(keyword).slice(0, 10);
+                if (results.length === 0) { dropdown.style.display = 'none'; return; }
+                dropdown.innerHTML = results.map((item, i) =>
+                    `<div class="search-dropdown-item" data-index="${i}">${esc(labelFn(item))}</div>`
+                ).join('');
+                dropdown.style.display = '';
+                dropdown.querySelectorAll('.search-dropdown-item').forEach((el, i) => {
+                    el.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        onSelect(results[i]);
+                        input.value = labelFn(results[i]);
+                        dropdown.style.display = 'none';
+                    });
+                });
+            });
+            input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
+        }
+
+        // ---- VN update on date change ----
+        document.getElementById('visitDateInput').addEventListener('change', async function () {
+            const date = this.value;
+            if (!date) return;
+            try {
+                const res = await fetch(`/PatientVisits/NextVN?date=${encodeURIComponent(date)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.vn) document.getElementById('VN').value = data.vn;
+            } catch { }
+        });
+
+        renderItems();
+    })();
+    </script>
+}

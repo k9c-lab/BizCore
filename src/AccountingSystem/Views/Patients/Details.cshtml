@@ -1,0 +1,125 @@
+@model BizCore.Models.Entities.Patient
+
+@{
+    ViewData["Title"] = $"คนไข้ {Model.HN}";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow"><a asp-action="Index">คนไข้</a></div>
+        <h1 class="page-title">@Model.FirstName @Model.LastName</h1>
+        <p class="page-subtitle">HN: @Model.HN</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.PatientId" class="btn btn-outline-primary">แก้ไข</a>
+        <a asp-controller="PatientVisits" asp-action="Create" class="btn btn-primary">ลงทะเบียนใหม่</a>
+    </div>
+</div>
+
+<div class="quotation-party-grid mb-4">
+    <div class="quotation-party-column">
+        <div class="quotation-info-card">
+            <div class="quotation-info-card-title">ข้อมูลส่วนตัว</div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">HN</span>
+                    <span class="quotation-info-value"><span class="code-chip">@Model.HN</span></span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">เลขบัตรประชาชน</span>
+                    <span class="quotation-info-value">@(Model.NationalId ?? "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">ชื่อ-นามสกุล</span>
+                    <span class="quotation-info-value fw-semibold">@Model.FirstName @Model.LastName</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">เพศ</span>
+                    <span class="quotation-info-value">@(Model.Gender == "M" ? "ชาย" : Model.Gender == "F" ? "หญิง" : "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-grid">
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">วันเกิด</span>
+                    <span class="quotation-info-value">@(Model.DateOfBirth?.ToString("dd MMM yyyy") ?? "-")</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">โทรศัพท์</span>
+                    <span class="quotation-info-value">@(Model.Phone ?? "-")</span>
+                </div>
+            </div>
+            <div class="quotation-info-field">
+                <span class="quotation-info-label">ที่อยู่</span>
+                <span class="quotation-info-value">@(Model.Address ?? "-")</span>
+            </div>
+            <div class="quotation-info-field mt-2">
+                <span class="quotation-info-label">สถานะ</span>
+                <span class="quotation-info-value">
+                    <span class="status-pill @(Model.IsActive ? "active" : "inactive")">@(Model.IsActive ? "ใช้งานอยู่" : "ไม่ใช้งาน")</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card content-card table-card">
+    <div class="table-card-header">
+        <h2 class="section-title">ประวัติการลงทะเบียน</h2>
+        <div class="table-meta">@Model.PatientVisits.Count รายการ</div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table entity-table align-middle">
+                <thead>
+                    <tr>
+                        <th>VN</th>
+                        <th>วันที่</th>
+                        <th>สิทธิการรักษา</th>
+                        <th>สถานะ</th>
+                        <th>ใบแจ้งหนี้</th>
+                        <th class="text-end">การทำงาน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.PatientVisits.Any())
+                {
+                    @foreach (var visit in Model.PatientVisits.OrderByDescending(x => x.VisitDate))
+                    {
+                        <tr>
+                            <td><span class="code-chip">@visit.VN</span></td>
+                            <td>@visit.VisitDate.ToString("dd MMM yyyy")</td>
+                            <td>@(visit.TreatmentRight?.TreatmentRightName ?? "-")</td>
+                            <td>
+                                <span class="status-pill @(visit.Status == "Registered" ? "draft" : visit.Status == "Invoiced" ? "active" : "inactive")">
+                                    @(visit.Status == "Registered" ? "ลงทะเบียนแล้ว" : visit.Status == "Invoiced" ? "ออกใบแจ้งหนี้แล้ว" : "ยกเลิก")
+                                </span>
+                            </td>
+                            <td>
+                                @if (visit.Invoice != null)
+                                {
+                                    <a asp-controller="Invoices" asp-action="Details" asp-route-id="@visit.InvoiceId" class="code-chip">@visit.Invoice.InvoiceNo</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-controller="PatientVisits" asp-action="Details" asp-route-id="@visit.PatientVisitId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="table-empty">ยังไม่มีประวัติการลงทะเบียน</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

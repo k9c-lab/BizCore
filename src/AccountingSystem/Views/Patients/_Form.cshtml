@@ -1,0 +1,63 @@
+@model BizCore.Models.Entities.Patient
+
+<div asp-validation-summary="All" class="form-alert"></div>
+
+<div class="form-shell">
+    <div class="form-section quotation-header-section">
+        <div class="form-section-title">ข้อมูลคนไข้</div>
+        <div class="row g-2 quotation-header-grid">
+            <div class="col-lg-2 col-md-4">
+                <label asp-for="HN" class="form-label"></label>
+                <input asp-for="HN" class="form-control" placeholder="เช่น HN-00001" />
+                <div class="form-text">HN จากโรงพยาบาลต้นสังกัด</div>
+                <span asp-validation-for="HN" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <label asp-for="NationalId" class="form-label"></label>
+                <input asp-for="NationalId" class="form-control" placeholder="เลข 13 หลัก" />
+                <span asp-validation-for="NationalId" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <label asp-for="Gender" class="form-label"></label>
+                <select asp-for="Gender" class="form-select">
+                    <option value="">ไม่ระบุ</option>
+                    <option value="M">ชาย</option>
+                    <option value="F">หญิง</option>
+                </select>
+                <span asp-validation-for="Gender" class="text-danger"></span>
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <label asp-for="DateOfBirth" class="form-label"></label>
+                <input asp-for="DateOfBirth" class="form-control" type="date" />
+                <span asp-validation-for="DateOfBirth" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <label asp-for="Phone" class="form-label"></label>
+                <input asp-for="Phone" class="form-control" />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="Address" class="form-label"></label>
+                <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">สถานะ</label>
+                <label class="quotation-inline-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <span>ใช้งานอยู่</span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
