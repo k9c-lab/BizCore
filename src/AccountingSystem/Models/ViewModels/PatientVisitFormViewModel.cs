@@ -50,13 +50,69 @@ public class PatientVisitFormViewModel
     public int? BranchId { get; set; }
     public string BranchName { get; set; } = string.Empty;
 
+    // Inline new patient creation
+    public bool IsNewPatient { get; set; }
+    [Display(Name = "HN")]
+    [StringLength(30)]
+    public string? NewPatientHN { get; set; }
+    [Display(Name = "เลขบัตร ปชช.")]
+    [StringLength(20)]
+    public string? NewPatientNationalId { get; set; }
+    [Display(Name = "ชื่อ")]
+    [StringLength(100)]
+    public string? NewPatientFirstName { get; set; }
+    [Display(Name = "นามสกุล")]
+    [StringLength(100)]
+    public string? NewPatientLastName { get; set; }
+    [Display(Name = "เพศ")]
+    public string? NewPatientGender { get; set; }
+    [Display(Name = "วันเกิด")]
+    [DataType(DataType.Date)]
+    public DateTime? NewPatientDateOfBirth { get; set; }
+    [Display(Name = "โทรศัพท์")]
+    [StringLength(20)]
+    public string? NewPatientPhone { get; set; }
+
     public List<PatientVisitItemViewModel> Items { get; set; } = new();
+
+    // Edit mode: linked invoice info (for sync confirmation)
+    public int? InvoiceId { get; set; }
+    public string? InvoiceNo { get; set; }
+    public string? InvoiceStatus { get; set; }
+    public bool SyncInvoice { get; set; }
+
+    // Edit mode: editable patient master fields
+    public string? EditPatientHN { get; set; }
+    [Display(Name = "ชื่อ")]
+    [StringLength(100)]
+    public string? EditPatientFirstName { get; set; }
+    [Display(Name = "นามสกุล")]
+    [StringLength(100)]
+    public string? EditPatientLastName { get; set; }
+    [Display(Name = "วันเกิด")]
+    [DataType(DataType.Date)]
+    public DateTime? EditPatientDateOfBirth { get; set; }
+    [Display(Name = "เพศ")]
+    public string? EditPatientGender { get; set; }
+    [Display(Name = "โทรศัพท์")]
+    [StringLength(20)]
+    public string? EditPatientPhone { get; set; }
+
+    // Edit mode: audit log display
+    public IReadOnlyList<PatientVisitAuditLogViewModel> AuditLogs { get; set; } = Array.Empty<PatientVisitAuditLogViewModel>();
 
     public IEnumerable<SelectListItem> TreatmentRightOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> ReferringDoctorOptions { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<PatientVisitItemLookupViewModel> ItemLookup { get; set; } = Array.Empty<PatientVisitItemLookupViewModel>();
     public IReadOnlyList<PatientLookupViewModel> PatientLookup { get; set; } = Array.Empty<PatientLookupViewModel>();
     public IReadOnlyList<QuotationCustomerLookupViewModel> CustomerLookup { get; set; } = Array.Empty<QuotationCustomerLookupViewModel>();
+}
+
+public class PatientVisitAuditLogViewModel
+{
+    public string UserName { get; set; } = string.Empty;
+    public DateTime OccurredAt { get; set; }
+    public string Description { get; set; } = string.Empty;
 }
 
 public class PatientVisitItemViewModel

@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -14,10 +15,12 @@ public class PaymentsController : CrudControllerBase
     private const string PaymentNumberPrefix = "PAY";
     private const string ReceiptNumberPrefix = "RC";
     private readonly AccountingDbContext _context;
+    private readonly ISystemSettingService _systemSettingService;
 
-    public PaymentsController(AccountingDbContext context)
+    public PaymentsController(AccountingDbContext context, ISystemSettingService systemSettingService)
     {
         _context = context;
+        _systemSettingService = systemSettingService;
     }
 
     public async Task<IActionResult> Index(string? search, string? status, DateTime? dateFrom, DateTime? dateTo, int page = 1, int pageSize = 20)
@@ -174,6 +177,7 @@ public class PaymentsController : CrudControllerBase
         }
 
         await PopulateLookupsAsync(model);
+        ViewData["AllowPaymentBackdate"] = await _systemSettingService.GetAllowPaymentBackdateAsync();
         return View(model);
     }
 
@@ -181,12 +185,19 @@ public class PaymentsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PaymentFormViewModel model, string? submitAction)
     {
+        var allowBackdate = await _systemSettingService.GetAllowPaymentBackdateAsync();
+        if (!allowBackdate && model.PaymentDate.Date != DateTime.Today)
+        {
+            model.PaymentDate = DateTime.Today;
+        }
+
         model.PaymentNo = await GetNextPaymentNumberAsync(model.PaymentDate);
         ModelState.Remove(nameof(PaymentFormViewModel.PaymentNo));
 
         if (!await ValidateAndComputeAsync(model))
         {
             await PopulateLookupsAsync(model);
+            ViewData["AllowPaymentBackdate"] = allowBackdate;
             return View(model);
         }
 

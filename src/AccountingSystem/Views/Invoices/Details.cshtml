@@ -731,6 +731,25 @@
                     }
                 </div>
             </div>
+
+            @if (Model.AuditLogs.Any())
+            {
+                <div class="form-section">
+                    <div class="form-section-title">ประวัติการแก้ไข</div>
+                    <div class="audit-log-list">
+                        @foreach (var log in Model.AuditLogs.OrderByDescending(x => x.OccurredAt))
+                        {
+                            <div class="audit-log-row">
+                                <div class="audit-log-meta">
+                                    <span class="audit-log-user">@log.UserName</span>
+                                    <span class="audit-log-time">@log.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                                </div>
+                                <div class="audit-log-desc">@log.Description</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>

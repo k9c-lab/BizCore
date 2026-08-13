@@ -6,4 +6,5 @@ public static class SettingKeys
     public const string SalesEnablePatientInfo = "Sales.EnablePatientInfo";
     public const string PrintAuthorisedName = "Print.AuthorisedName";
     public const string PrintAuthorisedTitle = "Print.AuthorisedTitle";
+    public const string PaymentAllowBackdate = "Payment.AllowBackdate";
 }

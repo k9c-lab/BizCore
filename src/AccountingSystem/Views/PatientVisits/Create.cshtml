@@ -2,10 +2,12 @@
 
 @{
     ViewData["Title"] = "ลงทะเบียนคนไข้";
+    var patientInitState = Model.IsNewPatient ? "new" : Model.PatientId.HasValue ? "found" : "search";
     var selectedPatient = Model.PatientLookup.FirstOrDefault(x => x.PatientId == Model.PatientId);
-    var selectedPatientDisplay = selectedPatient is null ? string.Empty : $"{selectedPatient.HN} - {selectedPatient.FullName}";
-    var selectedCustomer = Model.CustomerLookup.FirstOrDefault(x => x.CustomerId == Model.CustomerId);
-    var selectedCustomerDisplay = selectedCustomer is null ? string.Empty : $"{selectedCustomer.CustomerCode} - {selectedCustomer.CustomerName}";
+    var selectedHospital = Model.CustomerLookup.FirstOrDefault(x => x.CustomerId == Model.CustomerId);
+    var hospitalDisplayValue = selectedHospital != null
+        ? $"{selectedHospital.CustomerCode} - {selectedHospital.CustomerName}"
+        : (Model.ReferringHospital ?? string.Empty);
 }
 
 <div class="page-header">
@@ -45,71 +47,102 @@
             <div class="quotation-party-column">
                 <div class="quotation-info-card">
                     <div class="quotation-info-card-title">ข้อมูลคนไข้ <span class="text-danger">*</span></div>
-                    <div class="mb-2">
-                        <input asp-for="PatientId" type="hidden" id="visitPatientId" />
-                        <div class="search-dropdown">
+
+                    <input asp-for="PatientId" type="hidden" id="visitPatientId" />
+                    <input asp-for="IsNewPatient" type="hidden" id="isNewPatientInput" />
+
+                    @* SEARCH STATE *@
+                    <div id="pt-search" class="@(patientInitState == "search" ? "" : "d-none")">
+                        <div class="search-dropdown mb-1">
                             <input type="text" class="form-control" id="visitPatientSearch"
-                                   placeholder="ค้นหาจาก HN หรือชื่อ-นามสกุล"
-                                   value="@selectedPatientDisplay"
+                                   placeholder="พิมพ์เลขบัตร ปชช., HN หรือชื่อ-นามสกุล"
                                    autocomplete="off" />
                             <div id="visitPatientResults" class="search-dropdown-menu" style="display:none;"></div>
                         </div>
-                        <span asp-validation-for="PatientId" class="text-danger"></span>
+                        <div class="form-text">ถ้าไม่พบให้เลือก "สร้างคนไข้ใหม่" ในรายการ</div>
                     </div>
-                    <div class="quotation-info-grid">
-                        <div class="quotation-info-field">
-                            <span class="quotation-info-label">HN</span>
-                            <span class="quotation-info-value" id="patientHN">@(selectedPatient?.HN ?? "-")</span>
+
+                    @* FOUND STATE *@
+                    <div id="pt-found" class="@(patientInitState == "found" ? "" : "d-none")">
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">HN</span>
+                                <span class="quotation-info-value" id="patientHN">@(selectedPatient?.HN ?? "-")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">เพศ</span>
+                                <span class="quotation-info-value" id="patientGender">@(selectedPatient?.Gender == "M" ? "ชาย" : selectedPatient?.Gender == "F" ? "หญิง" : "-")</span>
+                            </div>
+                        </div>
+                        <div class="quotation-info-grid">
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">ชื่อ-นามสกุล</span>
+                                <span class="quotation-info-value" id="patientFullName">@(selectedPatient?.FullName ?? "-")</span>
+                            </div>
+                            <div class="quotation-info-field">
+                                <span class="quotation-info-label">วันเกิด</span>
+                                <span class="quotation-info-value" id="patientDOB">@(selectedPatient?.DateOfBirth ?? "-")</span>
+                            </div>
                         </div>
                         <div class="quotation-info-field">
-                            <span class="quotation-info-label">เพศ</span>
-                            <span class="quotation-info-value" id="patientGender">@(selectedPatient?.Gender == "M" ? "ชาย" : selectedPatient?.Gender == "F" ? "หญิง" : "-")</span>
+                            <span class="quotation-info-label">โทรศัพท์</span>
+                            <span class="quotation-info-value" id="patientPhone">@(selectedPatient?.Phone ?? "-")</span>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="patientReset()">เปลี่ยนคนไข้</button>
                     </div>
-                    <div class="quotation-info-grid">
-                        <div class="quotation-info-field">
-                            <span class="quotation-info-label">ชื่อ-นามสกุล</span>
-                            <span class="quotation-info-value" id="patientFullName">@(selectedPatient?.FullName ?? "-")</span>
+
+                    @* NEW PATIENT STATE *@
+                    <div id="pt-new" class="@(patientInitState == "new" ? "" : "d-none")">
+                        <div class="workflow-info workflow-info-warning py-2 mb-2" style="font-size:0.85rem;">
+                            ไม่พบในระบบ — กรอกข้อมูลเพื่อสร้างคนไข้ใหม่
                         </div>
-                        <div class="quotation-info-field">
-                            <span class="quotation-info-label">วันเกิด</span>
-                            <span class="quotation-info-value" id="patientDOB">@(selectedPatient?.DateOfBirth ?? "-")</span>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">HN <span class="text-danger">*</span></label>
+                                <input asp-for="NewPatientHN" class="form-control form-control-sm" placeholder="เลข HN จาก รพ.ที่ส่งตัว" />
+                                <span asp-validation-for="NewPatientHN" class="text-danger small"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">เลขบัตร ปชช.</label>
+                                <input asp-for="NewPatientNationalId" class="form-control form-control-sm" id="newPatientNationalId" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">ชื่อ <span class="text-danger">*</span></label>
+                                <input asp-for="NewPatientFirstName" class="form-control form-control-sm" />
+                                <span asp-validation-for="NewPatientFirstName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">นามสกุล <span class="text-danger">*</span></label>
+                                <input asp-for="NewPatientLastName" class="form-control form-control-sm" />
+                                <span asp-validation-for="NewPatientLastName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">เพศ</label>
+                                <select asp-for="NewPatientGender" class="form-select form-select-sm">
+                                    <option value="">-</option>
+                                    <option value="M">ชาย</option>
+                                    <option value="F">หญิง</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label form-label-sm">วันเกิด</label>
+                                <input type="text" class="form-control form-control-sm" id="NewPatientDateOfBirth_display"
+                                       placeholder="วว/ดด/ปปปป" maxlength="10" autocomplete="off" inputmode="numeric" />
+                                <input type="hidden" id="NewPatientDateOfBirth" name="NewPatientDateOfBirth"
+                                       value="@(Model.NewPatientDateOfBirth?.ToString("yyyy-MM-dd") ?? "")" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label form-label-sm">โทรศัพท์</label>
+                                <input asp-for="NewPatientPhone" class="form-control form-control-sm" />
+                            </div>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="patientReset()">ยกเลิก / ค้นหาใหม่</button>
                     </div>
-                    <div class="quotation-info-field">
-                        <span class="quotation-info-label">โทรศัพท์</span>
-                        <span class="quotation-info-value" id="patientPhone">@(selectedPatient?.Phone ?? "-")</span>
-                    </div>
-                    <div class="mt-2">
-                        <a asp-controller="Patients" asp-action="Create" target="_blank" class="btn btn-sm btn-outline-secondary">+ เพิ่มคนไข้ใหม่</a>
-                    </div>
+
+                    <span asp-validation-for="PatientId" class="text-danger d-block mt-1"></span>
                 </div>
             </div>
 
-            <div class="quotation-party-column">
-                <div class="quotation-info-card">
-                    <div class="quotation-info-card-title">ลูกค้า (ผู้ชำระเงิน)</div>
-                    <div class="mb-2">
-                        <input asp-for="CustomerId" type="hidden" id="visitCustomerId" />
-                        <div class="search-dropdown">
-                            <input type="text" class="form-control" id="visitCustomerSearch"
-                                   placeholder="ค้นหาลูกค้า (ถ้ามี)"
-                                   value="@selectedCustomerDisplay"
-                                   autocomplete="off" />
-                            <div id="visitCustomerResults" class="search-dropdown-menu" style="display:none;"></div>
-                        </div>
-                    </div>
-                    <div class="quotation-info-field">
-                        <span class="quotation-info-label">ชื่อลูกค้า</span>
-                        <span class="quotation-info-value" id="customerName">@(selectedCustomer?.CustomerName ?? "-")</span>
-                    </div>
-                    <div class="quotation-info-field">
-                        <span class="quotation-info-label">โทรศัพท์</span>
-                        <span class="quotation-info-value" id="customerPhone">@(selectedCustomer?.Phone ?? "-")</span>
-                    </div>
-                    <div class="form-text mt-1">สามารถระบุภายหลังตอนสร้างใบแจ้งหนี้ได้</div>
-                </div>
-            </div>
         </div>
 
         <div class="form-section">
@@ -131,9 +164,17 @@
                     <span asp-validation-for="Ward" class="text-danger"></span>
                 </div>
                 <div class="col-lg-5 col-md-6">
-                    <label asp-for="ReferringHospital" class="form-label"></label>
-                    <input asp-for="ReferringHospital" class="form-control" />
-                    <span asp-validation-for="ReferringHospital" class="text-danger"></span>
+                    <label class="form-label">โรงพยาบาลส่งตัว <small class="text-muted">(ผู้รับบิล)</small></label>
+                    <input asp-for="CustomerId" type="hidden" id="visitHospitalCustomerId" />
+                    <input asp-for="ReferringHospital" type="hidden" id="visitReferringHospital" />
+                    <div class="search-dropdown">
+                        <input type="text" class="form-control" id="visitHospitalSearch"
+                               placeholder="ค้นหา รพ. หรือองค์กรผู้ส่งตัว"
+                               value="@hospitalDisplayValue"
+                               autocomplete="off" />
+                        <div id="visitHospitalResults" class="search-dropdown-menu" style="display:none;"></div>
+                    </div>
+                    <span asp-validation-for="CustomerId" class="text-danger"></span>
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <label asp-for="TreatmentRightId" class="form-label"></label>
@@ -197,9 +238,9 @@
 </form>
 
 <script type="application/json" id="patientLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PatientLookup))</script>
-<script type="application/json" id="customerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
 <script type="application/json" id="itemLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>
 <script type="application/json" id="existingItemsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items.Select(x => new { x.ItemId, x.ItemCode, x.ItemName, x.Unit, x.Quantity })))</script>
+<script type="application/json" id="customerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
@@ -207,48 +248,86 @@
     (function () {
         // ---- Data ----
         const patients = JSON.parse(document.getElementById('patientLookupData').textContent);
-        const customers = JSON.parse(document.getElementById('customerLookupData').textContent);
         const items = JSON.parse(document.getElementById('itemLookupData').textContent);
         let visitItems = JSON.parse(document.getElementById('existingItemsData').textContent) || [];
 
-        // ---- Patient Search ----
-        setupSearch(
-            document.getElementById('visitPatientSearch'),
-            document.getElementById('visitPatientResults'),
-            patients,
-            (p) => `${p.HN} - ${p.FullName}`,
-            (p) => {
-                document.getElementById('visitPatientId').value = p.PatientId;
-                document.getElementById('patientHN').textContent = p.HN;
-                document.getElementById('patientFullName').textContent = p.FullName || '-';
-                document.getElementById('patientGender').textContent = p.Gender === 'M' ? 'ชาย' : p.Gender === 'F' ? 'หญิง' : '-';
-                document.getElementById('patientDOB').textContent = p.DateOfBirth || '-';
-                document.getElementById('patientPhone').textContent = p.Phone || '-';
-            },
-            (keyword) => patients.filter(p =>
-                p.HN.toLowerCase().includes(keyword) ||
-                p.FullName.toLowerCase().includes(keyword) ||
-                (p.NationalId && p.NationalId.includes(keyword))
-            )
-        );
+        // ---- Patient State Machine ----
+        const ptSearch = document.getElementById('pt-search');
+        const ptFound = document.getElementById('pt-found');
+        const ptNew = document.getElementById('pt-new');
+        const patientIdInput = document.getElementById('visitPatientId');
+        const isNewPatientInput = document.getElementById('isNewPatientInput');
+        const patientSearchInput = document.getElementById('visitPatientSearch');
+        const patientDropdown = document.getElementById('visitPatientResults');
 
-        // ---- Customer Search ----
-        setupSearch(
-            document.getElementById('visitCustomerSearch'),
-            document.getElementById('visitCustomerResults'),
-            customers,
-            (c) => `${c.CustomerCode} - ${c.CustomerName}`,
-            (c) => {
-                document.getElementById('visitCustomerId').value = c.CustomerId;
-                document.getElementById('customerName').textContent = c.CustomerName || '-';
-                document.getElementById('customerPhone').textContent = c.Phone || '-';
-            },
-            (keyword) => customers.filter(c =>
-                c.CustomerCode.toLowerCase().includes(keyword) ||
-                c.CustomerName.toLowerCase().includes(keyword) ||
-                (c.TaxId && c.TaxId.includes(keyword))
-            )
-        );
+        function showPatientState(state) {
+            ptSearch.classList.toggle('d-none', state !== 'search');
+            ptFound.classList.toggle('d-none', state !== 'found');
+            ptNew.classList.toggle('d-none', state !== 'new');
+            isNewPatientInput.value = state === 'new' ? 'true' : 'false';
+            if (state !== 'found') patientIdInput.value = '';
+        }
+
+        window.patientReset = function () {
+            showPatientState('search');
+            patientSearchInput.value = '';
+            patientDropdown.style.display = 'none';
+            setTimeout(() => patientSearchInput.focus(), 50);
+        };
+
+        function selectPatient(p) {
+            patientIdInput.value = p.PatientId;
+            document.getElementById('patientHN').textContent = p.HN;
+            document.getElementById('patientFullName').textContent = p.FullName || '-';
+            document.getElementById('patientGender').textContent = p.Gender === 'M' ? 'ชาย' : p.Gender === 'F' ? 'หญิง' : '-';
+            document.getElementById('patientDOB').textContent = (function(iso) {
+                if (!iso) return '-';
+                var p = iso.split('-');
+                return p.length === 3 ? p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543) : iso;
+            })(p.DateOfBirth);
+            document.getElementById('patientPhone').textContent = p.Phone || '-';
+            showPatientState('found');
+            patientDropdown.style.display = 'none';
+        }
+
+        function renderPatientDropdown(keyword) {
+            const kw = keyword.trim().toLowerCase();
+            const matches = kw.length < 1 ? [] : patients.filter(p =>
+                p.HN.toLowerCase().includes(kw) ||
+                p.FullName.toLowerCase().includes(kw) ||
+                (p.NationalId && p.NationalId.includes(kw))
+            ).slice(0, 10);
+
+            const rows = matches.map((p, i) =>
+                `<div class="search-dropdown-item" data-idx="${i}">${esc(p.HN)} — ${esc(p.FullName)}</div>`
+            );
+            rows.push(`<div class="search-dropdown-item" data-action="new" style="color:var(--bs-primary);border-top:1px solid var(--bs-border-color);margin-top:2px;padding-top:6px;">+ ไม่พบในระบบ → สร้างคนไข้ใหม่</div>`);
+
+            patientDropdown.innerHTML = rows.join('');
+            patientDropdown.style.display = '';
+
+            patientDropdown.querySelectorAll('[data-idx]').forEach(el => {
+                el.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    selectPatient(matches[+el.dataset.idx]);
+                });
+            });
+            patientDropdown.querySelector('[data-action="new"]').addEventListener('mousedown', e => {
+                e.preventDefault();
+                const nationalIdEl = document.getElementById('newPatientNationalId');
+                if (nationalIdEl) nationalIdEl.value = patientSearchInput.value.trim();
+                showPatientState('new');
+                patientDropdown.style.display = 'none';
+            });
+        }
+
+        if (patientSearchInput) {
+            patientSearchInput.addEventListener('input', function () {
+                if (this.value.trim().length < 1) { patientDropdown.style.display = 'none'; return; }
+                renderPatientDropdown(this.value);
+            });
+            patientSearchInput.addEventListener('blur', () => setTimeout(() => { patientDropdown.style.display = 'none'; }, 150));
+        }
 
         // ---- Item Search ----
         setupSearch(
@@ -350,6 +429,50 @@
 
         renderItems();
 
+        // ---- Hospital / Billing Customer Search ----
+        (function () {
+            const customers = JSON.parse(document.getElementById('customerLookupData').textContent);
+            const searchInput = document.getElementById('visitHospitalSearch');
+            const resultsEl = document.getElementById('visitHospitalResults');
+            const custIdInput = document.getElementById('visitHospitalCustomerId');
+            const refHospInput = document.getElementById('visitReferringHospital');
+            if (!searchInput) return;
+
+            function renderHospitalResults(keyword) {
+                const kw = (keyword || '').trim().toLowerCase();
+                const matches = (kw.length < 1 ? customers : customers.filter(c =>
+                    c.CustomerCode.toLowerCase().includes(kw) ||
+                    c.CustomerName.toLowerCase().includes(kw)
+                )).slice(0, 15);
+                if (!matches.length) { resultsEl.style.display = 'none'; return; }
+                resultsEl.innerHTML = matches.map(c =>
+                    `<div class="search-dropdown-item" data-id="${c.CustomerId}">${esc(c.CustomerCode)} — ${esc(c.CustomerName)}</div>`
+                ).join('');
+                resultsEl.style.display = '';
+                resultsEl.querySelectorAll('.search-dropdown-item').forEach(el => {
+                    el.addEventListener('mousedown', e => {
+                        e.preventDefault();
+                        const c = matches.find(x => x.CustomerId == el.dataset.id);
+                        if (!c) return;
+                        custIdInput.value = c.CustomerId;
+                        refHospInput.value = c.CustomerName;
+                        searchInput.value = `${c.CustomerCode} — ${c.CustomerName}`;
+                        resultsEl.style.display = 'none';
+                    });
+                });
+            }
+
+            searchInput.addEventListener('focus', () => renderHospitalResults(searchInput.value));
+            searchInput.addEventListener('input', function () {
+                custIdInput.value = '';
+                refHospInput.value = this.value;
+                renderHospitalResults(this.value);
+            });
+            searchInput.addEventListener('blur', () => {
+                setTimeout(() => { resultsEl.style.display = 'none'; }, 150);
+            });
+        })();
+
         // ---- Referring Doctor Search ----
         (function () {
             const select = document.getElementById('visitReferringDoctorSelect');
@@ -411,6 +534,48 @@
                     if (!select.value) searchInput.value = '';
                 }, 150);
             });
+        })();
+
+        // ---- New Patient Date of Birth mask (วว/ดด/ปปปป BE) ----
+        (function () {
+            var display = document.getElementById('NewPatientDateOfBirth_display');
+            var hidden  = document.getElementById('NewPatientDateOfBirth');
+            if (!display || !hidden) return;
+
+            function isoToBe(iso) {
+                if (!iso) return '';
+                var p = iso.split('-');
+                if (p.length !== 3) return '';
+                return p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543);
+            }
+            function beToIso(be) {
+                if (!be || be.length !== 10) return '';
+                var p = be.split('/');
+                if (p.length !== 3) return '';
+                var y = parseInt(p[2], 10);
+                if (isNaN(y) || y < 543) return '';
+                return (y - 543) + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
+            }
+            function sync() {
+                hidden.value = display.value.length === 10 ? (beToIso(display.value) || '') : '';
+            }
+
+            display.addEventListener('keydown', function (e) {
+                var allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                if (allowed.indexOf(e.key) >= 0) return;
+                if (!/^\d$/.test(e.key)) e.preventDefault();
+            });
+            display.addEventListener('input', function () {
+                var digits = display.value.replace(/\D/g, '').substring(0, 8);
+                var result = digits.substring(0, 2);
+                if (digits.length >= 3) result += '/' + digits.substring(2, 4);
+                if (digits.length >= 5) result += '/' + digits.substring(4, 8);
+                display.value = result;
+                sync();
+            });
+            display.addEventListener('change', sync);
+
+            if (hidden.value) display.value = isoToBe(hidden.value);
         })();
     })();
     </script>

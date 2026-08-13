@@ -97,6 +97,10 @@
                             </td>
                             <td class="text-end">
                                 <a asp-action="Details" asp-route-id="@item.PatientVisitId" class="btn btn-sm btn-outline-secondary">รายละเอียด</a>
+                                @if (item.Status != "Cancelled")
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.PatientVisitId" class="btn btn-sm btn-outline-primary ms-1">แก้ไข</a>
+                                }
                             </td>
                         </tr>
                     }

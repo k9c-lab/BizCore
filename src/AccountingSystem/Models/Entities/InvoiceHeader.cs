@@ -119,4 +119,5 @@ public class InvoiceHeader
     public ICollection<InvoiceDetail> InvoiceDetails { get; set; } = new List<InvoiceDetail>();
     public ICollection<PaymentAllocation> PaymentAllocations { get; set; } = new List<PaymentAllocation>();
     public ICollection<BillingNoteInvoice> BillingNoteInvoices { get; set; } = new List<BillingNoteInvoice>();
+    public ICollection<InvoiceAuditLog> AuditLogs { get; set; } = new List<InvoiceAuditLog>();
 }

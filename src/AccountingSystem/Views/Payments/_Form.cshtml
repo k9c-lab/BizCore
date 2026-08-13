@@ -4,6 +4,7 @@
     var selectedCustomerDisplay = selectedCustomer is null
         ? string.Empty
         : $"{selectedCustomer.CustomerCode} - {selectedCustomer.CustomerName}";
+    var allowBackdate = ViewData["AllowPaymentBackdate"] is true;
 }
 
 <div asp-validation-summary="All" class="form-alert"></div>
@@ -25,7 +26,15 @@
             </div>
             <div class="col-lg-3 col-md-6">
                 <label asp-for="PaymentDate" class="form-label"></label>
-                <input asp-for="PaymentDate" class="form-control" />
+                @if (allowBackdate)
+                {
+                    <input asp-for="PaymentDate" class="form-control" />
+                }
+                else
+                {
+                    <input asp-for="PaymentDate" class="form-control" readonly />
+                    <div class="form-text text-muted">วันที่ถูกล็อคเป็นวันปัจจุบัน</div>
+                }
                 <span asp-validation-for="PaymentDate" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-6">
@@ -241,7 +250,7 @@
 
 <script type="application/json" id="paymentCustomerLookupData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
 
-@if (!Model.PaymentId.HasValue)
+@if (!Model.PaymentId.HasValue && allowBackdate)
 {
     <script>
         (function () {

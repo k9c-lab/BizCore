@@ -1,0 +1,478 @@
+@model BizCore.Models.ViewModels.PatientVisitFormViewModel
+
+@{
+    ViewData["Title"] = $"แก้ไขการลงทะเบียน {Model.VN}";
+    var selectedHospital = Model.CustomerLookup.FirstOrDefault(x => x.CustomerId == Model.CustomerId);
+    var hospitalDisplayValue = selectedHospital != null
+        ? $"{selectedHospital.CustomerCode} — {selectedHospital.CustomerName}"
+        : (Model.ReferringHospital ?? string.Empty);
+    var hasDraftInvoice = Model.InvoiceId.HasValue && Model.InvoiceStatus == "Draft";
+    var hasIssuedInvoice = Model.InvoiceId.HasValue && Model.InvoiceStatus != "Draft";
+    var itemsJson = System.Text.Json.JsonSerializer.Serialize(Model.Items.Select(i => new {
+        i.ItemId, i.ItemCode, i.ItemName, i.Unit, Quantity = i.Quantity
+    }));
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow"><a asp-action="Index">ลงทะเบียนคนไข้</a> / <a asp-action="Details" asp-route-id="@Model.PatientVisitId">@Model.VN</a></div>
+        <h1 class="page-title">แก้ไขการลงทะเบียน</h1>
+    </div>
+</div>
+
+@if (hasDraftInvoice)
+{
+    <div class="alert alert-info mb-3">
+        มีใบแจ้งหนี้ <a asp-controller="Invoices" asp-action="Details" asp-route-id="@Model.InvoiceId" class="code-chip">@Model.InvoiceNo</a> (Draft) ที่เชื่อมอยู่
+        — เมื่อกดบันทึก ระบบจะถามว่าต้องการโหลดข้อมูลใหม่ไปที่ใบแจ้งหนี้ด้วยหรือไม่
+    </div>
+}
+@if (hasIssuedInvoice)
+{
+    <div class="alert alert-warning mb-3">
+        ใบแจ้งหนี้ <span class="code-chip">@Model.InvoiceNo</span> ออกเอกสารแล้ว — จะบันทึกการแก้ไขลงทะเบียนได้ แต่ไม่ส่งผลต่อใบแจ้งหนี้
+    </div>
+}
+
+<form asp-action="Edit" asp-route-id="@Model.PatientVisitId" method="post" id="editVisitForm">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="form-alert"></div>
+    <input asp-for="BranchId" type="hidden" />
+    <input asp-for="PatientId" type="hidden" />
+    <input type="hidden" name="SyncInvoice" id="syncInvoiceField" value="false" />
+
+    <div class="form-shell">
+
+        @* Document Info *@
+        <div class="form-section quotation-header-section">
+            <div class="form-section-title">ข้อมูลเอกสาร</div>
+            <div class="row g-2 quotation-header-grid">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">เลขที่ลงทะเบียน (VN)</label>
+                    <div class="form-control readonly-detail">@Model.VN</div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">วันที่ลงทะเบียน</label>
+                    <div class="form-control readonly-detail">@Model.VisitDate.ToString("dd MMM yyyy")</div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">สาขา</label>
+                    <div class="form-control readonly-detail">@Model.BranchName</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quotation-party-grid">
+            @* Patient info (editable) *@
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">ข้อมูลคนไข้</div>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label form-label-sm">HN</label>
+                            <div class="form-control form-control-sm readonly-detail">@Model.EditPatientHN</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label form-label-sm">ชื่อ <span class="text-danger">*</span></label>
+                            <input asp-for="EditPatientFirstName" class="form-control form-control-sm" />
+                            <span asp-validation-for="EditPatientFirstName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label form-label-sm">นามสกุล <span class="text-danger">*</span></label>
+                            <input asp-for="EditPatientLastName" class="form-control form-control-sm" />
+                            <span asp-validation-for="EditPatientLastName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label form-label-sm">เพศ</label>
+                            <select asp-for="EditPatientGender" class="form-select form-select-sm">
+                                <option value="">-</option>
+                                <option value="M">ชาย</option>
+                                <option value="F">หญิง</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label form-label-sm">วันเกิด</label>
+                            <input type="text" class="form-control form-control-sm" id="EditPatientDateOfBirth_display"
+                                   placeholder="วว/ดด/ปปปป" maxlength="10" autocomplete="off" inputmode="numeric" />
+                            <input type="hidden" id="EditPatientDateOfBirth" name="EditPatientDateOfBirth"
+                                   value="@(Model.EditPatientDateOfBirth?.ToString("yyyy-MM-dd") ?? "")" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label form-label-sm">โทรศัพท์</label>
+                            <input asp-for="EditPatientPhone" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Visit details *@
+            <div class="quotation-party-column">
+                <div class="quotation-info-card">
+                    <div class="quotation-info-card-title">รายละเอียดการส่งตัว</div>
+                    <div class="row g-2">
+                        <div class="col-lg-12">
+                            <label class="form-label form-label-sm">โรงพยาบาลส่งตัว <small class="text-muted">(ผู้รับบิล)</small></label>
+                            <input asp-for="CustomerId" type="hidden" id="editHospitalCustomerId" />
+                            <input asp-for="ReferringHospital" type="hidden" id="editReferringHospital" />
+                            <div class="search-dropdown">
+                                <input type="text" class="form-control form-control-sm" id="editHospitalSearch"
+                                       placeholder="ค้นหา รพ. หรือองค์กรผู้ส่งตัว"
+                                       value="@hospitalDisplayValue" autocomplete="off" />
+                                <div id="editHospitalResults" class="search-dropdown-menu" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <div class="col-lg-12">
+                            <label asp-for="ReferringDoctorId" class="form-label form-label-sm"></label>
+                            <select asp-for="ReferringDoctorId" asp-items="Model.ReferringDoctorOptions"
+                                    class="form-select form-select-sm" id="visitReferringDoctorSelect">
+                                <option value="">- ไม่ระบุ -</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-12">
+                            <label asp-for="TreatmentRightId" class="form-label form-label-sm"></label>
+                            <select asp-for="TreatmentRightId" asp-items="Model.TreatmentRightOptions"
+                                    class="form-select form-select-sm">
+                                <option value="">- ไม่ระบุ -</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="Weight" class="form-label form-label-sm"></label>
+                            <input asp-for="Weight" class="form-control form-control-sm" type="number" step="0.1" min="0" />
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="Height" class="form-label form-label-sm"></label>
+                            <input asp-for="Height" class="form-control form-control-sm" type="number" step="0.1" min="0" />
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="Ward" class="form-label form-label-sm"></label>
+                            <input asp-for="Ward" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Remark" class="form-label form-label-sm"></label>
+                            <textarea asp-for="Remark" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Items *@
+        <div class="form-section">
+            <div class="form-section-title">รายการตรวจ</div>
+            <div class="mb-2">
+                <div class="search-dropdown" style="max-width:420px;">
+                    <input type="text" class="form-control form-control-sm" id="editItemSearchInput"
+                           placeholder="ค้นหารายการตรวจ" autocomplete="off" />
+                    <div id="editItemSearchResults" class="search-dropdown-menu" style="display:none;"></div>
+                </div>
+            </div>
+            <div id="editVisitItemsEmpty" class="text-muted small py-2" style="@(Model.Items.Any() ? "display:none;" : "")">ยังไม่มีรายการ</div>
+            <div class="table-responsive" id="editVisitItemsTable" style="@(Model.Items.Any() ? "" : "display:none;")">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>รหัส</th>
+                            <th>รายการ</th>
+                            <th>หน่วย</th>
+                            <th style="width:110px;">จำนวน</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="editVisitItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="form-actions">
+        <a asp-action="Details" asp-route-id="@Model.PatientVisitId" class="btn btn-outline-secondary">ยกเลิก</a>
+        <button type="button" class="btn btn-primary" id="editSaveBtn">บันทึกการแก้ไข</button>
+    </div>
+</form>
+
+<script id="editItemLookupData" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ItemLookup))</script>
+<script id="editCustomerLookupData" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CustomerLookup))</script>
+<script id="editInitialItemsData" type="application/json">@Html.Raw(itemsJson)</script>
+
+@if (Model.AuditLogs.Any())
+{
+    <div class="form-shell mt-4">
+        <div class="form-section">
+            <div class="form-section-title">ประวัติการแก้ไข</div>
+            <div class="audit-log-list">
+                @foreach (var log in Model.AuditLogs)
+                {
+                    <div class="audit-log-row">
+                        <div class="audit-log-meta">
+                            <span class="audit-log-user">@log.UserName</span>
+                            <span class="audit-log-time">@log.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                        </div>
+                        <div class="audit-log-desc">@log.Description</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="modal fade" id="syncInvoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ยืนยันการบันทึก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>มีใบแจ้งหนี้ <strong id="syncModalInvoiceNo" class="code-chip"></strong> (Draft) ที่เชื่อมอยู่กับการลงทะเบียนนี้</p>
+                <p class="mb-0">ต้องการโหลดข้อมูลใหม่ไปที่ใบแจ้งหนี้ด้วยหรือไม่?</p>
+                <ul class="mt-2 mb-0 text-muted small">
+                    <li>ข้อมูลคนไข้, รายการตรวจ, โรงพยาบาลส่งตัว, แพทย์ส่ง จะถูกอัปเดตในใบแจ้งหนี้</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-outline-primary" id="btnSyncNo">บันทึกเฉพาะการลงทะเบียน</button>
+                <button type="button" class="btn btn-primary" id="btnSyncYes">โหลดข้อมูลใหม่ไปที่ใบแจ้งหนี้</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+    (function () {
+        var hasDraftInvoice = @(hasDraftInvoice ? "true" : "false");
+        var draftInvoiceNo = '@(Html.Raw(Model.InvoiceNo ?? ""))';
+
+        // ---- Items ----
+        var items = JSON.parse(document.getElementById('editItemLookupData').textContent);
+        var visitItems = JSON.parse(document.getElementById('editInitialItemsData').textContent);
+
+        function esc(str) {
+            return (str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderItems() {
+            var tbody = document.getElementById('editVisitItemsBody');
+            var empty = document.getElementById('editVisitItemsEmpty');
+            var table = document.getElementById('editVisitItemsTable');
+            tbody.innerHTML = '';
+            if (visitItems.length === 0) {
+                empty.style.display = '';
+                table.style.display = 'none';
+                return;
+            }
+            empty.style.display = 'none';
+            table.style.display = '';
+            visitItems.forEach(function (item, index) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td><input type="hidden" name="Items[' + index + '].ItemId" value="' + item.ItemId + '" /><span class="code-chip">' + esc(item.ItemCode) + '</span></td>' +
+                    '<td>' + esc(item.ItemName) + '</td>' +
+                    '<td>' + esc(item.Unit) + '</td>' +
+                    '<td><input type="number" name="Items[' + index + '].Quantity" value="' + item.Quantity + '" min="0.01" step="0.01" class="form-control form-control-sm" onchange="editUpdateQty(' + index + ', this.value)" /></td>' +
+                    '<td><button type="button" class="btn btn-sm btn-outline-danger" onclick="editRemoveItem(' + index + ')">ลบ</button></td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.editRemoveItem = function (index) {
+            visitItems.splice(index, 1);
+            renderItems();
+        };
+        window.editUpdateQty = function (index, val) {
+            visitItems[index].Quantity = parseFloat(val) || 1;
+        };
+
+        // ---- Item Search ----
+        (function () {
+            var input = document.getElementById('editItemSearchInput');
+            var dropdown = document.getElementById('editItemSearchResults');
+            input.addEventListener('input', function () {
+                var kw = this.value.trim().toLowerCase();
+                if (kw.length < 1) { dropdown.style.display = 'none'; return; }
+                var results = items.filter(function (i) {
+                    return i.ItemCode.toLowerCase().includes(kw) || i.ItemName.toLowerCase().includes(kw);
+                }).slice(0, 10);
+                if (!results.length) { dropdown.style.display = 'none'; return; }
+                dropdown.innerHTML = results.map(function (i, idx) {
+                    return '<div class="search-dropdown-item" data-index="' + idx + '">' + esc(i.ItemCode) + ' — ' + esc(i.ItemName) + '</div>';
+                }).join('');
+                dropdown.style.display = '';
+                dropdown.querySelectorAll('.search-dropdown-item').forEach(function (el, idx) {
+                    el.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        var item = results[idx];
+                        visitItems.push({ ItemId: item.ItemId, ItemCode: item.ItemCode, ItemName: item.ItemName, Unit: item.Unit, Quantity: 1 });
+                        renderItems();
+                        input.value = '';
+                        dropdown.style.display = 'none';
+                    });
+                });
+            });
+            input.addEventListener('blur', function () {
+                setTimeout(function () { dropdown.style.display = 'none'; }, 150);
+            });
+        })();
+
+        // ---- Hospital Search ----
+        (function () {
+            var customers = JSON.parse(document.getElementById('editCustomerLookupData').textContent);
+            var searchInput = document.getElementById('editHospitalSearch');
+            var resultsEl = document.getElementById('editHospitalResults');
+            var custIdInput = document.getElementById('editHospitalCustomerId');
+            var refHospInput = document.getElementById('editReferringHospital');
+            if (!searchInput) return;
+
+            function renderResults(keyword) {
+                var kw = (keyword || '').trim().toLowerCase();
+                var matches = (kw.length < 1 ? customers : customers.filter(function (c) {
+                    return c.CustomerCode.toLowerCase().includes(kw) || c.CustomerName.toLowerCase().includes(kw);
+                })).slice(0, 15);
+                if (!matches.length) { resultsEl.style.display = 'none'; return; }
+                resultsEl.innerHTML = matches.map(function (c) {
+                    return '<div class="search-dropdown-item" data-id="' + c.CustomerId + '">' + esc(c.CustomerCode) + ' — ' + esc(c.CustomerName) + '</div>';
+                }).join('');
+                resultsEl.style.display = '';
+                resultsEl.querySelectorAll('.search-dropdown-item').forEach(function (el) {
+                    el.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        var c = matches.find(function (x) { return x.CustomerId == el.dataset.id; });
+                        if (!c) return;
+                        custIdInput.value = c.CustomerId;
+                        refHospInput.value = c.CustomerName;
+                        searchInput.value = c.CustomerCode + ' — ' + c.CustomerName;
+                        resultsEl.style.display = 'none';
+                    });
+                });
+            }
+
+            searchInput.addEventListener('focus', function () { renderResults(searchInput.value); });
+            searchInput.addEventListener('input', function () {
+                custIdInput.value = '';
+                refHospInput.value = this.value;
+                renderResults(this.value);
+            });
+            searchInput.addEventListener('blur', function () {
+                setTimeout(function () { resultsEl.style.display = 'none'; }, 150);
+            });
+        })();
+
+        // ---- Referring Doctor Search ----
+        (function () {
+            var select = document.getElementById('visitReferringDoctorSelect');
+            if (!select) return;
+            var options = Array.from(select.options).filter(function (o) { return o.value; })
+                .map(function (o) { return { id: o.value, text: o.text, search: o.text.toLowerCase() }; });
+
+            select.classList.add('d-none');
+            var wrapper = document.createElement('div');
+            wrapper.className = 'search-dropdown';
+            var searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'form-control form-control-sm';
+            searchInput.placeholder = 'ค้นหาจากรหัสหรือชื่อแพทย์ส่ง';
+            searchInput.autocomplete = 'off';
+            var resultsEl = document.createElement('div');
+            resultsEl.className = 'search-dropdown-menu';
+            resultsEl.style.display = 'none';
+            wrapper.appendChild(searchInput);
+            wrapper.appendChild(resultsEl);
+            select.insertAdjacentElement('afterend', wrapper);
+
+            if (select.value) {
+                var current = options.find(function (o) { return o.id === select.value; });
+                if (current) searchInput.value = current.text;
+            }
+
+            function renderDrResults(keyword) {
+                var kw = (keyword || '').trim().toLowerCase();
+                var matches = options.filter(function (o) { return !kw || o.search.includes(kw); }).slice(0, 15);
+                if (!matches.length) { resultsEl.style.display = 'none'; return; }
+                resultsEl.innerHTML = matches.map(function (o) {
+                    return '<div class="search-dropdown-item" data-id="' + o.id + '">' + esc(o.text) + '</div>';
+                }).join('');
+                resultsEl.style.display = '';
+                resultsEl.querySelectorAll('.search-dropdown-item').forEach(function (el) {
+                    el.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        var opt = matches.find(function (o) { return o.id === el.dataset.id; });
+                        if (!opt) return;
+                        select.value = opt.id;
+                        searchInput.value = opt.text;
+                        resultsEl.style.display = 'none';
+                    });
+                });
+            }
+
+            searchInput.addEventListener('focus', function () { renderDrResults(searchInput.value); });
+            searchInput.addEventListener('input', function () { select.value = ''; renderDrResults(this.value); });
+            searchInput.addEventListener('blur', function () {
+                setTimeout(function () {
+                    resultsEl.style.display = 'none';
+                    if (!select.value) searchInput.value = '';
+                }, 150);
+            });
+        })();
+
+        // ---- DOB Mask (EditPatientDateOfBirth) ----
+        (function () {
+            var display = document.getElementById('EditPatientDateOfBirth_display');
+            var hidden  = document.getElementById('EditPatientDateOfBirth');
+            if (!display || !hidden) return;
+
+            function isoToBe(iso) {
+                if (!iso) return '';
+                var p = iso.split('-');
+                return p.length === 3 ? p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543) : '';
+            }
+            function beToIso(be) {
+                if (!be || be.length !== 10) return '';
+                var p = be.split('/');
+                if (p.length !== 3) return '';
+                var y = parseInt(p[2], 10);
+                if (isNaN(y) || y < 543) return '';
+                return (y - 543) + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
+            }
+            function sync() { hidden.value = display.value.length === 10 ? (beToIso(display.value) || '') : ''; }
+
+            display.addEventListener('keydown', function (e) {
+                var allowed = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+                if (allowed.indexOf(e.key) >= 0) return;
+                if (!/^\d$/.test(e.key)) e.preventDefault();
+            });
+            display.addEventListener('input', function () {
+                var digits = display.value.replace(/\D/g, '').substring(0, 8);
+                var result = digits.substring(0, 2);
+                if (digits.length >= 3) result += '/' + digits.substring(2, 4);
+                if (digits.length >= 5) result += '/' + digits.substring(4, 8);
+                display.value = result;
+                sync();
+            });
+            display.addEventListener('change', sync);
+            if (hidden.value) display.value = isoToBe(hidden.value);
+        })();
+
+        // ---- Save with Invoice Confirm Modal ----
+        document.getElementById('editSaveBtn').addEventListener('click', function () {
+            if (hasDraftInvoice) {
+                document.getElementById('syncModalInvoiceNo').textContent = draftInvoiceNo;
+                new bootstrap.Modal(document.getElementById('syncInvoiceModal')).show();
+            } else {
+                document.getElementById('editVisitForm').submit();
+            }
+        });
+        document.getElementById('btnSyncYes').addEventListener('click', function () {
+            document.getElementById('syncInvoiceField').value = 'true';
+            document.getElementById('editVisitForm').submit();
+        });
+        document.getElementById('btnSyncNo').addEventListener('click', function () {
+            document.getElementById('syncInvoiceField').value = 'false';
+            document.getElementById('editVisitForm').submit();
+        });
+
+        renderItems();
+    })();
+    </script>
+}

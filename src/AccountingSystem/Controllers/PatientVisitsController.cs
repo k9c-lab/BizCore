@@ -82,8 +82,21 @@ public class PatientVisitsController : CrudControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PatientVisitFormViewModel model)
     {
-        if (!model.PatientId.HasValue)
-            ModelState.AddModelError(nameof(model.PatientId), "กรุณาเลือกคนไข้");
+        if (model.IsNewPatient)
+        {
+            ModelState.Remove(nameof(model.PatientId));
+            if (string.IsNullOrWhiteSpace(model.NewPatientHN))
+                ModelState.AddModelError(nameof(model.NewPatientHN), "กรุณากรอก HN");
+            if (string.IsNullOrWhiteSpace(model.NewPatientFirstName))
+                ModelState.AddModelError(nameof(model.NewPatientFirstName), "กรุณากรอกชื่อ");
+            if (string.IsNullOrWhiteSpace(model.NewPatientLastName))
+                ModelState.AddModelError(nameof(model.NewPatientLastName), "กรุณากรอกนามสกุล");
+        }
+        else
+        {
+            if (!model.PatientId.HasValue)
+                ModelState.AddModelError(nameof(model.PatientId), "กรุณาเลือกคนไข้");
+        }
 
         var validItems = model.Items.Where(x => x.ItemId.HasValue).ToList();
 
@@ -91,6 +104,33 @@ public class PatientVisitsController : CrudControllerBase
         {
             await PopulateLookupsAsync(model);
             return View(model);
+        }
+
+        if (model.IsNewPatient)
+        {
+            var newPatient = new Patient
+            {
+                HN = model.NewPatientHN!.Trim(),
+                NationalId = model.NewPatientNationalId?.Trim(),
+                FirstName = model.NewPatientFirstName!.Trim(),
+                LastName = model.NewPatientLastName!.Trim(),
+                Gender = model.NewPatientGender ?? string.Empty,
+                DateOfBirth = model.NewPatientDateOfBirth,
+                Phone = model.NewPatientPhone?.Trim(),
+                IsActive = true
+            };
+            _context.Patients.Add(newPatient);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsDuplicateConstraintViolation(ex))
+            {
+                ModelState.AddModelError(nameof(model.NewPatientHN), "HN นี้มีอยู่ในระบบแล้ว กรุณาตรวจสอบ");
+                await PopulateLookupsAsync(model);
+                return View(model);
+            }
+            model.PatientId = newPatient.PatientId;
         }
 
         model.VN = await GetNextVNAsync(model.VisitDate);
@@ -152,6 +192,7 @@ public class PatientVisitsController : CrudControllerBase
             .Include(x => x.Branch)
             .Include(x => x.PatientVisitItems)
                 .ThenInclude(x => x.Item)
+            .Include(x => x.AuditLogs.OrderByDescending(a => a.OccurredAt))
             .FirstOrDefaultAsync(x => x.PatientVisitId == id.Value);
 
         if (visit is null || !CanAccessBranch(visit.BranchId))
@@ -394,5 +435,341 @@ public class PatientVisitsController : CrudControllerBase
 
         if (model.BranchId.HasValue && string.IsNullOrEmpty(model.BranchName))
             model.BranchName = await GetBranchNameAsync(model.BranchId);
+    }
+
+    private void AddVisitAuditLog(int patientVisitId, string description)
+    {
+        _context.PatientVisitAuditLogs.Add(new PatientVisitAuditLog
+        {
+            PatientVisitId = patientVisitId,
+            UserId = CurrentUserId(),
+            UserName = User.Identity?.Name ?? "",
+            OccurredAt = DateTime.UtcNow,
+            Description = description
+        });
+    }
+
+    private PatientVisitFormViewModel MapVisitToEditModel(PatientVisit visit)
+    {
+        var patient = visit.Patient;
+        return new PatientVisitFormViewModel
+        {
+            PatientVisitId = visit.PatientVisitId,
+            VN = visit.VN,
+            VisitDate = visit.VisitDate,
+            PatientId = visit.PatientId,
+            CustomerId = visit.CustomerId,
+            Weight = visit.Weight,
+            Height = visit.Height,
+            Ward = visit.Ward,
+            TreatmentRightId = visit.TreatmentRightId,
+            ReferringDoctorId = visit.ReferringDoctorId,
+            ReferringHospital = visit.ReferringHospital,
+            Remark = visit.Remark,
+            Status = visit.Status,
+            BranchId = visit.BranchId,
+            InvoiceId = visit.InvoiceId,
+            InvoiceNo = visit.Invoice?.InvoiceNo,
+            InvoiceStatus = visit.Invoice?.Status,
+            EditPatientHN = patient?.HN,
+            EditPatientFirstName = patient?.FirstName,
+            EditPatientLastName = patient?.LastName,
+            EditPatientDateOfBirth = patient?.DateOfBirth,
+            EditPatientGender = patient?.Gender,
+            EditPatientPhone = patient?.Phone,
+            Items = visit.PatientVisitItems.Select(i => new PatientVisitItemViewModel
+            {
+                PatientVisitItemId = i.PatientVisitItemId,
+                ItemId = i.ItemId,
+                ItemCode = i.Item?.ItemCode ?? "",
+                ItemName = i.Item?.ItemName ?? "",
+                Unit = i.Item?.Unit ?? "",
+                Quantity = i.Quantity
+            }).ToList(),
+            AuditLogs = visit.AuditLogs
+                .OrderByDescending(a => a.OccurredAt)
+                .Select(a => new PatientVisitAuditLogViewModel
+                {
+                    UserName = a.UserName,
+                    OccurredAt = a.OccurredAt,
+                    Description = a.Description
+                })
+                .ToList()
+        };
+    }
+
+    public async Task<IActionResult> Edit(int? id)
+    {
+        if (id is null) return NotFound();
+
+        var visit = await _context.PatientVisits
+            .Include(x => x.Patient)
+            .Include(x => x.PatientVisitItems)
+                .ThenInclude(x => x.Item)
+            .Include(x => x.Invoice)
+            .Include(x => x.AuditLogs.OrderByDescending(a => a.OccurredAt))
+            .FirstOrDefaultAsync(x => x.PatientVisitId == id.Value);
+
+        if (visit is null || !CanAccessBranch(visit.BranchId))
+            return NotFound();
+
+        var model = MapVisitToEditModel(visit);
+        model.BranchName = await GetBranchNameAsync(visit.BranchId);
+        await PopulateLookupsAsync(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, PatientVisitFormViewModel model)
+    {
+        var visit = await _context.PatientVisits
+            .Include(x => x.Patient)
+            .Include(x => x.PatientVisitItems)
+                .ThenInclude(x => x.Item)
+            .Include(x => x.Invoice)
+                .ThenInclude(x => x!.InvoiceDetails)
+            .Include(x => x.AuditLogs.OrderByDescending(a => a.OccurredAt))
+            .FirstOrDefaultAsync(x => x.PatientVisitId == id);
+
+        if (visit is null || !CanAccessBranch(visit.BranchId))
+            return NotFound();
+
+        ModelState.Remove(nameof(model.PatientId));
+        ModelState.Remove(nameof(model.VN));
+        ModelState.Remove(nameof(model.IsNewPatient));
+
+        var validItems = model.Items.Where(x => x.ItemId.HasValue).ToList();
+
+        if (!ModelState.IsValid)
+        {
+            var errorModel = MapVisitToEditModel(visit);
+            errorModel.BranchName = await GetBranchNameAsync(visit.BranchId);
+            // keep user's input for editable fields
+            errorModel.EditPatientFirstName = model.EditPatientFirstName;
+            errorModel.EditPatientLastName = model.EditPatientLastName;
+            errorModel.EditPatientDateOfBirth = model.EditPatientDateOfBirth;
+            errorModel.EditPatientGender = model.EditPatientGender;
+            errorModel.EditPatientPhone = model.EditPatientPhone;
+            errorModel.CustomerId = model.CustomerId;
+            errorModel.ReferringHospital = model.ReferringHospital;
+            errorModel.ReferringDoctorId = model.ReferringDoctorId;
+            errorModel.TreatmentRightId = model.TreatmentRightId;
+            errorModel.Weight = model.Weight;
+            errorModel.Height = model.Height;
+            errorModel.Ward = model.Ward;
+            errorModel.Remark = model.Remark;
+            errorModel.Items = validItems;
+            await PopulateLookupsAsync(errorModel);
+            return View(errorModel);
+        }
+
+        var auditLines = new List<string>();
+
+        // --- Patient master changes ---
+        var patient = visit.Patient;
+        if (patient != null && model.EditPatientFirstName != null)
+        {
+            var changes = new List<string>();
+            var newFirst = model.EditPatientFirstName.Trim();
+            var newLast = model.EditPatientLastName?.Trim() ?? "";
+
+            if (patient.FirstName != newFirst || patient.LastName != newLast)
+            {
+                changes.Add($"- ชื่อ: '{patient.FirstName} {patient.LastName}' → '{newFirst} {newLast}'");
+                patient.FirstName = newFirst;
+                patient.LastName = newLast;
+            }
+            if (patient.DateOfBirth != model.EditPatientDateOfBirth)
+            {
+                static string FmtDob(DateTime? d) => d.HasValue
+                    ? $"{d.Value:dd/MM}/{d.Value.Year + 543}" : "-";
+                changes.Add($"- วันเกิด: '{FmtDob(patient.DateOfBirth)}' → '{FmtDob(model.EditPatientDateOfBirth)}'");
+                patient.DateOfBirth = model.EditPatientDateOfBirth;
+            }
+            var newGender = model.EditPatientGender ?? patient.Gender;
+            if (patient.Gender != newGender)
+            {
+                static string GL(string? g) => g == "M" ? "ชาย" : g == "F" ? "หญิง" : "-";
+                changes.Add($"- เพศ: '{GL(patient.Gender)}' → '{GL(newGender)}'");
+                patient.Gender = newGender;
+            }
+            var newPhone = model.EditPatientPhone?.Trim();
+            if (patient.Phone != newPhone)
+            {
+                changes.Add($"- โทรศัพท์: '{patient.Phone ?? "-"}' → '{newPhone ?? "-"}'");
+                patient.Phone = newPhone;
+            }
+            if (changes.Any())
+                auditLines.Add("แก้ไขข้อมูลคนไข้:\n" + string.Join("\n", changes));
+        }
+
+        // --- Visit field changes ---
+        {
+            var changes = new List<string>();
+            var newHosp = model.ReferringHospital?.Trim();
+            if (visit.ReferringHospital != newHosp)
+            {
+                changes.Add($"- รพ.ส่งตัว: '{visit.ReferringHospital ?? "-"}' → '{newHosp ?? "-"}'");
+                visit.ReferringHospital = newHosp;
+            }
+
+            if (visit.CustomerId != model.CustomerId)
+            {
+                var custIds = new[] { visit.CustomerId, model.CustomerId }
+                    .Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
+                var custNames = custIds.Any()
+                    ? (await _context.Customers.Where(x => custIds.Contains(x.CustomerId))
+                        .Select(x => new { x.CustomerId, x.CustomerName }).ToListAsync())
+                        .ToDictionary(x => x.CustomerId, x => x.CustomerName)
+                    : new Dictionary<int, string>();
+                var oldName = visit.CustomerId.HasValue && custNames.TryGetValue(visit.CustomerId.Value, out var on) ? on : "-";
+                var newName = model.CustomerId.HasValue && custNames.TryGetValue(model.CustomerId.Value, out var nn) ? nn : "-";
+                changes.Add($"- ผู้รับบิล: '{oldName}' → '{newName}'");
+                visit.CustomerId = model.CustomerId;
+            }
+
+            if (visit.ReferringDoctorId != model.ReferringDoctorId)
+            {
+                var drIds = new[] { visit.ReferringDoctorId, model.ReferringDoctorId }
+                    .Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
+                var drNames = drIds.Any()
+                    ? (await _context.ReferringDoctors.Where(x => drIds.Contains(x.ReferringDoctorId))
+                        .Select(x => new { x.ReferringDoctorId, x.DoctorName }).ToListAsync())
+                        .ToDictionary(x => x.ReferringDoctorId, x => x.DoctorName)
+                    : new Dictionary<int, string>();
+                var oldDr = visit.ReferringDoctorId.HasValue && drNames.TryGetValue(visit.ReferringDoctorId.Value, out var od) ? od : "-";
+                var newDr = model.ReferringDoctorId.HasValue && drNames.TryGetValue(model.ReferringDoctorId.Value, out var nd) ? nd : "-";
+                changes.Add($"- แพทย์ส่ง: '{oldDr}' → '{newDr}'");
+                visit.ReferringDoctorId = model.ReferringDoctorId;
+            }
+
+            if (visit.TreatmentRightId != model.TreatmentRightId)
+            {
+                changes.Add("- สิทธิการรักษา: เปลี่ยนแปลง");
+                visit.TreatmentRightId = model.TreatmentRightId;
+            }
+            if (visit.Weight != model.Weight)
+            {
+                changes.Add($"- น้ำหนัก: {visit.Weight?.ToString("F1") ?? "-"} → {model.Weight?.ToString("F1") ?? "-"} กก.");
+                visit.Weight = model.Weight;
+            }
+            if (visit.Height != model.Height)
+            {
+                changes.Add($"- ส่วนสูง: {visit.Height?.ToString("F1") ?? "-"} → {model.Height?.ToString("F1") ?? "-"} ซม.");
+                visit.Height = model.Height;
+            }
+            var newWard = model.Ward?.Trim();
+            if (visit.Ward != newWard)
+            {
+                changes.Add($"- Ward: '{visit.Ward ?? "-"}' → '{newWard ?? "-"}'");
+                visit.Ward = newWard;
+            }
+            visit.Remark = model.Remark?.Trim();
+
+            if (changes.Any())
+                auditLines.Add("แก้ไขข้อมูลการลงทะเบียน:\n" + string.Join("\n", changes));
+        }
+
+        // --- Item changes ---
+        {
+            var changes = new List<string>();
+            var oldMap = visit.PatientVisitItems.ToDictionary(x => x.ItemId);
+            var newMap = validItems.Where(x => x.ItemId.HasValue).ToDictionary(x => x.ItemId!.Value);
+
+            var removedIds = oldMap.Keys.Except(newMap.Keys).ToList();
+            var addedIds = newMap.Keys.Except(oldMap.Keys).ToList();
+            var allChangedIds = removedIds.Concat(addedIds).Distinct().ToList();
+
+            Dictionary<int, string> changedNames = new();
+            if (allChangedIds.Any())
+                changedNames = (await _context.Items.Where(x => allChangedIds.Contains(x.ItemId))
+                    .Select(x => new { x.ItemId, x.ItemName }).ToListAsync())
+                    .ToDictionary(x => x.ItemId, x => x.ItemName);
+
+            foreach (var rid in removedIds)
+                changes.Add($"- ลบ: {changedNames.GetValueOrDefault(rid, $"Item #{rid}")}");
+            foreach (var aid in addedIds)
+                changes.Add($"- เพิ่ม: {changedNames.GetValueOrDefault(aid, $"Item #{aid}")}");
+
+            foreach (var (itemId, ni) in newMap)
+            {
+                if (oldMap.TryGetValue(itemId, out var oi) && oi.Quantity != ni.Quantity)
+                    changes.Add($"- เปลี่ยนจำนวน: {oi.Item?.ItemName ?? $"Item #{itemId}"} {oi.Quantity} → {ni.Quantity}");
+            }
+
+            if (changes.Any())
+                auditLines.Add("แก้ไขรายการตรวจ:\n" + string.Join("\n", changes));
+
+            // Apply item changes
+            _context.PatientVisitItems.RemoveRange(visit.PatientVisitItems.ToList());
+            foreach (var item in validItems)
+            {
+                _context.PatientVisitItems.Add(new PatientVisitItem
+                {
+                    PatientVisitId = visit.PatientVisitId,
+                    ItemId = item.ItemId!.Value,
+                    Quantity = item.Quantity
+                });
+            }
+        }
+
+        // --- Write audit log ---
+        if (auditLines.Any())
+            AddVisitAuditLog(visit.PatientVisitId, string.Join("\n\n", auditLines));
+
+        // --- Sync to Invoice ---
+        var invoice = visit.Invoice;
+        if (invoice != null && invoice.Status == "Draft" && model.SyncInvoice)
+        {
+            if (patient != null)
+            {
+                invoice.PatientFullName = $"{patient.FirstName} {patient.LastName}";
+                invoice.PatientHn = patient.HN;
+                invoice.PatientGender = patient.Gender;
+                invoice.PatientBirthDate = patient.DateOfBirth;
+            }
+            if (visit.CustomerId.HasValue)
+                invoice.CustomerId = visit.CustomerId.Value;
+            invoice.ReferringDoctorId = visit.ReferringDoctorId;
+            invoice.TreatmentRightId = visit.TreatmentRightId;
+            invoice.PatientWard = visit.Ward;
+            invoice.Remark = visit.Remark;
+
+            // Reload invoice items from updated visit items
+            _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
+            var itemIds = validItems.Select(x => x.ItemId!.Value).ToList();
+            var itemsData = await _context.Items
+                .Where(x => itemIds.Contains(x.ItemId))
+                .ToDictionaryAsync(x => x.ItemId);
+
+            var lineNum = 1;
+            foreach (var vi in validItems)
+            {
+                if (!itemsData.TryGetValue(vi.ItemId!.Value, out var iData)) continue;
+                var lineTotal = iData.UnitPrice * vi.Quantity;
+                invoice.InvoiceDetails.Add(new InvoiceDetail
+                {
+                    LineNumber = lineNum++,
+                    ItemId = iData.ItemId,
+                    Qty = vi.Quantity,
+                    QuotedQty = vi.Quantity,
+                    UnitPrice = iData.UnitPrice,
+                    DiscountAmount = 0,
+                    LineTotal = lineTotal
+                });
+            }
+            invoice.Subtotal = invoice.InvoiceDetails.Sum(x => x.LineTotal);
+            invoice.VatAmount = 0;
+            invoice.TotalAmount = invoice.Subtotal;
+            invoice.BalanceAmount = invoice.TotalAmount;
+
+            AddVisitAuditLog(visit.PatientVisitId, $"โหลดข้อมูลใหม่ไปที่ใบแจ้งหนี้ {invoice.InvoiceNo}");
+        }
+
+        await _context.SaveChangesAsync();
+
+        TempData["VisitSuccess"] = "บันทึกการแก้ไขเรียบร้อยแล้ว";
+        return RedirectToAction(nameof(Details), new { id });
     }
 }

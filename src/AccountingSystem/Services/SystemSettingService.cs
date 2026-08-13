@@ -152,6 +152,31 @@ public class SystemSettingService : ISystemSettingService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> GetAllowPaymentBackdateAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var value = await _context.SystemSettings
+                .AsNoTracking()
+                .Where(x => x.SettingKey == SettingKeys.PaymentAllowBackdate)
+                .Select(x => x.SettingValue)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return value is not null && bool.TryParse(value, out var allowed) && allowed;
+        }
+        catch (Exception ex) when (ex is DbUpdateException || ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    public async Task SetAllowPaymentBackdateAsync(bool allowed, int? updatedByUserId, CancellationToken cancellationToken = default)
+    {
+        await _context.Database.ExecuteSqlRawAsync(EnsureSystemSettingsSql, cancellationToken);
+        await UpsertSettingAsync(SettingKeys.PaymentAllowBackdate, allowed.ToString().ToLowerInvariant(), "อนุญาตให้บันทึกวันที่รับชำระย้อนหลัง", updatedByUserId, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task UpsertSettingAsync(string key, string value, string description, int? updatedByUserId, CancellationToken cancellationToken)
     {
         var setting = await _context.SystemSettings.FirstOrDefaultAsync(x => x.SettingKey == key, cancellationToken);

@@ -8,4 +8,6 @@ public interface ISystemSettingService
     Task SetEnablePatientInfoAsync(bool enabled, int? updatedByUserId, CancellationToken cancellationToken = default);
     Task<(string Name, string Title)> GetAuthorisedSignatureAsync(CancellationToken cancellationToken = default);
     Task SetAuthorisedSignatureAsync(string name, string title, int? updatedByUserId, CancellationToken cancellationToken = default);
+    Task<bool> GetAllowPaymentBackdateAsync(CancellationToken cancellationToken = default);
+    Task SetAllowPaymentBackdateAsync(bool allowed, int? updatedByUserId, CancellationToken cancellationToken = default);
 }

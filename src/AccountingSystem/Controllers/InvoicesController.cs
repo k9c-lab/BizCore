@@ -226,6 +226,14 @@ public class InvoicesController : CrudControllerBase
                 .FirstOrDefaultAsync(x => x.QuotationHeaderId == model.QuotationId.Value)
             : null;
 
+        // Capture old state before applying changes (for audit log)
+        var auditOldReferringDoctorId = invoice.ReferringDoctorId;
+        var auditOldPatientFullName = invoice.PatientFullName?.Trim();
+        var auditOldPatientHn = invoice.PatientHn?.Trim();
+        var auditOldDetails = invoice.InvoiceDetails
+            .Select(d => new { d.ItemId, d.Qty, d.UnitPrice })
+            .ToList();
+
         invoice.InvoiceDate = model.InvoiceDate.Date;
         invoice.CustomerId = model.CustomerId!.Value;
         invoice.SalespersonId = model.SalespersonId;
@@ -259,6 +267,49 @@ public class InvoicesController : CrudControllerBase
 
         _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
         invoice.InvoiceDetails = model.Details.Select(MapDetailEntity).ToList();
+
+        // Build audit log entry
+        {
+            var newDetailMap = model.Details
+                .Where(d => d.ItemId.HasValue)
+                .ToDictionary(d => d.ItemId!.Value, d => d);
+
+            var removedIds = auditOldDetails
+                .Select(d => d.ItemId)
+                .Where(id => !newDetailMap.ContainsKey(id))
+                .ToList();
+            var removedNames = removedIds.Count > 0
+                ? await _context.Items.AsNoTracking()
+                    .Where(x => removedIds.Contains(x.ItemId))
+                    .ToDictionaryAsync(x => x.ItemId, x => $"{x.ItemCode} — {x.ItemName}")
+                : new Dictionary<int, string>();
+
+            var changes = new List<string>();
+
+            if (!string.Equals(auditOldPatientFullName, model.PatientFullName?.Trim(), StringComparison.OrdinalIgnoreCase))
+                changes.Add($"- แก้ไขชื่อคนไข้: {model.PatientFullName?.Trim()}");
+            if (!string.Equals(auditOldPatientHn, model.PatientHn?.Trim(), StringComparison.OrdinalIgnoreCase))
+                changes.Add($"- แก้ไข HN: {model.PatientHn?.Trim()}");
+            if (auditOldReferringDoctorId != model.ReferringDoctorId)
+                changes.Add("- เปลี่ยนแพทย์ส่ง");
+
+            foreach (var nd in newDetailMap.Values.Where(d => !auditOldDetails.Any(o => o.ItemId == d.ItemId!.Value)))
+                changes.Add($"- เพิ่มรายการ: {nd.ItemCode} — {nd.ItemName} จำนวน {nd.Qty:0.##}");
+            foreach (var od in auditOldDetails.Where(o => !newDetailMap.ContainsKey(o.ItemId)))
+                changes.Add($"- ลบรายการ: {removedNames.GetValueOrDefault(od.ItemId, od.ItemId.ToString())}");
+            foreach (var (itemId, nd) in newDetailMap)
+            {
+                var od = auditOldDetails.FirstOrDefault(o => o.ItemId == itemId);
+                if (od is not null && od.Qty != nd.Qty)
+                    changes.Add($"- แก้ไขจำนวน: {nd.ItemCode} — {nd.ItemName}: {od.Qty:0.##} → {nd.Qty:0.##}");
+            }
+
+            var label = issueInvoice ? "ออกเอกสาร" : "แก้ไขใบแจ้งหนี้";
+            var description = changes.Count > 0
+                ? $"{label}:\n{string.Join("\n", changes)}"
+                : label;
+            AddAuditLog(invoice.InvoiceId, description);
+        }
 
         if (!issueInvoice)
         {
@@ -538,6 +589,7 @@ public class InvoicesController : CrudControllerBase
             .Include(x => x.InvoiceDetails)
                 .ThenInclude(x => x.InvoiceSerials)
                     .ThenInclude(x => x.SerialNumber)
+            .Include(x => x.AuditLogs.OrderByDescending(a => a.OccurredAt))
             .FirstOrDefaultAsync(x => x.InvoiceId == id.Value);
 
         if (invoice is null || !CanAccessBranch(invoice.BranchId))
@@ -812,6 +864,7 @@ public class InvoicesController : CrudControllerBase
             invoice.CancelledByUserId = CurrentUserId();
             invoice.CancelledDate = DateTime.UtcNow;
             invoice.CancelReason = cancelReason.Trim();
+            AddAuditLog(invoice.InvoiceId, $"ยกเลิกเอกสาร: {cancelReason.Trim()}");
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             TempData["InvoiceNotice"] = "Invoice cancelled successfully.";
@@ -1276,7 +1329,7 @@ public class InvoicesController : CrudControllerBase
             VatType = VatModeHelper.Normalize(invoice.VatType, VatModeHelper.VatExclusive),
             DiscountMode = invoice.QuotationId.HasValue ? "Line" : (useHeaderDiscount ? "Header" : "Line"),
             HeaderDiscountAmount = invoice.QuotationId.HasValue ? 0m : (useHeaderDiscount ? referenceDiscountTotal : 0m),
-            AmountDueThisInvoice = invoice.TotalAmount,
+            AmountDueThisInvoice = invoice.QuotationId.HasValue ? invoice.TotalAmount : null,
             Remark = invoice.Remark,
             Subtotal = invoice.Subtotal,
             DiscountAmount = invoice.QuotationId.HasValue ? 0m : (useHeaderDiscount ? 0m : invoice.DiscountAmount),
@@ -1441,6 +1494,10 @@ public class InvoicesController : CrudControllerBase
 
     private async Task<bool> ValidateAndComputeAsync(InvoiceFormViewModel model, bool requireSerials, bool requireAvailableStock)
     {
+        // AmountDueThisInvoice only applies to quotation-linked invoices
+        if (!model.QuotationId.HasValue)
+            ModelState.Remove(nameof(model.AmountDueThisInvoice));
+
         var pricingMode = await _systemSettingService.GetPricingModeAsync();
         model.PricingMode = pricingMode;
         model.ShowPriceLevelSelector = string.Equals(pricingMode, PricingModes.MultiPrice, StringComparison.OrdinalIgnoreCase);
@@ -1991,5 +2048,17 @@ public class InvoicesController : CrudControllerBase
         var codes = await codesQuery.Where(x => x.StartsWith(prefix)).ToListAsync();
         var nextSequence = codes.Select(ExtractSequence).DefaultIfEmpty(0).Max() + 1;
         return FormatPeriodPrefixedCode(NumberPrefix, date, nextSequence);
+    }
+
+    private void AddAuditLog(int invoiceId, string description)
+    {
+        _context.InvoiceAuditLogs.Add(new InvoiceAuditLog
+        {
+            InvoiceId = invoiceId,
+            UserId = CurrentUserId(),
+            UserName = User.Identity?.Name ?? "",
+            OccurredAt = DateTime.UtcNow,
+            Description = description
+        });
     }
 }

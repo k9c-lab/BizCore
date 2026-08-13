@@ -25,8 +25,9 @@ public class SettingsController : CrudControllerBase
         var pricingMode = await _systemSettingService.GetPricingModeAsync(cancellationToken);
         var enablePatientInfo = await _systemSettingService.GetEnablePatientInfoAsync(cancellationToken);
         var (authorisedName, authorisedTitle) = await _systemSettingService.GetAuthorisedSignatureAsync(cancellationToken);
+        var allowPaymentBackdate = await _systemSettingService.GetAllowPaymentBackdateAsync(cancellationToken);
         var migrationStatus = await _databaseMigrationService.GetStatusAsync(cancellationToken);
-        return View(await BuildModelAsync(pricingMode, enablePatientInfo, authorisedName, authorisedTitle, migrationStatus));
+        return View(BuildModel(pricingMode, enablePatientInfo, authorisedName, authorisedTitle, allowPaymentBackdate, migrationStatus));
     }
 
     [HttpPost]
@@ -48,6 +49,7 @@ public class SettingsController : CrudControllerBase
         await _systemSettingService.SetPricingModeAsync(model.PricingMode, CurrentUserId(), cancellationToken);
         await _systemSettingService.SetEnablePatientInfoAsync(model.EnablePatientInfo, CurrentUserId(), cancellationToken);
         await _systemSettingService.SetAuthorisedSignatureAsync(model.AuthorisedName ?? string.Empty, model.AuthorisedTitle ?? string.Empty, CurrentUserId(), cancellationToken);
+        await _systemSettingService.SetAllowPaymentBackdateAsync(model.AllowPaymentBackdate, CurrentUserId(), cancellationToken);
         TempData["SettingsNotice"] = "Settings were updated successfully.";
 
         return RedirectToAction(nameof(Index));
@@ -65,17 +67,18 @@ public class SettingsController : CrudControllerBase
         return RedirectToAction(nameof(Index));
     }
 
-    private static Task<PricingSettingsViewModel> BuildModelAsync(string pricingMode, bool enablePatientInfo, string authorisedName, string authorisedTitle, DatabaseMigrationStatusViewModel migrationStatus)
+    private static PricingSettingsViewModel BuildModel(string pricingMode, bool enablePatientInfo, string authorisedName, string authorisedTitle, bool allowPaymentBackdate, DatabaseMigrationStatusViewModel migrationStatus)
     {
-        return Task.FromResult(new PricingSettingsViewModel
+        return new PricingSettingsViewModel
         {
             PricingMode = pricingMode,
             PricingModeOptions = BuildPricingModeOptions(pricingMode),
             EnablePatientInfo = enablePatientInfo,
             AuthorisedName = authorisedName,
             AuthorisedTitle = authorisedTitle,
+            AllowPaymentBackdate = allowPaymentBackdate,
             MigrationStatus = migrationStatus
-        });
+        };
     }
 
     private static IReadOnlyList<SelectListItem> BuildPricingModeOptions(string selectedValue)

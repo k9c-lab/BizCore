@@ -28,7 +28,10 @@
             </div>
             <div class="col-lg-2 col-md-4">
                 <label asp-for="DateOfBirth" class="form-label"></label>
-                <input asp-for="DateOfBirth" class="form-control" type="date" />
+                <input type="text" class="form-control" id="DateOfBirth_display"
+                       placeholder="วว/ดด/ปปปป" maxlength="10" autocomplete="off" inputmode="numeric" />
+                <input type="hidden" id="DateOfBirth" name="DateOfBirth"
+                       value="@(Model.DateOfBirth?.ToString("yyyy-MM-dd") ?? "")" />
                 <span asp-validation-for="DateOfBirth" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-4">
@@ -61,3 +64,46 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var display = document.getElementById('DateOfBirth_display');
+    var hidden  = document.getElementById('DateOfBirth');
+    if (!display || !hidden) return;
+
+    function isoToBe(iso) {
+        if (!iso) return '';
+        var p = iso.split('-');
+        if (p.length !== 3) return '';
+        return p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543);
+    }
+    function beToIso(be) {
+        if (!be || be.length !== 10) return '';
+        var p = be.split('/');
+        if (p.length !== 3) return '';
+        var y = parseInt(p[2], 10);
+        if (isNaN(y) || y < 543) return '';
+        return (y - 543) + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
+    }
+    function sync() {
+        hidden.value = display.value.length === 10 ? (beToIso(display.value) || '') : '';
+    }
+
+    display.addEventListener('keydown', function (e) {
+        var allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        if (allowed.indexOf(e.key) >= 0) return;
+        if (!/^\d$/.test(e.key)) e.preventDefault();
+    });
+    display.addEventListener('input', function () {
+        var digits = display.value.replace(/\D/g, '').substring(0, 8);
+        var result = digits.substring(0, 2);
+        if (digits.length >= 3) result += '/' + digits.substring(2, 4);
+        if (digits.length >= 5) result += '/' + digits.substring(4, 8);
+        display.value = result;
+        sync();
+    });
+    display.addEventListener('change', sync);
+
+    if (hidden.value) display.value = isoToBe(hidden.value);
+})();
+</script>

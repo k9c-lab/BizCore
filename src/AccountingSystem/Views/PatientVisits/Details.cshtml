@@ -18,6 +18,10 @@
         </p>
     </div>
     <div class="page-actions">
+        @if (Model.Status != "Cancelled")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PatientVisitId" class="btn btn-outline-secondary">แก้ไข</a>
+        }
         @if (canCancel)
         {
             <form asp-action="Cancel" asp-route-id="@Model.PatientVisitId" method="post" id="cancelForm">
@@ -36,6 +40,10 @@
     </div>
 </div>
 
+@if (TempData["VisitSuccess"] is string visitSuccess)
+{
+    <div class="alert alert-success mb-3">@visitSuccess</div>
+}
 @if (TempData["VisitError"] is string visitError)
 {
     <div class="alert alert-danger mb-3">@visitError</div>
@@ -252,4 +260,25 @@ else
     <script>
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
     </script>
+}
+
+@if (Model.AuditLogs.Any())
+{
+    <div class="card content-card mt-4">
+        <div class="card-body">
+            <div class="form-section-title mb-3">ประวัติการแก้ไข</div>
+            <div class="audit-log-list">
+                @foreach (var log in Model.AuditLogs.OrderByDescending(x => x.OccurredAt))
+                {
+                    <div class="audit-log-row">
+                        <div class="audit-log-meta">
+                            <span class="audit-log-user">@log.UserName</span>
+                            <span class="audit-log-time">@log.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                        </div>
+                        <div class="audit-log-desc">@log.Description</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 }

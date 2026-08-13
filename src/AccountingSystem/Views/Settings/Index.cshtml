@@ -68,6 +68,24 @@
                 </div>
 
                 <div class="form-section">
+                    <div class="form-section-title">การรับชำระเงิน</div>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-5">
+                            <div class="form-check">
+                                <input asp-for="AllowPaymentBackdate" class="form-check-input ms-0" />
+                                <label asp-for="AllowPaymentBackdate" class="form-check-label">อนุญาตบันทึกวันที่รับชำระย้อนหลัง</label>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="workflow-info workflow-info-warning mb-0">
+                                เมื่อ <strong>ปิด</strong> — ช่องวันที่รับชำระจะถูกล็อคเป็นวันปัจจุบัน ไม่สามารถเลือกวันย้อนหลังได้<br />
+                                เมื่อ <strong>เปิด</strong> — สามารถเลือกวันที่รับชำระย้อนหลังได้ (เลขที่เอกสารจะ running ตามเดือนของวันที่เลือก)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <div class="form-section-title">Patient Information</div>
                     <div class="row g-4 align-items-start">
                         <div class="col-lg-5">

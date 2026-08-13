@@ -66,4 +66,5 @@ public class PatientVisit
     public Branch? Branch { get; set; }
     public User? CreatedByUser { get; set; }
     public ICollection<PatientVisitItem> PatientVisitItems { get; set; } = new List<PatientVisitItem>();
+    public ICollection<PatientVisitAuditLog> AuditLogs { get; set; } = new List<PatientVisitAuditLog>();
 }

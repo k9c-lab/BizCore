@@ -42,6 +42,7 @@ public class AccountingDbContext : DbContext
     public DbSet<InvoiceHeader> InvoiceHeaders => Set<InvoiceHeader>();
     public DbSet<InvoiceDetail> InvoiceDetails => Set<InvoiceDetail>();
     public DbSet<InvoiceSerial> InvoiceSerials => Set<InvoiceSerial>();
+    public DbSet<InvoiceAuditLog> InvoiceAuditLogs => Set<InvoiceAuditLog>();
     public DbSet<CashSaleHeader> CashSaleHeaders => Set<CashSaleHeader>();
     public DbSet<CashSaleDetail> CashSaleDetails => Set<CashSaleDetail>();
     public DbSet<CashSaleSerial> CashSaleSerials => Set<CashSaleSerial>();
@@ -68,6 +69,7 @@ public class AccountingDbContext : DbContext
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientVisit> PatientVisits => Set<PatientVisit>();
     public DbSet<PatientVisitItem> PatientVisitItems => Set<PatientVisitItem>();
+    public DbSet<PatientVisitAuditLog> PatientVisitAuditLogs => Set<PatientVisitAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
