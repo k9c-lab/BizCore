@@ -48,6 +48,13 @@
                 <div class="quotation-info-card">
                     <div class="quotation-info-card-title">ข้อมูลคนไข้ <span class="text-danger">*</span></div>
 
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <button type="button" id="btnReadCard" class="btn btn-sm btn-outline-info" disabled>
+                            อ่านบัตรประชาชน
+                        </button>
+                        <span id="cardReaderStatus" class="text-muted small">กำลังเชื่อมต่อเครื่องอ่านบัตร...</span>
+                    </div>
+
                     <input asp-for="PatientId" type="hidden" id="visitPatientId" />
                     <input asp-for="IsNewPatient" type="hidden" id="isNewPatientInput" />
 
@@ -82,6 +89,7 @@
                             <div class="quotation-info-field">
                                 <span class="quotation-info-label">วันเกิด</span>
                                 <span class="quotation-info-value" id="patientDOB">@(selectedPatient?.DateOfBirth ?? "-")</span>
+                                <span class="text-muted small" id="patientAge"></span>
                             </div>
                         </div>
                         <div class="quotation-info-field">
@@ -130,6 +138,7 @@
                                        placeholder="วว/ดด/ปปปป" maxlength="10" autocomplete="off" inputmode="numeric" />
                                 <input type="hidden" id="NewPatientDateOfBirth" name="NewPatientDateOfBirth"
                                        value="@(Model.NewPatientDateOfBirth?.ToString("yyyy-MM-dd") ?? "")" />
+                                <span id="newPatientAge" class="form-text text-muted"></span>
                             </div>
                             <div class="col-12">
                                 <label class="form-label form-label-sm">โทรศัพท์</label>
@@ -268,6 +277,14 @@
             if (state !== 'found') patientIdInput.value = '';
         }
 
+        function calcAge(iso) {
+            if (!iso) return '';
+            var d = new Date(iso), t = new Date();
+            var age = t.getFullYear() - d.getFullYear();
+            if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) age--;
+            return age >= 0 ? 'อายุ ' + age + ' ปี' : '';
+        }
+
         window.patientReset = function () {
             showPatientState('search');
             patientSearchInput.value = '';
@@ -286,6 +303,7 @@
                 return p.length === 3 ? p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543) : iso;
             })(p.DateOfBirth);
             document.getElementById('patientPhone').textContent = p.Phone || '-';
+            document.getElementById('patientAge').textContent = calcAge(p.DateOfBirth);
             showPatientState('found');
             patientDropdown.style.display = 'none';
         }
@@ -536,6 +554,149 @@
             });
         })();
 
+        // ---- ID Card Reader ----
+        (function () {
+            var ws = null;
+            var connected = false;
+            var readerList = null;
+            var selectRes = null;
+            var readRes = null;
+            var readerSelected = false;
+
+            var statusEl = document.getElementById('cardReaderStatus');
+            var readBtn = document.getElementById('btnReadCard');
+
+            function setStatus(ok) {
+                connected = ok;
+                if (statusEl) {
+                    statusEl.textContent = ok ? 'เครื่องอ่านบัตร: พร้อม' : 'เครื่องอ่านบัตร: ไม่พบการเชื่อมต่อ';
+                    statusEl.className = ok ? 'text-success small' : 'text-danger small';
+                }
+                if (readBtn) readBtn.disabled = !ok;
+            }
+
+            function wsSend(obj) { ws.send(JSON.stringify(obj)); }
+
+            function onMessage(msg) {
+                if (msg.Message === 'AgentStatusE' && msg.Status === 1) setStatus(true);
+                if (msg.Message === 'GetReaderListR') readerList = msg.Status > 0 ? msg.ReaderList : [];
+                if (msg.Message === 'SelectReaderR') {
+                    selectRes = parseInt(msg.Status) >= 0;
+                    if (selectRes) readerSelected = true;
+                }
+                if (msg.Message === 'ReadIDCardR') {
+                    readRes = msg.Status;
+                    if (msg.Status === 0) fillFromCard(msg);
+                }
+            }
+
+            function wait(check, ms) {
+                return new Promise(function (resolve) {
+                    var t = setTimeout(resolve, ms);
+                    var iv = setInterval(function () {
+                        if (check()) { clearInterval(iv); clearTimeout(t); resolve(); }
+                    }, 100);
+                });
+            }
+
+            async function readCard() {
+                if (!connected) return;
+                readerList = null; selectRes = null; readRes = null; readerSelected = false;
+                readBtn.disabled = true;
+                readBtn.textContent = 'กำลังอ่าน...';
+
+                wsSend({ Command: 'GetReaderList' });
+                await wait(function () { return readerList !== null; }, 5000);
+
+                if (!readerList || readerList.length === 0) {
+                    alert('ไม่พบเครื่องอ่านบัตร กรุณาตรวจสอบการเชื่อมต่อ');
+                    resetBtn(); return;
+                }
+
+                for (var i = 0; i < readerList.length; i++) {
+                    selectRes = null;
+                    wsSend({ Command: 'SelectReader', ReaderName: readerList[i] });
+                    await wait(function () { return selectRes !== null; }, 5000);
+                    if (!selectRes) continue;
+
+                    readRes = null;
+                    wsSend({ Command: 'ReadIDCard', IDNumberRead: false, IDTextRead: false, IDATextRead: true, IDPhotoRead: false });
+                    await wait(function () { return readRes !== null; }, 30000);
+
+                    if (readRes !== -16) break;
+                }
+
+                if (readRes === -16 || readRes === null)
+                    alert('ไม่พบบัตรในเครื่องอ่าน กรุณาใส่บัตรแล้วลองใหม่');
+
+                resetBtn();
+            }
+
+            function resetBtn() {
+                readBtn.disabled = !connected;
+                readBtn.textContent = 'อ่านบัตรประชาชน';
+            }
+
+            function fillFromCard(msg) {
+                var raw = msg.IDAText || msg.IDText || '';
+                if (!raw) return;
+                var d = raw.split('#');
+                if (d.length < 19) return;
+
+                var nationalId  = (d[0] || '').trim();
+                var firstName   = (d[2] || '').trim();
+                var lastName    = (d[4] || '').trim();
+                var genderCode  = d[17];
+                var dobRaw      = (d[18] || '').trim(); // yyyymmdd BE
+
+                var gender = genderCode === '1' ? 'M' : genderCode === '2' ? 'F' : '';
+
+                // ค้นหาคนไข้เดิมในระบบจากเลขบัตร
+                var existing = patients.find(function (p) { return p.NationalId === nationalId; });
+                if (existing) {
+                    selectPatient(existing);
+                    return;
+                }
+
+                // ไม่พบ → เปิด new patient และเติมข้อมูล
+                showPatientState('new');
+
+                var setVal = function (id, val) {
+                    var el = document.getElementById(id) || document.querySelector('[name="' + id + '"]');
+                    if (el) el.value = val;
+                };
+
+                setVal('newPatientNationalId', nationalId);
+                setVal('NewPatientFirstName', firstName);
+                setVal('NewPatientLastName', lastName);
+                setVal('NewPatientGender', gender);
+
+                if (dobRaw.length >= 8) {
+                    var beYear = parseInt(dobRaw.substring(0, 4), 10);
+                    var mo = dobRaw.substring(4, 6);
+                    var dy = dobRaw.substring(6, 8);
+                    var display = document.getElementById('NewPatientDateOfBirth_display');
+                    var hidden  = document.getElementById('NewPatientDateOfBirth');
+                    var isoVal = (beYear - 543) + '-' + mo + '-' + dy;
+                    if (display) display.value = dy + '/' + mo + '/' + beYear;
+                    if (hidden)  hidden.value  = isoVal;
+                    var ageEl = document.getElementById('newPatientAge');
+                    if (ageEl) ageEl.textContent = calcAge(isoVal);
+                }
+            }
+
+            function connect() {
+                ws = new WebSocket('ws://localhost:14820/IDWAgent');
+                ws.onmessage = function (e) { onMessage(JSON.parse(e.data)); };
+                ws.onclose = function () { setStatus(false); };
+                ws.onerror = function () { setStatus(false); };
+            }
+
+            if (readBtn) readBtn.addEventListener('click', readCard);
+            window.addEventListener('beforeunload', function () { if (ws) ws.close(); });
+            connect();
+        })();
+
         // ---- New Patient Date of Birth mask (วว/ดด/ปปปป BE) ----
         (function () {
             var display = document.getElementById('NewPatientDateOfBirth_display');
@@ -558,6 +719,8 @@
             }
             function sync() {
                 hidden.value = display.value.length === 10 ? (beToIso(display.value) || '') : '';
+                var ageEl = document.getElementById('newPatientAge');
+                if (ageEl) ageEl.textContent = hidden.value ? calcAge(hidden.value) : '';
             }
 
             display.addEventListener('keydown', function (e) {

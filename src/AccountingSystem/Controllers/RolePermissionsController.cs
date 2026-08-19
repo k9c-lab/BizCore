@@ -15,6 +15,7 @@ public class RolePermissionsController : CrudControllerBase
     private static readonly Dictionary<string, (string Title, string Description, int SortOrder)> SectionMetadata = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Overview"] = ("Overview", "แดชบอร์ด รายงาน และภาพรวมระบบ", 10),
+        ["Patient"] = ("Patient", "เมนูและสิทธิ์ของงานลงทะเบียนผู้ป่วย", 15),
         ["Sales"] = ("Sales", "เมนูและสิทธิ์ของงานขาย เอกสารลูกหนี้ และรับชำระ", 20),
         ["Purchasing"] = ("Purchasing", "งานจัดซื้อ รับสินค้า และจ่ายผู้ขาย", 30),
         ["Inventory"] = ("Inventory", "สต็อก สอบถามคงเหลือ และเอกสารเคลื่อนไหวสินค้า", 40),
@@ -197,6 +198,12 @@ public class RolePermissionsController : CrudControllerBase
             return "Warranty";
         }
 
+        if (code.StartsWith("Patient.", StringComparison.OrdinalIgnoreCase) ||
+            code.StartsWith("MasterData.Patients.", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Patient";
+        }
+
         if (code.StartsWith("MasterData.", StringComparison.OrdinalIgnoreCase))
         {
             return "MasterData";
@@ -266,6 +273,7 @@ public class RolePermissionsController : CrudControllerBase
             "RolePermissions" => "Role Permissions",
             "PriceLevels" => "Price Levels",
             "TreatmentRights" => "Treatment Rights",
+            "PatientVisits" => "Patient Visits",
             "ReferringDoctors" => "Doctors",
             "ReadingDoctors" => "Reading Doctors",
             "CashSales" => "Cash Sales",

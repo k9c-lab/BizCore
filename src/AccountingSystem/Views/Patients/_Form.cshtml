@@ -32,6 +32,7 @@
                        placeholder="วว/ดด/ปปปป" maxlength="10" autocomplete="off" inputmode="numeric" />
                 <input type="hidden" id="DateOfBirth" name="DateOfBirth"
                        value="@(Model.DateOfBirth?.ToString("yyyy-MM-dd") ?? "")" />
+                <span id="ageDisplay" class="form-text text-muted"></span>
                 <span asp-validation-for="DateOfBirth" class="text-danger"></span>
             </div>
             <div class="col-lg-3 col-md-4">
@@ -85,8 +86,17 @@
         if (isNaN(y) || y < 543) return '';
         return (y - 543) + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0');
     }
+    function calcAge(iso) {
+        if (!iso) return '';
+        var d = new Date(iso), t = new Date();
+        var age = t.getFullYear() - d.getFullYear();
+        if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) age--;
+        return age >= 0 ? 'อายุ ' + age + ' ปี' : '';
+    }
     function sync() {
         hidden.value = display.value.length === 10 ? (beToIso(display.value) || '') : '';
+        var ageEl = document.getElementById('ageDisplay');
+        if (ageEl) ageEl.textContent = calcAge(hidden.value);
     }
 
     display.addEventListener('keydown', function (e) {
@@ -104,6 +114,6 @@
     });
     display.addEventListener('change', sync);
 
-    if (hidden.value) display.value = isoToBe(hidden.value);
+    if (hidden.value) { display.value = isoToBe(hidden.value); sync(); }
 })();
 </script>
