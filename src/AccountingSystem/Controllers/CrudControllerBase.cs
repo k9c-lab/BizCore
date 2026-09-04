@@ -57,6 +57,12 @@ public abstract class CrudControllerBase : Controller
     {
         base.OnActionExecuting(context);
 
+        // Skip permission check when serving the global error page
+        if (context.HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>() != null)
+        {
+            return;
+        }
+
         if (User.Identity?.IsAuthenticated != true)
         {
             return;
