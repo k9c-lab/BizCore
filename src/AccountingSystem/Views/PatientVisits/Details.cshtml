@@ -67,7 +67,11 @@
                 </div>
                 <div class="quotation-info-field">
                     <span class="quotation-info-label">ชื่อ-นามสกุล</span>
-                    <span class="quotation-info-value fw-semibold">@Model.Patient.FirstName @Model.Patient.LastName</span>
+                    <span class="quotation-info-value fw-semibold">@(string.IsNullOrWhiteSpace(Model.Patient.NamePrefix) ? "" : Model.Patient.NamePrefix + " ")@Model.Patient.FirstName @Model.Patient.LastName</span>
+                </div>
+                <div class="quotation-info-field">
+                    <span class="quotation-info-label">เลขบัตรประชาชน</span>
+                    <span class="quotation-info-value">@(Model.Patient.NationalId ?? "-")</span>
                 </div>
                 <div class="quotation-info-grid">
                     <div class="quotation-info-field">

@@ -72,12 +72,16 @@
                             <label class="form-label form-label-sm">HN</label>
                             <div class="form-control form-control-sm readonly-detail">@Model.EditPatientHN</div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-3">
+                            <label class="form-label form-label-sm">คำนำหน้า</label>
+                            <input asp-for="EditPatientNamePrefix" class="form-control form-control-sm" placeholder="นาย, ดร." maxlength="20" />
+                        </div>
+                        <div class="col-5">
                             <label class="form-label form-label-sm">ชื่อ <span class="text-danger">*</span></label>
                             <input asp-for="EditPatientFirstName" class="form-control form-control-sm" />
                             <span asp-validation-for="EditPatientFirstName" class="text-danger small"></span>
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
                             <label class="form-label form-label-sm">นามสกุล <span class="text-danger">*</span></label>
                             <input asp-for="EditPatientLastName" class="form-control form-control-sm" />
                             <span asp-validation-for="EditPatientLastName" class="text-danger small"></span>

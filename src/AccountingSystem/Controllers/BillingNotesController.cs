@@ -212,6 +212,7 @@ public class BillingNotesController : CrudControllerBase
             TreatmentRightId = treatmentRightId,
             SelectedInvoiceIds = note.BillingNoteInvoices.Select(x => x.InvoiceId).ToList(),
             IsEditMode = true,
+            IsAmountLocked = note.IsAmountLocked,
             SubmitAction = "SaveDraft"
         };
 
@@ -277,7 +278,8 @@ public class BillingNotesController : CrudControllerBase
         note.SubtotalAmount = billingAmounts.SubtotalAmount;
         note.DiscountAmount = billingAmounts.DiscountAmount;
         note.VatAmount = billingAmounts.VatAmount;
-        note.TotalAmount = billingAmounts.TotalAmount;
+        if (!note.IsAmountLocked)
+            note.TotalAmount = billingAmounts.TotalAmount;
         note.BalanceAmount = Math.Max(note.TotalAmount - note.PaidAmount, 0m);
         note.Remark = model.Remark?.Trim();
         note.Status = shouldIssue ? "Issued" : "Draft";
@@ -327,6 +329,78 @@ public class BillingNotesController : CrudControllerBase
         }
 
         return View(note);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdjustAmount(int id, decimal totalAmount)
+    {
+        var note = await _context.BillingNoteHeaders.FindAsync(id);
+        if (note is null || !CanAccessBranch(note.BranchId))
+            return NotFound();
+
+        if (note.Status == "Cancelled")
+        {
+            TempData["BillingNoteNotice"] = "ไม่สามารถแก้ไขยอดใบวางบิลที่ยกเลิกแล้ว";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        note.TotalAmount = Math.Max(totalAmount, 0m);
+        note.IsAmountLocked = true;
+        note.BalanceAmount = Math.Max(note.TotalAmount - note.PaidAmount, 0m);
+        note.UpdatedDate = DateTime.UtcNow;
+        note.UpdatedByUserId = CurrentUserId();
+        await _context.SaveChangesAsync();
+
+        TempData["BillingNoteNotice"] = $"ล็อคยอดแล้ว: {note.TotalAmount:N2} บาท";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetAmount(int id)
+    {
+        var note = await _context.BillingNoteHeaders
+            .Include(x => x.BillingNoteInvoices)
+            .FirstOrDefaultAsync(x => x.BillingNoteId == id);
+        if (note is null || !CanAccessBranch(note.BranchId))
+            return NotFound();
+
+        if (note.Status == "Cancelled")
+        {
+            TempData["BillingNoteNotice"] = "ไม่สามารถแก้ไขยอดใบวางบิลที่ยกเลิกแล้ว";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var billedAmountMap = note.BillingNoteInvoices.ToDictionary(x => x.InvoiceId, x => x.BilledAmount);
+        var invoiceIds = billedAmountMap.Keys.ToList();
+
+        var invoiceVatInfo = await _context.InvoiceHeaders
+            .AsNoTracking()
+            .Where(x => invoiceIds.Contains(x.InvoiceId))
+            .Select(x => new { x.InvoiceId, x.TotalAmount, x.VatAmount, x.VatType })
+            .ToListAsync();
+
+        var sources = invoiceVatInfo
+            .Select(x => new BillingNoteInvoiceAmountSource(
+                billedAmountMap.GetValueOrDefault(x.InvoiceId, 0m),
+                x.TotalAmount,
+                x.VatAmount,
+                x.VatType))
+            .ToList();
+
+        var amounts = ComputeBillingAmounts(sources, note.DiscountAmount);
+        note.SubtotalAmount = amounts.SubtotalAmount;
+        note.VatAmount = amounts.VatAmount;
+        note.TotalAmount = amounts.TotalAmount;
+        note.IsAmountLocked = false;
+        note.BalanceAmount = Math.Max(note.TotalAmount - note.PaidAmount, 0m);
+        note.UpdatedDate = DateTime.UtcNow;
+        note.UpdatedByUserId = CurrentUserId();
+        await _context.SaveChangesAsync();
+
+        TempData["BillingNoteNotice"] = "รีเซ็ตยอดเป็นอัตโนมัติแล้ว";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     public async Task<IActionResult> Print(int? id)

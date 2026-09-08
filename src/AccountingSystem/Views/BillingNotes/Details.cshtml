@@ -226,11 +226,64 @@
                             <span class="quotation-summary-amount">@Model.BalanceAmount.ToString("N2")</span>
                         </div>
                         <div class="quotation-summary-row total">
-                            <span class="quotation-summary-name">ยอดรวมทั้งสิ้น</span>
-                            <span class="quotation-summary-amount">@Model.TotalAmount.ToString("N2")</span>
+                            <span class="quotation-summary-name">
+                                ยอดรวมทั้งสิ้น
+                                @if (Model.IsAmountLocked)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">ล็อคยอด</span>
+                                }
+                            </span>
+                            <span class="quotation-summary-amount" id="totalAmountDisplay">@Model.TotalAmount.ToString("N2")</span>
                         </div>
+                        @if (Model.Status != "Cancelled")
+                        {
+                            <div class="quotation-summary-row" id="adjustAmountRow" style="border-top:1px dashed var(--bs-border-color);padding-top:0.5rem;margin-top:0.25rem;">
+                                <span class="quotation-summary-name">
+                                    @if (!Model.IsAmountLocked)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btnAdjustAmount" style="font-size:0.78rem;">แก้ไขยอด</button>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="ResetAmount" asp-route-id="@Model.BillingNoteId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.78rem;">รีเซ็ตยอดอัตโนมัติ</button>
+                                        </form>
+                                    }
+                                </span>
+                                <span></span>
+                            </div>
+                            <div id="adjustAmountForm" class="d-none mt-2">
+                                <form asp-action="AdjustAmount" asp-route-id="@Model.BillingNoteId" method="post" class="d-flex gap-2 align-items-center justify-content-end">
+                                    @Html.AntiForgeryToken()
+                                    <input type="number" name="totalAmount" class="form-control form-control-sm text-end"
+                                           value="@Model.TotalAmount.ToString("F2")" step="0.01" min="0"
+                                           style="width:140px;" id="adjustAmountInput" />
+                                    <button type="submit" class="btn btn-sm btn-primary">บันทึก</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelAdjust">ยกเลิก</button>
+                                </form>
+                            </div>
+                        }
                     </div>
                 </div>
+                <script>
+                (function () {
+                    var btn = document.getElementById('btnAdjustAmount');
+                    var form = document.getElementById('adjustAmountForm');
+                    var cancelBtn = document.getElementById('btnCancelAdjust');
+                    if (!btn || !form) return;
+                    btn.addEventListener('click', function () {
+                        form.classList.remove('d-none');
+                        btn.classList.add('d-none');
+                        document.getElementById('adjustAmountInput').focus();
+                        document.getElementById('adjustAmountInput').select();
+                    });
+                    if (cancelBtn) cancelBtn.addEventListener('click', function () {
+                        form.classList.add('d-none');
+                        btn.classList.remove('d-none');
+                    });
+                })();
+                </script>
             </div>
         </div>
     </div>

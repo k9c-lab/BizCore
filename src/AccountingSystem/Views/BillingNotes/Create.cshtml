@@ -68,6 +68,14 @@
 
     <div asp-validation-summary="All" class="form-alert"></div>
 
+    @if (Model.IsEditMode && Model.IsAmountLocked)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+            <span><strong>ยอดถูกล็อคไว้</strong> — การเพิ่มหรือลบใบแจ้งหนี้จะไม่เปลี่ยนยอดรวมทั้งสิ้น กดรีเซ็ตจากหน้ารายละเอียดเพื่อให้ระบบคำนวณใหม่</span>
+        </div>
+    }
+
     <div class="card content-card mb-3">
         <div class="card-body">
             <div class="form-shell">

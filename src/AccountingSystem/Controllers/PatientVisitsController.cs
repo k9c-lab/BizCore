@@ -1,6 +1,7 @@
 using BizCore.Data;
 using BizCore.Models.Entities;
 using BizCore.Models.ViewModels;
+using BizCore.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -112,6 +113,7 @@ public class PatientVisitsController : CrudControllerBase
             {
                 HN = model.NewPatientHN!.Trim(),
                 NationalId = model.NewPatientNationalId?.Trim(),
+                NamePrefix = model.NewPatientNamePrefix?.Trim(),
                 FirstName = model.NewPatientFirstName!.Trim(),
                 LastName = model.NewPatientLastName!.Trim(),
                 Gender = model.NewPatientGender ?? string.Empty,
@@ -173,6 +175,16 @@ public class PatientVisitsController : CrudControllerBase
             ModelState.AddModelError(string.Empty, "ไม่สามารถบันทึกได้ กรุณาลองใหม่");
             await PopulateLookupsAsync(model);
             return View(model);
+        }
+
+        if (!model.IsNewPatient && model.PatientId.HasValue && !string.IsNullOrWhiteSpace(model.UpdatePatientPrefix))
+        {
+            var patient = await _context.Patients.FindAsync(model.PatientId.Value);
+            if (patient is not null && string.IsNullOrWhiteSpace(patient.NamePrefix))
+            {
+                patient.NamePrefix = model.UpdatePatientPrefix.Trim();
+                await _context.SaveChangesAsync();
+            }
         }
 
         return RedirectToAction(nameof(Details), new { id = visit.PatientVisitId });
@@ -260,8 +272,10 @@ public class PatientVisitsController : CrudControllerBase
             CustomerId = payerId.Value,
             BranchId = visit.BranchId,
             Status = "Draft",
-            VatType = "NoVAT",
-            PatientFullName = $"{patient.FirstName} {patient.LastName}",
+            VatType = VatModeHelper.VatInclusive,
+            PatientFullName = string.IsNullOrWhiteSpace(patient.NamePrefix)
+                ? $"{patient.FirstName} {patient.LastName}"
+                : $"{patient.NamePrefix} {patient.FirstName} {patient.LastName}",
             PatientHn = patient.HN,
             PatientGender = patient.Gender,
             PatientBirthDate = patient.DateOfBirth,
@@ -292,9 +306,10 @@ public class PatientVisitsController : CrudControllerBase
 
         invoice.Subtotal = invoice.InvoiceDetails.Sum(x => x.LineTotal);
         invoice.DiscountAmount = 0;
-        invoice.VatAmount = 0;
-        invoice.TotalAmount = invoice.Subtotal;
-        invoice.BalanceAmount = invoice.TotalAmount;
+        var vatComp = VatModeHelper.ComputeFromDocumentPricing(invoice.Subtotal, VatModeHelper.VatInclusive);
+        invoice.VatAmount = vatComp.VatAmount;
+        invoice.TotalAmount = vatComp.TotalAmount;
+        invoice.BalanceAmount = vatComp.TotalAmount;
 
         _context.InvoiceHeaders.Add(invoice);
         await _context.SaveChangesAsync();
@@ -411,7 +426,8 @@ public class PatientVisitsController : CrudControllerBase
             {
                 PatientId = x.PatientId,
                 HN = x.HN,
-                FullName = x.FirstName + " " + x.LastName,
+                NamePrefix = x.NamePrefix,
+                FullName = (x.NamePrefix != null ? x.NamePrefix + " " : "") + x.FirstName + " " + x.LastName,
                 NationalId = x.NationalId,
                 Phone = x.Phone,
                 Gender = x.Gender,
@@ -472,6 +488,7 @@ public class PatientVisitsController : CrudControllerBase
             InvoiceNo = visit.Invoice?.InvoiceNo,
             InvoiceStatus = visit.Invoice?.Status,
             EditPatientHN = patient?.HN,
+            EditPatientNamePrefix = patient?.NamePrefix,
             EditPatientFirstName = patient?.FirstName,
             EditPatientLastName = patient?.LastName,
             EditPatientDateOfBirth = patient?.DateOfBirth,
@@ -546,6 +563,7 @@ public class PatientVisitsController : CrudControllerBase
             var errorModel = MapVisitToEditModel(visit);
             errorModel.BranchName = await GetBranchNameAsync(visit.BranchId);
             // keep user's input for editable fields
+            errorModel.EditPatientNamePrefix = model.EditPatientNamePrefix;
             errorModel.EditPatientFirstName = model.EditPatientFirstName;
             errorModel.EditPatientLastName = model.EditPatientLastName;
             errorModel.EditPatientDateOfBirth = model.EditPatientDateOfBirth;
@@ -571,9 +589,15 @@ public class PatientVisitsController : CrudControllerBase
         if (patient != null && model.EditPatientFirstName != null)
         {
             var changes = new List<string>();
+            var newPrefix = model.EditPatientNamePrefix?.Trim();
             var newFirst = model.EditPatientFirstName.Trim();
             var newLast = model.EditPatientLastName?.Trim() ?? "";
 
+            if (patient.NamePrefix != newPrefix)
+            {
+                changes.Add($"- คำนำหน้า: '{patient.NamePrefix ?? "-"}' → '{newPrefix ?? "-"}'");
+                patient.NamePrefix = newPrefix;
+            }
             if (patient.FirstName != newFirst || patient.LastName != newLast)
             {
                 changes.Add($"- ชื่อ: '{patient.FirstName} {patient.LastName}' → '{newFirst} {newLast}'");
@@ -724,7 +748,9 @@ public class PatientVisitsController : CrudControllerBase
         {
             if (patient != null)
             {
-                invoice.PatientFullName = $"{patient.FirstName} {patient.LastName}";
+                invoice.PatientFullName = string.IsNullOrWhiteSpace(patient.NamePrefix)
+                    ? $"{patient.FirstName} {patient.LastName}"
+                    : $"{patient.NamePrefix} {patient.FirstName} {patient.LastName}";
                 invoice.PatientHn = patient.HN;
                 invoice.PatientGender = patient.Gender;
                 invoice.PatientBirthDate = patient.DateOfBirth;

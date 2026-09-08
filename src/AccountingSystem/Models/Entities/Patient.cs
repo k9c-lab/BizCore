@@ -15,6 +15,10 @@ public class Patient
     [StringLength(20)]
     public string? NationalId { get; set; }
 
+    [Display(Name = "คำนำหน้า")]
+    [StringLength(20)]
+    public string? NamePrefix { get; set; }
+
     [Required(ErrorMessage = "กรุณาระบุชื่อ")]
     [Display(Name = "ชื่อ")]
     [StringLength(100)]

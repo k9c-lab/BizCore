@@ -47,6 +47,7 @@ public class BillingNoteCreateViewModel
     public string BranchName { get; set; } = string.Empty;
     public bool CanAccessAllBranches { get; set; }
     public bool IsEditMode { get; set; }
+    public bool IsAmountLocked { get; set; }
     public List<int> SelectedInvoiceIds { get; set; } = new();
     public List<BillingNoteInvoiceCandidateViewModel> AvailableInvoices { get; set; } = new();
     public List<BillingNoteSummaryPreviewViewModel> SummaryPreview { get; set; } = new();

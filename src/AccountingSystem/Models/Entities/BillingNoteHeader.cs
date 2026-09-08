@@ -43,6 +43,8 @@ public class BillingNoteHeader
     [Display(Name = "ยอดรวม")]
     public decimal TotalAmount { get; set; }
 
+    public bool IsAmountLocked { get; set; }
+
     [Display(Name = "ชำระแล้ว")]
     public decimal PaidAmount { get; set; }
 

@@ -272,7 +272,8 @@ public class InvoicesController : CrudControllerBase
         {
             var newDetailMap = model.Details
                 .Where(d => d.ItemId.HasValue)
-                .ToDictionary(d => d.ItemId!.Value, d => d);
+                .GroupBy(d => d.ItemId!.Value)
+                .ToDictionary(g => g.Key, g => g.First());
 
             var removedIds = auditOldDetails
                 .Select(d => d.ItemId)

@@ -17,6 +17,11 @@
                 <input asp-for="NationalId" class="form-control" placeholder="เลข 13 หลัก" />
                 <span asp-validation-for="NationalId" class="text-danger"></span>
             </div>
+            <div class="col-lg-2 col-md-3">
+                <label asp-for="NamePrefix" class="form-label"></label>
+                <input asp-for="NamePrefix" class="form-control" placeholder="เช่น นาย, ดร." maxlength="20" />
+                <span asp-validation-for="NamePrefix" class="text-danger"></span>
+            </div>
             <div class="col-lg-2 col-md-4">
                 <label asp-for="Gender" class="form-label"></label>
                 <select asp-for="Gender" class="form-select">

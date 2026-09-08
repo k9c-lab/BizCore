@@ -52,12 +52,16 @@ public class PatientVisitFormViewModel
 
     // Inline new patient creation
     public bool IsNewPatient { get; set; }
+    public string? UpdatePatientPrefix { get; set; }
     [Display(Name = "HN")]
     [StringLength(30)]
     public string? NewPatientHN { get; set; }
     [Display(Name = "เลขบัตร ปชช.")]
     [StringLength(20)]
     public string? NewPatientNationalId { get; set; }
+    [Display(Name = "คำนำหน้า")]
+    [StringLength(20)]
+    public string? NewPatientNamePrefix { get; set; }
     [Display(Name = "ชื่อ")]
     [StringLength(100)]
     public string? NewPatientFirstName { get; set; }
@@ -83,6 +87,9 @@ public class PatientVisitFormViewModel
 
     // Edit mode: editable patient master fields
     public string? EditPatientHN { get; set; }
+    [Display(Name = "คำนำหน้า")]
+    [StringLength(20)]
+    public string? EditPatientNamePrefix { get; set; }
     [Display(Name = "ชื่อ")]
     [StringLength(100)]
     public string? EditPatientFirstName { get; set; }
@@ -132,6 +139,7 @@ public class PatientLookupViewModel
 {
     public int PatientId { get; set; }
     public string HN { get; set; } = string.Empty;
+    public string? NamePrefix { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string? NationalId { get; set; }
     public string? Phone { get; set; }

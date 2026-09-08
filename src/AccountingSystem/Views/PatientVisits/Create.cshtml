@@ -55,8 +55,19 @@
                         <span id="cardReaderStatus" class="text-muted small">กำลังเชื่อมต่อเครื่องอ่านบัตร...</span>
                     </div>
 
+                    <div id="cardDataPanel" class="d-none mb-2 p-2 border border-info rounded-2 small" style="background:rgba(13,202,240,.08)">
+                        <div class="fw-semibold text-info mb-1" style="font-size:0.73rem;">ข้อมูลจากบัตรประชาชน</div>
+                        <div class="row g-1">
+                            <div class="col-12"><span class="text-muted">ชื่อ:</span> <strong id="cardFullName"></strong></div>
+                            <div class="col-7"><span class="text-muted">เลขบัตร:</span> <span id="cardNationalId"></span></div>
+                            <div class="col-2"><span class="text-muted">เพศ:</span> <span id="cardGender"></span></div>
+                            <div class="col-3"><span class="text-muted">วันเกิด:</span> <span id="cardDOB"></span></div>
+                        </div>
+                    </div>
+
                     <input asp-for="PatientId" type="hidden" id="visitPatientId" />
                     <input asp-for="IsNewPatient" type="hidden" id="isNewPatientInput" />
+                    <input type="hidden" id="updatePatientPrefixInput" name="UpdatePatientPrefix" />
 
                     @* SEARCH STATE *@
                     <div id="pt-search" class="@(patientInitState == "search" ? "" : "d-none")">
@@ -114,12 +125,16 @@
                                 <label class="form-label form-label-sm">เลขบัตร ปชช.</label>
                                 <input asp-for="NewPatientNationalId" class="form-control form-control-sm" id="newPatientNationalId" />
                             </div>
-                            <div class="col-6">
+                            <div class="col-3">
+                                <label class="form-label form-label-sm">คำนำหน้า</label>
+                                <input asp-for="NewPatientNamePrefix" class="form-control form-control-sm" placeholder="นาย, ดร." maxlength="20" />
+                            </div>
+                            <div class="col-5">
                                 <label class="form-label form-label-sm">ชื่อ <span class="text-danger">*</span></label>
                                 <input asp-for="NewPatientFirstName" class="form-control form-control-sm" />
                                 <span asp-validation-for="NewPatientFirstName" class="text-danger small"></span>
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="form-label form-label-sm">นามสกุล <span class="text-danger">*</span></label>
                                 <input asp-for="NewPatientLastName" class="form-control form-control-sm" />
                                 <span asp-validation-for="NewPatientLastName" class="text-danger small"></span>
@@ -289,6 +304,8 @@
             showPatientState('search');
             patientSearchInput.value = '';
             patientDropdown.style.display = 'none';
+            var cardPanel = document.getElementById('cardDataPanel');
+            if (cardPanel) cardPanel.classList.add('d-none');
             setTimeout(() => patientSearchInput.focus(), 50);
         };
 
@@ -604,6 +621,8 @@
                 readerList = null; selectRes = null; readRes = null; readerSelected = false;
                 readBtn.disabled = true;
                 readBtn.textContent = 'กำลังอ่าน...';
+                var cardPanel = document.getElementById('cardDataPanel');
+                if (cardPanel) cardPanel.classList.add('d-none');
 
                 wsSend({ Command: 'GetReaderList' });
                 await wait(function () { return readerList !== null; }, 5000);
@@ -644,6 +663,7 @@
                 if (d.length < 19) return;
 
                 var nationalId  = (d[0] || '').trim();
+                var cardPrefix  = (d[1] || '').trim();
                 var firstName   = (d[2] || '').trim();
                 var lastName    = (d[4] || '').trim();
                 var genderCode  = d[17];
@@ -651,9 +671,31 @@
 
                 var gender = genderCode === '1' ? 'M' : genderCode === '2' ? 'F' : '';
 
+                // แสดงข้อมูลจากบัตรประชาชน
+                (function () {
+                    var panel = document.getElementById('cardDataPanel');
+                    if (!panel) return;
+                    var dobDisplay = '-';
+                    if (dobRaw.length >= 8)
+                        dobDisplay = dobRaw.substring(6, 8) + '/' + dobRaw.substring(4, 6) + '/' + dobRaw.substring(0, 4);
+                    document.getElementById('cardFullName').textContent = [cardPrefix, firstName, lastName].filter(Boolean).join(' ') || '-';
+                    document.getElementById('cardNationalId').textContent = nationalId || '-';
+                    document.getElementById('cardGender').textContent = gender === 'M' ? 'ชาย' : gender === 'F' ? 'หญิง' : '-';
+                    document.getElementById('cardDOB').textContent = dobDisplay;
+                    panel.classList.remove('d-none');
+                })();
+
+                var prefixUpdateInput = document.getElementById('updatePatientPrefixInput');
+                if (prefixUpdateInput) prefixUpdateInput.value = '';
+
                 // ค้นหาคนไข้เดิมในระบบจากเลขบัตร
                 var existing = patients.find(function (p) { return p.NationalId === nationalId; });
                 if (existing) {
+                    if (cardPrefix && !existing.NamePrefix) {
+                        existing.NamePrefix = cardPrefix;
+                        existing.FullName = cardPrefix + ' ' + existing.FullName;
+                        if (prefixUpdateInput) prefixUpdateInput.value = cardPrefix;
+                    }
                     selectPatient(existing);
                     return;
                 }
@@ -667,6 +709,7 @@
                 };
 
                 setVal('newPatientNationalId', nationalId);
+                setVal('NewPatientNamePrefix', cardPrefix);
                 setVal('NewPatientFirstName', firstName);
                 setVal('NewPatientLastName', lastName);
                 setVal('NewPatientGender', gender);
